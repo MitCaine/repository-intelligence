@@ -56,4 +56,3 @@ def _receipt_bool(value: Any, name: str) -> bool:
         return _require_exact_bool(value, name)
     except ValidationError as exc:
         raise ReceiptVerificationError(str(exc)) from exc
-
