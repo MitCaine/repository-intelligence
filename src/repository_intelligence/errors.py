@@ -11,3 +11,7 @@ class ValidationError(PilotError):
 
 class DuplicateAttemptError(PilotError):
     """An allocation would duplicate an existing non-rerun attempt."""
+
+
+class ReceiptVerificationError(PilotError):
+    """A conformance receipt is malformed, inconsistent, or tampered with."""
