@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -9,7 +10,7 @@ from pathlib import Path
 import re
 from typing import Any
 
-from .errors import ReceiptVerificationError, ValidationError
+from .errors import PilotError, ReceiptVerificationError, ValidationError
 from .validation import (
     _deep_freeze,
     _require_exact_bool,
@@ -21,6 +22,16 @@ from .validation import (
 
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _sha256_file(path: Path) -> str:
+    """Hash exact file bytes for protocol/schema identity binding."""
+
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        raise PilotError(f"cannot read required authority file {path}: {exc}") from exc
+    return hashlib.sha256(data).hexdigest()
 
 
 @dataclass(frozen=True)
