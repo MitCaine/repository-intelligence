@@ -25,7 +25,7 @@ from .validation import _json_value, _require_mapping, _require_text
 
 
 class Harness:
-    """Issue and validate only the bounded G1 authority records."""
+    """Issue and validate authenticated records within one bounded authority."""
 
     def __init__(self, harness_id: str) -> None:
         self.harness_id = _require_text(harness_id, "harness_id", identifier=True)
