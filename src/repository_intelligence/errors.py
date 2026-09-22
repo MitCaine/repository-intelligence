@@ -7,3 +7,7 @@ class PilotError(ValueError):
 
 class ValidationError(PilotError):
     """A trust-bearing input failed closed validation."""
+
+
+class DuplicateAttemptError(PilotError):
+    """An allocation would duplicate an existing non-rerun attempt."""
