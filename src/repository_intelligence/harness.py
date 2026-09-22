@@ -21,13 +21,13 @@ from .evidence import (
 from .identity import AuthenticatedBinding, IdentityBinding, _new_binding
 from .qualification import ExecutionEvidence
 from .security import SecurityObservation
-from .validation import _json_value, _require_mapping
+from .validation import _json_value, _require_mapping, _require_text
 
 
 class Harness:
     """Issue and validate only the bounded G1 authority records."""
 
-    def __init__(self, harness_id: str = HARNESS_ID) -> None:
+    def __init__(self, harness_id: str) -> None:
         self.harness_id = _require_text(harness_id, "harness_id", identifier=True)
         self._authority = _Authority(self.harness_id)
         self._observation_count = 0
@@ -308,4 +308,3 @@ class Harness:
             ),
         )
         return record
-
