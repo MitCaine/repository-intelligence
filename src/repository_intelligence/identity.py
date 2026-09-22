@@ -13,6 +13,8 @@ import json
 import re
 from typing import Any, Optional
 
+from .errors import ValidationError
+
 
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]*$")
 
@@ -21,9 +23,9 @@ def _validate_binding_text(value: Any, name: str) -> str:
     """Accept a nonblank binding dimension constrained to an identifier."""
 
     if type(value) is not str or not value.strip():
-        raise ValueError(f"{name} must be nonblank text")
+        raise ValidationError(f"{name} must be nonblank text")
     if not _IDENTIFIER_RE.fullmatch(value):
-        raise ValueError(f"{name} is not a valid identifier")
+        raise ValidationError(f"{name} is not a valid identifier")
     return value
 
 
