@@ -20,6 +20,31 @@ from .errors import ValidationError
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]*$")
 
 
+def _typed_equal(left: Any, right: Any) -> bool:
+    """Compare supported values without Python's bool/int equality collision."""
+
+    if left is None or right is None:
+        return left is None and right is None
+    if type(left) is bool or type(right) is bool:
+        return type(left) is bool and type(right) is bool and left == right
+    if type(left) is int or type(right) is int:
+        return type(left) is int and type(right) is int and left == right
+    if type(left) is float or type(right) is float:
+        return type(left) is float and type(right) is float and left == right
+    if type(left) is str or type(right) is str:
+        return type(left) is str and type(right) is str and left == right
+    if isinstance(left, Mapping) and isinstance(right, Mapping):
+        return (
+            set(left) == set(right)
+            and all(_typed_equal(left[key], right[key]) for key in left)
+        )
+    if isinstance(left, (list, tuple)) and isinstance(right, (list, tuple)):
+        return len(left) == len(right) and all(
+            _typed_equal(a, b) for a, b in zip(left, right)
+        )
+    return False
+
+
 def _require_exact_bool(value: Any, name: str) -> bool:
     """Accept only a JSON boolean; reject truthy strings, integers, and containers."""
 
