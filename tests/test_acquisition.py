@@ -14,6 +14,7 @@ import repository_intelligence.acquisition as acquisition
 from repository_intelligence.acquisition import (
     GitSourceObserver, GitSourceObservation,
     LocalFileAcquisitionObserver, LocalFileAcquisitionObservation,
+    LocalInputCoverageGate,
 )
 from repository_intelligence.errors import ValidationError
 
@@ -227,6 +228,110 @@ class LocalFileAcquisitionObserverTests(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 observer.observe()
         self.assertTrue(swapped)
+
+
+class LocalInputCoverageGateTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name).resolve()
+        self.files = [self.root / f"input-{number}.bin" for number in range(3)]
+        for number, path in enumerate(self.files):
+            path.write_bytes(f"material-{number}".encode())
+        self.plan = [
+            {
+                "input_id": f"input-{number}",
+                "source_or_registry_id": "registry-authored",
+                "kind": "wheel" if number < 2 else "binary",
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                "dimension": "dependencies" if number < 2 else "candidate_binary",
+            }
+            for number, path in enumerate(self.files)
+        ]
+        self.gate = LocalInputCoverageGate(self.plan)
+
+    def observe(self, number):
+        specification = {key: value for key, value in self.plan[number].items() if key != "dimension"}
+        observer = LocalFileAcquisitionObserver(specification, self.files[number])
+        return observer, observer.observe()
+
+    def test_partial_local_coverage_never_authorizes_execution(self):
+        original = self.gate.coverage()
+        self.assertEqual(set(original["dimensions"].values()), {"pending"})
+        self.plan[0]["sha256"] = "0" * 64
+        self.assertEqual(self.gate.coverage(), original)
+        self.plan[0]["sha256"] = hashlib.sha256(self.files[0].read_bytes()).hexdigest()
+        for number in range(3):
+            observer, observation = self.observe(number)
+            self.gate.admit(self.plan[number]["dimension"], f"input-{number}", observer, observation)
+            coverage = self.gate.coverage()
+            self.assertEqual(coverage["status"], "pending")
+            self.assertIs(coverage["execution_authorized"], False)
+            self.assertEqual(coverage["dimensions"]["dependencies"], "observed" if number >= 1 else "pending")
+        self.assertEqual(coverage["dimensions"]["candidate_binary"], "observed")
+        for dimension in ("repository_source", "credentials_isolation", "materialization_closure"):
+            self.assertEqual(coverage["dimensions"][dimension], "pending")
+        coverage["dimensions"]["repository_source"] = "observed"
+        coverage["execution_authorized"] = True
+        self.assertEqual(self.gate.coverage()["dimensions"]["repository_source"], "pending")
+        self.assertIs(self.gate.coverage()["execution_authorized"], False)
+        with self.assertRaises(AttributeError):
+            self.gate._plan = ()
+
+    def test_invalid_admission_is_atomic_and_replay_fails(self):
+        observer, observation = self.observe(0)
+        before = self.gate.coverage()
+        for dimension, input_id in (("candidate_binary", "input-0"), ("dependencies", "missing")):
+            with self.subTest(dimension=dimension, input_id=input_id), self.assertRaises(ValidationError):
+                self.gate.admit(dimension, input_id, observer, observation)
+            self.assertEqual(self.gate.coverage(), before)
+        foreign, foreign_observation = self.observe(0)
+        with self.assertRaises(ValidationError):
+            self.gate.admit("dependencies", "input-0", foreign, observation)
+        with self.assertRaises(ValidationError):
+            self.gate.admit("dependencies", "input-0", observer, observation.as_dict())
+        with self.assertRaises(ValidationError):
+            self.gate.admit("dependencies", "input-1", observer, observation)
+        self.assertEqual(self.gate.coverage(), before)
+        self.gate.admit("dependencies", "input-0", observer, observation)
+        with self.assertRaises(ValidationError):
+            self.gate.admit("dependencies", "input-0", observer, observation)
+        self.assertEqual(self.gate.coverage()["admitted_local_input_ids"], ["input-0"])
+
+    def test_changed_file_fails_coverage_instead_of_reverting_to_pending(self):
+        observer, observation = self.observe(0)
+        self.gate.admit("dependencies", "input-0", observer, observation)
+        self.files[0].write_bytes(b"changed")
+        with self.assertRaises(ValidationError):
+            self.gate.coverage()
+        self.assertEqual(len(self.gate._admitted), 1)
+
+    def test_one_materialized_file_cannot_fill_two_authored_positions(self):
+        second = {**self.plan[0], "input_id": "input-alias"}
+        gate = LocalInputCoverageGate([self.plan[0], second])
+        first_observer, first_observation = self.observe(0)
+        gate.admit("dependencies", "input-0", first_observer, first_observation)
+        alias_identity = {key: value for key, value in second.items() if key != "dimension"}
+        alias_observer = LocalFileAcquisitionObserver(alias_identity, self.files[0])
+        with self.assertRaises(ValidationError):
+            gate.admit("dependencies", "input-alias", alias_observer, alias_observer.observe())
+        self.assertEqual(gate.coverage()["admitted_local_input_ids"], ["input-0"])
+
+    def test_plan_rejects_mutable_duplicate_wrong_dimension_and_aliases(self):
+        variants = [
+            [],
+            [self.plan[0], self.plan[0]],
+            [{**self.plan[0], "dimension": "repository_source"}],
+            [{**self.plan[0], "dimension": "credentials_isolation"}],
+            [{**self.plan[0], "dimension": "latest"}],
+            [{**self.plan[0], "input_id": "current"}],
+            [{**self.plan[0], "source_or_registry_id": "unknown"}],
+            [{**self.plan[0], "sha256": "0" * 63}],
+            [{**self.plan[0], "extra": "field"}],
+        ]
+        for variant in variants:
+            with self.subTest(variant=variant), self.assertRaises(ValidationError):
+                LocalInputCoverageGate(variant)
 
 
 if __name__ == "__main__":

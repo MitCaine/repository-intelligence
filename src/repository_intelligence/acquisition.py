@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 import hashlib
 import hmac
 import os
@@ -11,11 +11,12 @@ import re
 import secrets
 import stat
 import subprocess
+import threading
 from types import MappingProxyType
 from typing import Any
 
 from .errors import ValidationError
-from .validation import _canonical_json, _require_exact_keys, _require_mapping, _require_text, _typed_equal
+from .validation import _canonical_json, _require_exact_keys, _require_mapping, _require_sequence, _require_text, _typed_equal
 
 
 _SOURCE_FIELDS = (
@@ -28,6 +29,13 @@ _MUTABLE = frozenset({"all", "any", "current", "discover", "discovered", "head",
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _LOCAL_INPUT_FIELDS = ("input_id", "source_or_registry_id", "kind", "sha256")
 _MAX_LOCAL_INPUT_BYTES = 64 * 1024 * 1024
+_ACQUISITION_DIMENSIONS = (
+    "repository_source", "generated_inputs", "dependencies", "candidate_binary",
+    "candidate_configuration", "toolchain", "credentials_isolation", "materialization_closure",
+)
+_LOCAL_FILE_DIMENSIONS = frozenset({
+    "generated_inputs", "dependencies", "candidate_binary", "candidate_configuration", "toolchain",
+})
 
 
 def _concrete_local_identity(value: Any, name: str) -> str:
@@ -227,6 +235,108 @@ class LocalFileAcquisitionObserver:
         if not _typed_equal(payload, self._inspect()):
             raise ValidationError("local input changed after observation")
         return payload
+
+
+class LocalInputCoverageGate:
+    """Diagnostic coverage of an immutable, controller-authored local input plan.
+
+    This gate cannot grant execution or complete trusted acquisition. The
+    caller must independently bind the plan before candidate access.
+    """
+
+    __slots__ = ("_plan", "_by_id", "_admitted", "_lock", "_sealed")
+
+    def __init__(self, authored_inputs: Sequence[Mapping[str, Any]]) -> None:
+        raw = _require_sequence(authored_inputs, "authored local input plan")
+        if not raw:
+            raise ValidationError("authored local input plan must be nonempty")
+        plan = []
+        by_id = {}
+        fields = (*_LOCAL_INPUT_FIELDS, "dimension")
+        for index, item in enumerate(raw):
+            record = _require_mapping(item, f"authored local input plan[{index}]")
+            _require_exact_keys(record, fields, fields, f"authored local input plan[{index}]")
+            normalized = {
+                key: _concrete_local_identity(record[key], f"authored local input plan[{index}].{key}")
+                for key in fields if key != "sha256"
+            }
+            if normalized["dimension"] not in _LOCAL_FILE_DIMENSIONS:
+                raise ValidationError("local input dimension is unsupported or not pre-execution observable")
+            digest = _require_text(record["sha256"], f"authored local input plan[{index}].sha256")
+            if not _SHA256.fullmatch(digest):
+                raise ValidationError("authored local input plan digest must be exact lowercase hex")
+            normalized["sha256"] = digest
+            if normalized["input_id"] in by_id:
+                raise ValidationError("authored local input IDs must be globally unique")
+            frozen = MappingProxyType(normalized)
+            plan.append(frozen)
+            by_id[normalized["input_id"]] = frozen
+        object.__setattr__(self, "_plan", tuple(plan))
+        object.__setattr__(self, "_by_id", MappingProxyType(by_id))
+        object.__setattr__(self, "_admitted", {})
+        object.__setattr__(self, "_lock", threading.RLock())
+        object.__setattr__(self, "_sealed", True)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if getattr(self, "_sealed", False):
+            raise AttributeError("local input coverage authority is immutable")
+        object.__setattr__(self, name, value)
+
+    def __delattr__(self, name: str) -> None:
+        raise AttributeError("local input coverage authority is immutable")
+
+    def admit(
+        self,
+        dimension: str,
+        input_id: str,
+        observer: LocalFileAcquisitionObserver,
+        observation: LocalFileAcquisitionObservation,
+    ) -> None:
+        """Atomically admit only live evidence matching one authored position."""
+
+        dimension = _concrete_local_identity(dimension, "local input dimension")
+        input_id = _concrete_local_identity(input_id, "local input ID")
+        expected = self._by_id.get(input_id)
+        if expected is None or expected["dimension"] != dimension:
+            raise ValidationError("local input is absent from its authored dimension")
+        if type(observer) is not LocalFileAcquisitionObserver:
+            raise ValidationError("local input requires an exact controller file observer")
+        with self._lock:
+            if input_id in self._admitted:
+                raise ValidationError("local input observation is already admitted")
+            payload = observer.require(observation)
+            if any(not _typed_equal(payload.get(key), expected[key]) for key in _LOCAL_INPUT_FIELDS):
+                raise ValidationError("local input observation differs from authored identity")
+            for prior_observer, prior_observation in self._admitted.values():
+                prior = prior_observer.require(prior_observation)
+                if (payload["device"], payload["inode"]) == (prior["device"], prior["inode"]):
+                    raise ValidationError("one materialized local file cannot satisfy two inputs")
+            self._admitted[input_id] = (observer, observation)
+
+    def coverage(self) -> dict[str, Any]:
+        """Revalidate every record; return pending, never readiness authority."""
+
+        with self._lock:
+            for input_id, (observer, observation) in self._admitted.items():
+                payload = observer.require(observation)
+                expected = self._by_id[input_id]
+                if any(not _typed_equal(payload.get(key), expected[key]) for key in _LOCAL_INPUT_FIELDS):
+                    raise ValidationError("admitted local input no longer matches authored identity")
+            dimensions = {}
+            for dimension in _ACQUISITION_DIMENSIONS:
+                planned = [item["input_id"] for item in self._plan if item["dimension"] == dimension]
+                dimensions[dimension] = (
+                    "observed" if planned and all(item in self._admitted for item in planned) else "pending"
+                )
+            return {
+                "status": "pending",
+                "execution_authorized": False,
+                "dimensions": dimensions,
+                "planned_local_input_ids": [item["input_id"] for item in self._plan],
+                "admitted_local_input_ids": [
+                    item["input_id"] for item in self._plan if item["input_id"] in self._admitted
+                ],
+            }
 
 
 class GitSourceObservation:
