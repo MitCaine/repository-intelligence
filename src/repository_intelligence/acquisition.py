@@ -104,41 +104,74 @@ class LocalFileAcquisitionObserver:
     def __delattr__(self, name: str) -> None:
         raise AttributeError("local acquisition observer authority is immutable")
 
+    def _open_parent(self) -> int:
+        """Anchor every directory component without following a symlink."""
+
+        if not all(hasattr(os, name) for name in ("O_DIRECTORY", "O_NOFOLLOW")):
+            raise ValidationError("no-follow directory traversal is unavailable")
+        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+        descriptor = os.open(self._path.anchor, flags)
+        try:
+            for component in self._path.parts[1:-1]:
+                following = os.open(component, flags, dir_fd=descriptor)
+                os.close(descriptor)
+                descriptor = following
+            return descriptor
+        except BaseException:
+            os.close(descriptor)
+            raise
+
     def _inspect(self) -> dict[str, Any]:
         path = self._path
         try:
-            for component in (path, *path.parents):
-                if stat.S_ISLNK(component.lstat().st_mode):
-                    raise ValidationError("local input path traverses a symlink")
-            before = path.lstat()
-            if not stat.S_ISREG(before.st_mode):
-                raise ValidationError("local input must be a regular file")
-            descriptor = os.open(
-                path,
-                os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0),
-            )
+            parent = self._open_parent()
             try:
-                opened = os.fstat(descriptor)
-                if not stat.S_ISREG(opened.st_mode) or (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
-                    raise ValidationError("local input changed while opening")
-                digest = hashlib.sha256()
-                size = 0
-                while True:
-                    chunk = os.read(descriptor, 1024 * 1024)
-                    if not chunk:
-                        break
-                    size += len(chunk)
-                    if size > _MAX_LOCAL_INPUT_BYTES:
-                        raise ValidationError("local input exceeds bounded observation size")
-                    digest.update(chunk)
-                after = os.fstat(descriptor)
+                before = os.stat(path.name, dir_fd=parent, follow_symlinks=False)
+                if not stat.S_ISREG(before.st_mode):
+                    raise ValidationError("local input must be a regular file")
+                descriptor = os.open(
+                    path.name,
+                    os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0),
+                    dir_fd=parent,
+                )
+                try:
+                    opened = os.fstat(descriptor)
+                    if not stat.S_ISREG(opened.st_mode) or (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
+                        raise ValidationError("local input changed while opening")
+                    digest = hashlib.sha256()
+                    size = 0
+                    while True:
+                        chunk = os.read(descriptor, 1024 * 1024)
+                        if not chunk:
+                            break
+                        size += len(chunk)
+                        if size > _MAX_LOCAL_INPUT_BYTES:
+                            raise ValidationError("local input exceeds bounded observation size")
+                        digest.update(chunk)
+                    after = os.fstat(descriptor)
+                finally:
+                    os.close(descriptor)
+                current = os.stat(path.name, dir_fd=parent, follow_symlinks=False)
+                anchored_parent = os.fstat(parent)
             finally:
-                os.close(descriptor)
-            current = path.lstat()
+                os.close(parent)
+            visible_parent = self._open_parent()
+            try:
+                visible_directory = os.fstat(visible_parent)
+                visible = os.stat(path.name, dir_fd=visible_parent, follow_symlinks=False)
+            finally:
+                os.close(visible_parent)
         except (OSError, RuntimeError, ValueError) as exc:
             raise ValidationError("controller local input is unavailable or changed") from exc
         fingerprint = lambda info: (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
-        if fingerprint(before) != fingerprint(opened) or fingerprint(opened) != fingerprint(after) or fingerprint(after) != fingerprint(current) or size != current.st_size:
+        if (
+            fingerprint(before) != fingerprint(opened)
+            or fingerprint(opened) != fingerprint(after)
+            or fingerprint(after) != fingerprint(current)
+            or fingerprint(current) != fingerprint(visible)
+            or (anchored_parent.st_dev, anchored_parent.st_ino) != (visible_directory.st_dev, visible_directory.st_ino)
+            or size != current.st_size
+        ):
             raise ValidationError("local input changed during observation")
         if digest.hexdigest() != self._identity["sha256"]:
             raise ValidationError("local input bytes differ from authored digest")

@@ -203,6 +203,31 @@ class LocalFileAcquisitionObserverTests(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 LocalFileAcquisitionObserver(self.identity, self.file).observe()
 
+    def test_parent_symlink_swap_during_open_fails_closed(self):
+        parent = self.root / "material-root"
+        parent.mkdir()
+        material = parent / "material.bin"
+        material.write_bytes(self.file.read_bytes())
+        redirect = self.root / "redirect"
+        redirect.mkdir()
+        (redirect / "material.bin").write_bytes(self.file.read_bytes())
+        observer = LocalFileAcquisitionObserver(self.identity, material)
+        original_open = os.open
+        swapped = False
+
+        def swap_before_file_open(target, flags, *args, **kwargs):
+            nonlocal swapped
+            if target == material.name and "dir_fd" in kwargs and not swapped:
+                swapped = True
+                parent.rename(self.root / "former-root")
+                parent.symlink_to(redirect, target_is_directory=True)
+            return original_open(target, flags, *args, **kwargs)
+
+        with mock.patch.object(acquisition.os, "open", side_effect=swap_before_file_open):
+            with self.assertRaises(ValidationError):
+                observer.observe()
+        self.assertTrue(swapped)
+
 
 if __name__ == "__main__":
     unittest.main()
