@@ -26,4 +26,14 @@ class SecurityPolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError,"different issuers"):security.evaluate_security(self.policy,self.h.observe_security(self.binding,EXPECTED),foreign)
     def test_evaluation_record_shape_is_typed(self):
         result=security.SecurityEvaluation("fail",("conflict:cleanup",),"observation-a"); self.assertEqual((result.status,result.reasons,result.observation_id),("fail",("conflict:cleanup",),"observation-a"))
+        with self.assertRaises(ValidationError):security.SecurityEvaluation("pass",("conflict:cleanup",),"observation-a")
+        with self.assertRaises(ValidationError):security.SecurityEvaluation("accepted",(),"observation-a")
+    def test_policy_and_observation_values_use_closed_typed_vocabularies(self):
+        for value in ("/","host-root","whatever-is-discovered-later","all-files"):
+            with self.subTest(kind="policy",value=value),self.assertRaises(ValidationError):
+                security.SecurityPolicy("unsafe",{**EXPECTED,"writable_roots":value},binding=self.binding)
+            with self.subTest(kind="observation",value=value),self.assertRaises(ValidationError):
+                self.h.observe_security(self.binding,{**EXPECTED,"writable_roots":value})
+        unsafe=self.h.observe_security(self.binding,{**EXPECTED,"writable_roots":"unbounded"})
+        self.assertEqual(security.evaluate_security(self.policy,unsafe,self.binding).status,"fail")
 if __name__=="__main__":unittest.main()

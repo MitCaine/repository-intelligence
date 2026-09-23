@@ -24,6 +24,27 @@ REQUIRED_SECURITY_OBSERVATIONS = (
     "cleanup",
 )
 
+_SAFE_SECURITY_DISPOSITIONS = {
+    "network": frozenset({"denied", "blocked"}),
+    "credentials": frozenset({"dropped", "absent"}),
+    "writable_roots": frozenset({"bounded", "scoped"}),
+    "process_limits": frozenset({"enforced", "bounded"}),
+    "resource_limits": frozenset({"enforced", "bounded"}),
+    "checkout": frozenset({"unchanged", "read-only"}),
+    "host_config": frozenset({"isolated", "separate"}),
+    "cleanup": frozenset({"clean", "complete"}),
+}
+_UNSAFE_SECURITY_DISPOSITIONS = {
+    "network": frozenset({"allowed"}),
+    "credentials": frozenset({"present"}),
+    "writable_roots": frozenset({"unbounded"}),
+    "process_limits": frozenset({"unenforced"}),
+    "resource_limits": frozenset({"unenforced"}),
+    "checkout": frozenset({"modified"}),
+    "host_config": frozenset({"shared"}),
+    "cleanup": frozenset({"residue"}),
+}
+
 
 @dataclass(frozen=True)
 class SecurityPolicy:
@@ -37,6 +58,8 @@ class SecurityPolicy:
     def __post_init__(self) -> None:
         _require_text(self.policy_id, "policy_id", identifier=True)
         expected = _require_mapping(self.expected, "security policy expected")
+        if set(expected) != set(REQUIRED_SECURITY_OBSERVATIONS):
+            raise ValidationError("security policy fields must match the closed observation set")
         required = tuple(self.required)
         if required != REQUIRED_SECURITY_OBSERVATIONS:
             raise ValidationError("security policy must retain all required observations")
@@ -44,7 +67,9 @@ class SecurityPolicy:
         for name in REQUIRED_SECURITY_OBSERVATIONS:
             if name not in expected:
                 raise ValidationError(f"security policy omits {name}")
-            _require_text(expected[name], f"security policy {name}", identifier=True)
+            value = _require_text(expected[name], f"security policy {name}", identifier=True)
+            if value not in _SAFE_SECURITY_DISPOSITIONS[name]:
+                raise ValidationError(f"security policy {name} disposition is unsafe or unknown")
         object.__setattr__(self, "expected", _deep_freeze(_json_value(expected, "security expected")))
         if self.binding is not None:
             _require_authenticated_binding(self.binding, "security policy binding")
@@ -69,7 +94,10 @@ class SecurityObservation:
         for key, value in observed.items():
             if key not in REQUIRED_SECURITY_OBSERVATIONS:
                 raise ValidationError(f"unknown security observation {key}")
-            _require_text(value, f"security observed {key}", identifier=True)
+            disposition = _require_text(value, f"security observed {key}", identifier=True)
+            allowed = _SAFE_SECURITY_DISPOSITIONS[key] | _UNSAFE_SECURITY_DISPOSITIONS[key]
+            if disposition not in allowed:
+                raise ValidationError(f"security observed {key} disposition is unknown")
         object.__setattr__(self, "observed", _deep_freeze(_json_value(observed, "security observed")))
 
     def is_authenticated(self) -> bool:
@@ -96,6 +124,21 @@ class SecurityEvaluation:
     status: str
     reasons: tuple[str, ...]
     observation_id: str
+
+    def __post_init__(self) -> None:
+        if self.status not in {"pass", "fail"}:
+            raise ValidationError("security evaluation status is unsupported")
+        _require_text(self.observation_id, "security evaluation observation_id", identifier=True)
+        if not isinstance(self.reasons, tuple):
+            raise ValidationError("security evaluation reasons must be an immutable tuple")
+        for reason in self.reasons:
+            if type(reason) is not str or ":" not in reason:
+                raise ValidationError("security evaluation reason is malformed")
+            kind, name = reason.split(":", 1)
+            if kind not in {"missing", "conflict"} or name not in REQUIRED_SECURITY_OBSERVATIONS:
+                raise ValidationError("security evaluation reason is unsupported")
+        if (self.status == "pass") != (not self.reasons):
+            raise ValidationError("security evaluation status and reasons are inconsistent")
 
 
 def evaluate_security(
