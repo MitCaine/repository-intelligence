@@ -97,6 +97,7 @@ class AuthoredEvidencePredicate:
     test_id: str
     artifact_id: str
     allowed_statuses: tuple[str, ...] = ("passed",)
+    allowed_exit_codes: tuple[int, ...] = (0,)
     require_complete: bool = True
 
     def __post_init__(self) -> None:
@@ -108,6 +109,13 @@ class AuthoredEvidencePredicate:
             raise ValidationError("predicate allowed_statuses must be a nonempty tuple")
         for status in self.allowed_statuses:
             _require_text(status, "predicate allowed status", identifier=True)
+        if (
+            not isinstance(self.allowed_exit_codes, tuple)
+            or not self.allowed_exit_codes
+            or any(type(code) is not int or code < 0 for code in self.allowed_exit_codes)
+            or len(self.allowed_exit_codes) != len(set(self.allowed_exit_codes))
+        ):
+            raise ValidationError("predicate allowed_exit_codes must be unique nonnegative integers")
         _require_exact_bool(self.require_complete, "predicate require_complete")
 
     def evaluate(
@@ -137,6 +145,8 @@ class AuthoredEvidencePredicate:
             return False, "wrong_artifact"
         if evidence.status not in self.allowed_statuses:
             return False, f"status_{evidence.status}"
+        if evidence.exit_code not in self.allowed_exit_codes:
+            return False, "exit_code_not_authored"
         if evidence.observed is not True:
             return False, "execution_not_observed"
         if evidence.terminal is not True:
@@ -215,7 +225,14 @@ class QualificationAuthority:
         assessments: list[QualificationAssessment] = []
         for obligation in self._obligations:
             typed = [item for item in observed if isinstance(item, ExecutionEvidence)]
-            if not typed:
+            claimed = [
+                item
+                for item in typed
+                if item.command_id == obligation.predicate.command_id
+                and item.test_id == obligation.predicate.test_id
+                and item.artifact_id == obligation.predicate.artifact_id
+            ]
+            if not claimed:
                 # Call the predicate explicitly even for absent evidence so
                 # every authored obligation has a recorded evaluation.
                 _, reason = obligation.predicate.evaluate(None, expected_binding)
@@ -224,7 +241,7 @@ class QualificationAuthority:
                 )
                 continue
             evaluations = [
-                obligation.predicate.evaluate(item, expected_binding) for item in typed
+                obligation.predicate.evaluate(item, expected_binding) for item in claimed
             ]
             reasons = tuple(reason for _, reason in evaluations)
             authored_statuses = obligation.predicate.allowed_statuses
@@ -242,11 +259,7 @@ class QualificationAuthority:
                 (state for reason, is_blocking, state in blocking_statuses if reason in reasons and is_blocking),
                 None,
             )
-            if blocking is not None:
-                state = blocking
-            elif self._has_unpermitted_incomplete_evidence(obligation, reasons):
-                state = "indeterminate"
-            elif any(result for result, _ in evaluations):
+            if all(result for result, _ in evaluations):
                 assessments.append(
                     QualificationAssessment(
                         obligation.obligation_id,
@@ -256,7 +269,11 @@ class QualificationAuthority:
                     )
                 )
                 continue
-            if any(reason.startswith("status_failed") for reason in reasons):
+            if blocking is not None:
+                state = blocking
+            elif self._has_unpermitted_incomplete_evidence(obligation, reasons):
+                state = "indeterminate"
+            elif any(reason.startswith("status_failed") for reason in reasons):
                 state = "failed"
             elif any(
                 reason.startswith("status_")
@@ -266,7 +283,14 @@ class QualificationAuthority:
             ):
                 state = "partial_or_skipped"
             elif any(
-                reason in {"wrong_source_binding", "wrong_artifact", "unverified_execution_evidence"}
+                reason
+                in {
+                    "different_source_authority",
+                    "wrong_source_binding",
+                    "wrong_authored_binding",
+                    "unverified_execution_evidence",
+                    "exit_code_not_authored",
+                }
                 for reason in reasons
             ):
                 state = "invalid_or_stale_evidence"
