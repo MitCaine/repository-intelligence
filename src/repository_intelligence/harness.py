@@ -35,6 +35,7 @@ class Harness:
         self._security_count = 0
         self._cleanup_count = 0
         self._cleanup_issued: dict[str, AttemptCleanupObservation] = {}
+        self._cleanup_attempts: set[str] = set()
 
     def authenticated_binding(
         self,
@@ -272,6 +273,8 @@ class Harness:
             raise ValidationError("cleanup binding was not issued by this harness")
         if candidate_claims is not None:
             _require_mapping(candidate_claims, "candidate_claims")
+        if attempt_id in self._cleanup_attempts:
+            raise ValidationError("cleanup observation already issued for attempt")
         sequence = self._cleanup_count + 1
         observation = AttemptCleanupObservation(
             observation_id=f"cleanup-observation-{sequence:04d}",
@@ -291,6 +294,7 @@ class Harness:
         }))
         self._cleanup_count = sequence
         self._cleanup_issued[observation.observation_id] = observation
+        self._cleanup_attempts.add(attempt_id)
         return observation
 
     def observe_execution(

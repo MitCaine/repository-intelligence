@@ -112,7 +112,9 @@ class AttemptLifecycleTests(unittest.TestCase):
     def test_cleanup_identity_time_forgery_and_replay_fail_atomically(self):
         ledger = attempts.AttemptLedger()
         scheduled = ledger.allocate(**self.values)
-        early = self.harness.observe_attempt_cleanup(scheduled.attempt_id, self.task, observed_at=13, disposition="clean")
+        early_harness = Harness("early-cleanup")
+        early_binding = early_harness.bind("task-source", "task-material", "config-a", "task-generation")
+        early = early_harness.observe_attempt_cleanup(scheduled.attempt_id, early_binding, observed_at=13, disposition="clean")
         before = ledger.history
         with self.assertRaises(ValidationError):
             ledger.record_cleanup(scheduled.attempt_id, early)
@@ -120,9 +122,11 @@ class AttemptLifecycleTests(unittest.TestCase):
         ledger.start(scheduled.attempt_id, observed_at=11)
         finished = ledger.finish(scheduled.attempt_id, status="completed", termination="normal", observed_at=12, disposition="terminal")
         valid = self.harness.observe_attempt_cleanup(finished.attempt_id, self.task, observed_at=13, disposition="clean")
-        wrong_source = self.harness.observe_attempt_cleanup(finished.attempt_id, self.provider, observed_at=13, disposition="clean")
-        wrong_attempt = self.harness.observe_attempt_cleanup("another-attempt", self.task, observed_at=13, disposition="clean")
-        same_time = self.harness.observe_attempt_cleanup(finished.attempt_id, self.task, observed_at=12, disposition="clean")
+        with self.assertRaises(ValidationError):
+            self.harness.observe_attempt_cleanup(finished.attempt_id, self.task, observed_at=14, disposition="clean")
+        wrong_source = replace(valid, binding=self.provider)
+        wrong_attempt = replace(valid, attempt_id="another-attempt")
+        same_time = replace(valid, observed_at=12)
         foreign_harness = Harness("foreign-cleanup")
         foreign_binding = foreign_harness.bind("task-source", "task-material", "config-a", "task-generation")
         foreign = foreign_harness.observe_attempt_cleanup(finished.attempt_id, foreign_binding, observed_at=13, disposition="clean")
@@ -135,6 +139,8 @@ class AttemptLifecycleTests(unittest.TestCase):
             self.assertEqual(ledger.history, before)
         with self.assertRaises(ValidationError):
             replace(finished, cleanup_observation_id="fake", cleanup_observed_at=12, cleanup_disposition="clean")
+        with self.assertRaises(ValidationError):
+            replace(finished, cleanup_observation_id="fake", cleanup_observed_at=13, cleanup_disposition="clean", last_observed_at=13)
         with self.assertRaises(ValidationError):
             replace(scheduled, cleanup_observation_id="fake", cleanup_observed_at=13, cleanup_disposition="clean")
         accepted = ledger.record_cleanup(finished.attempt_id, valid)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 import threading
 from typing import Any, Optional, Sequence
 
@@ -84,6 +84,7 @@ class AttemptRecord:
     cleanup_observation_id: Optional[str] = None
     cleanup_observed_at: Optional[int] = None
     cleanup_disposition: str = "unobserved"
+    _cleanup_evidence: Optional[AttemptCleanupObservation] = field(default=None, repr=False, compare=False)
     retry_of: Optional[str] = None
     retry_root_id: str = ""
     evidence_refs: tuple[str, ...] = ()
@@ -152,10 +153,22 @@ class AttemptRecord:
             if not (self.scheduled_at < self.started_at < self.finished_at <= self.last_observed_at):
                 raise ValidationError("terminal attempt time ordering is inconsistent")
         if self.cleanup_observation_id is None:
-            if self.cleanup_observed_at is not None or self.cleanup_disposition != "unobserved":
+            if self.cleanup_observed_at is not None or self.cleanup_disposition != "unobserved" or self._cleanup_evidence is not None:
                 raise ValidationError("cleanup fields require an authenticated observation identity")
         else:
             _require_text(self.cleanup_observation_id, "cleanup_observation_id", identifier=True)
+            evidence = self._cleanup_evidence
+            if (
+                type(evidence) is not AttemptCleanupObservation
+                or not evidence.is_authenticated()
+                or evidence.observation_id != self.cleanup_observation_id
+                or evidence.attempt_id != self.attempt_id
+                or evidence.observed_at != self.cleanup_observed_at
+                or evidence.disposition != self.cleanup_disposition
+                or evidence.binding._authority is not self.access_planes.task_source._authority
+                or _binding_tuple(evidence.binding) != _binding_tuple(self.access_planes.task_source)
+            ):
+                raise ValidationError("cleanup fields require exact authenticated observation")
             if self.status in {"scheduled", "started"} or self.finished_at is None:
                 raise ValidationError("cleanup requires a terminal attempt")
             if (
@@ -451,6 +464,7 @@ class AttemptLedger:
                 cleanup_observation_id=observation.observation_id,
                 cleanup_observed_at=observation.observed_at,
                 cleanup_disposition=observation.disposition,
+                _cleanup_evidence=observation,
                 last_observed_at=observation.observed_at,
             )
             self._records[attempt_id] = updated
