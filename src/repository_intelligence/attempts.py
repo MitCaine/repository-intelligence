@@ -77,6 +77,7 @@ class ScoringDecision:
 
 
 def assess_scoring(
+    ledger: "AttemptLedger",
     record: "AttemptRecord",
     cache_observation: Optional[CacheResetObservation],
     execution_evidence: Sequence[ExecutionEvidence],
@@ -84,8 +85,11 @@ def assess_scoring(
 ) -> ScoringDecision:
     """Gate scoring on exact independent reset, cleanup and authored evidence."""
 
-    if type(record) is not AttemptRecord:
+    if type(ledger) is not AttemptLedger or type(record) is not AttemptRecord:
         raise ValidationError("scoring requires one immutable attempt record")
+    with ledger._lock:
+        if ledger._records.get(record.attempt_id) is not record:
+            raise ValidationError("scoring attempt is not the ledger-retained snapshot")
     if type(qualification_authority) is not QualificationAuthority:
         raise ValidationError("scoring requires authored qualification authority")
     evidence = tuple(execution_evidence)
