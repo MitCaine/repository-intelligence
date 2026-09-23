@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 import hmac
+from pathlib import PurePosixPath
 from typing import Any, Optional
 
 from .authority import _Authority, _binding_tuple, _require_authenticated_binding, _sign
@@ -44,6 +45,120 @@ _UNSAFE_SECURITY_DISPOSITIONS = {
     "host_config": frozenset({"shared"}),
     "cleanup": frozenset({"residue"}),
 }
+
+
+def _concrete_writable_roots(value: Any, *, nonempty: bool) -> tuple[str, ...]:
+    if type(value) not in {tuple, list} or (nonempty and not value):
+        raise ValidationError("writable roots must be a finite concrete sequence")
+    roots: list[str] = []
+    for index, raw in enumerate(value):
+        path = _require_text(raw, f"writable roots[{index}]")
+        parsed = PurePosixPath(path)
+        if (
+            path in {".", ".."}
+            or path.startswith(("/", "~"))
+            or path.endswith("/")
+            or parsed.as_posix() != path
+            or any(part in {"", ".", ".."} for part in parsed.parts)
+            or any(marker in path for marker in ("*", "?", "[", "]", "\\", ":", "$", "%"))
+            or any(ord(char) < 32 or ord(char) == 127 for char in path)
+        ):
+            raise ValidationError("writable root must be normalized, concrete and anchor-relative")
+        if any(path == other or path.startswith(other + "/") or other.startswith(path + "/") for other in roots):
+            raise ValidationError("writable roots cannot duplicate or overlap")
+        roots.append(path)
+    return tuple(roots)
+
+
+@dataclass(frozen=True)
+class WritableRootsPolicy:
+    """Exact finite writable roots within one independently identified sandbox anchor."""
+
+    policy_id: str
+    binding: AuthenticatedBinding
+    anchor_id: str
+    roots: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        _require_text(self.policy_id, "writable roots policy_id", identifier=True)
+        _require_authenticated_binding(self.binding, "writable roots policy binding")
+        _require_text(self.anchor_id, "writable roots anchor_id", identifier=True)
+        object.__setattr__(self, "roots", _concrete_writable_roots(self.roots, nonempty=True))
+
+
+@dataclass(frozen=True)
+class WritableRootsObservation:
+    """Harness-retained observed root set, never a candidate-supplied claim."""
+
+    observation_id: str
+    binding: AuthenticatedBinding
+    anchor_id: str
+    roots: tuple[str, ...]
+    _authority: Optional[_Authority] = field(default=None, repr=False, compare=False)
+    _issuer: Any = field(default=None, repr=False, compare=False)
+    _signature: str = field(default="", repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        _require_text(self.observation_id, "writable roots observation_id", identifier=True)
+        _require_authenticated_binding(self.binding, "writable roots observation binding")
+        _require_text(self.anchor_id, "writable roots observation anchor_id", identifier=True)
+        object.__setattr__(self, "roots", _concrete_writable_roots(self.roots, nonempty=False))
+
+    def is_authenticated(self) -> bool:
+        if (
+            self._authority is None
+            or self.binding._authority is not self._authority
+            or self._issuer is None
+            or getattr(self._issuer, "_authority", None) is not self._authority
+            or getattr(self._issuer, "_writable_roots_issued", {}).get(self.observation_id) is not self
+        ):
+            return False
+        expected = _sign(self._authority, {
+            "observation_id": self.observation_id,
+            "binding": self.binding.as_dict(),
+            "anchor_id": self.anchor_id,
+            "roots": list(self.roots),
+        })
+        return hmac.compare_digest(self._signature, expected)
+
+
+@dataclass(frozen=True)
+class WritableRootsEvaluation:
+    status: str
+    reasons: tuple[str, ...]
+    observation_id: str
+
+    def __post_init__(self) -> None:
+        if self.status not in {"pass", "fail"} or (self.status == "pass") != (not self.reasons):
+            raise ValidationError("writable roots evaluation status is inconsistent")
+        if any(reason not in {"missing:roots", "conflict:roots"} for reason in self.reasons):
+            raise ValidationError("writable roots evaluation reason is unsupported")
+        _require_text(self.observation_id, "writable roots evaluation observation_id", identifier=True)
+
+
+def evaluate_writable_roots(
+    policy: WritableRootsPolicy,
+    observation: WritableRootsObservation,
+    expected_binding: AuthenticatedBinding,
+) -> WritableRootsEvaluation:
+    """Require exact independently issued roots; categorical security is insufficient."""
+
+    if type(policy) is not WritableRootsPolicy:
+        raise ValidationError("writable roots policy has the wrong type")
+    if type(observation) is not WritableRootsObservation or not observation.is_authenticated():
+        raise ValidationError("writable roots observation lacks independent issuer provenance")
+    expected = _require_authenticated_binding(expected_binding, "writable roots expected binding")
+    if (
+        policy.binding._authority is not expected._authority
+        or observation.binding._authority is not expected._authority
+        or _binding_tuple(policy.binding) != _binding_tuple(expected)
+        or _binding_tuple(observation.binding) != _binding_tuple(expected)
+    ):
+        raise ValidationError("writable roots source binding mismatch")
+    if policy.anchor_id != observation.anchor_id:
+        raise ValidationError("writable roots sandbox anchor mismatch")
+    reasons = () if set(policy.roots) == set(observation.roots) else (("missing:roots",) if not observation.roots else ("conflict:roots",))
+    return WritableRootsEvaluation("pass" if not reasons else "fail", reasons, observation.observation_id)
 
 
 @dataclass(frozen=True)

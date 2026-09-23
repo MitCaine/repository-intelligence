@@ -1,6 +1,8 @@
 """Direct tests for generic security observations and evaluation."""
 from __future__ import annotations
 import unittest
+from dataclasses import replace
+import copy
 from repository_intelligence import security
 from repository_intelligence.errors import ValidationError
 from repository_intelligence.harness import Harness
@@ -36,4 +38,36 @@ class SecurityPolicyTests(unittest.TestCase):
                 self.h.observe_security(self.binding,{**EXPECTED,"writable_roots":value})
         unsafe=self.h.observe_security(self.binding,{**EXPECTED,"writable_roots":"unbounded"})
         self.assertEqual(security.evaluate_security(self.policy,unsafe,self.binding).status,"fail")
+
+    def test_concrete_writable_roots_match_independent_issuer_observation(self):
+        roots=("working-tree/candidate", "scratch/attempt")
+        policy=security.WritableRootsPolicy("roots-a",self.binding,"sandbox-a",roots)
+        observation=self.h.observe_writable_roots(self.binding,"sandbox-a",tuple(reversed(roots)),candidate_claims={"roots":["/"]})
+        self.assertTrue(observation.is_authenticated())
+        self.assertEqual(policy.roots,roots)
+        self.assertEqual(security.evaluate_writable_roots(policy,observation,self.binding).status,"pass")
+        self.assertEqual(security.evaluate_writable_roots(policy,self.h.observe_writable_roots(self.binding,"sandbox-a",()),self.binding).reasons,("missing:roots",))
+        self.assertEqual(security.evaluate_writable_roots(policy,self.h.observe_writable_roots(self.binding,"sandbox-a",("working-tree/candidate", "scratch/attempt", "extra/root")),self.binding).reasons,("conflict:roots",))
+
+    def test_concrete_writable_roots_reject_broad_overlap_and_false_provenance(self):
+        roots=("working-tree/candidate", "scratch/attempt")
+        policy=security.WritableRootsPolicy("roots-a",self.binding,"sandbox-a",roots)
+        for invalid in ((),(".",),("/",),("~/data",),("$HOME",),("a/../b",),("a//b",),("a/*",),("a\\b",),("a", "a/b"),("a", "a")):
+            with self.subTest(invalid=invalid),self.assertRaises(ValidationError):
+                security.WritableRootsPolicy("invalid",self.binding,"sandbox-a",invalid)
+        valid=self.h.observe_writable_roots(self.binding,"sandbox-a",roots)
+        with self.assertRaises(ValidationError):
+            security.evaluate_writable_roots(self.policy,valid,self.binding)
+        for forged in (copy.copy(valid),replace(valid,anchor_id="sandbox-b"),replace(valid,roots=("extra/root",)),security.WritableRootsObservation("direct",self.binding,"sandbox-a",roots)):
+            with self.subTest(forged=forged),self.assertRaises(ValidationError):
+                security.evaluate_writable_roots(policy,forged,self.binding)
+        other=self.h.bind("other","other-material","other-config","other-generation")
+        with self.assertRaises(ValidationError):
+            security.evaluate_writable_roots(policy,self.h.observe_writable_roots(other,"sandbox-a",roots),self.binding)
+        with self.assertRaises(ValidationError):
+            security.evaluate_writable_roots(policy,self.h.observe_writable_roots(self.binding,"sandbox-b",roots),self.binding)
+        foreign_harness=Harness("foreign-roots")
+        foreign_binding=foreign_harness.bind("source-a","material-a","config-a","generation-a")
+        with self.assertRaises(ValidationError):
+            security.evaluate_writable_roots(policy,foreign_harness.observe_writable_roots(foreign_binding,"sandbox-a",roots),self.binding)
 if __name__=="__main__":unittest.main()

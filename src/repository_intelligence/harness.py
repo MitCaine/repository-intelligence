@@ -20,7 +20,7 @@ from .evidence import (
 )
 from .identity import AuthenticatedBinding, IdentityBinding, _new_binding
 from .qualification import ExecutionEvidence
-from .security import AttemptCleanupObservation, SecurityObservation
+from .security import AttemptCleanupObservation, SecurityObservation, WritableRootsObservation
 from .validation import _json_value, _require_mapping, _require_text
 
 
@@ -36,6 +36,8 @@ class Harness:
         self._cleanup_count = 0
         self._cleanup_issued: dict[str, AttemptCleanupObservation] = {}
         self._cleanup_attempts: set[str] = set()
+        self._writable_roots_count = 0
+        self._writable_roots_issued: dict[str, WritableRootsObservation] = {}
 
     def authenticated_binding(
         self,
@@ -295,6 +297,40 @@ class Harness:
         self._cleanup_count = sequence
         self._cleanup_issued[observation.observation_id] = observation
         self._cleanup_attempts.add(attempt_id)
+        return observation
+
+    def observe_writable_roots(
+        self,
+        binding: AuthenticatedBinding,
+        anchor_id: str,
+        observed_roots: tuple[str, ...],
+        *,
+        candidate_claims: Optional[Mapping[str, Any]] = None,
+    ) -> WritableRootsObservation:
+        """Retain exact controller-observed roots, ignoring candidate claims."""
+
+        expected = _require_authenticated_binding(binding, "writable roots binding")
+        if expected._authority is not self._authority:
+            raise ValidationError("writable roots binding was not issued by this harness")
+        if candidate_claims is not None:
+            _require_mapping(candidate_claims, "candidate_claims")
+        sequence = self._writable_roots_count + 1
+        observation = WritableRootsObservation(
+            observation_id=f"writable-roots-observation-{sequence:04d}",
+            binding=expected,
+            anchor_id=anchor_id,
+            roots=observed_roots,
+            _authority=self._authority,
+            _issuer=self,
+        )
+        object.__setattr__(observation, "_signature", _sign(self._authority, {
+            "observation_id": observation.observation_id,
+            "binding": observation.binding.as_dict(),
+            "anchor_id": observation.anchor_id,
+            "roots": list(observation.roots),
+        }))
+        self._writable_roots_count = sequence
+        self._writable_roots_issued[observation.observation_id] = observation
         return observation
 
     def observe_execution(
