@@ -5,8 +5,9 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from pathlib import PurePosixPath
 import re
 from typing import Any
 
@@ -22,6 +23,52 @@ from .validation import (
 
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_GIT_SHA1_RE = re.compile(r"^[0-9a-f]{40}$")
+
+
+def _accepted_artifact_path(value: Any) -> str:
+    path = _require_text(value, "accepted artifact path")
+    parsed = PurePosixPath(path)
+    if (
+        path in {".", ".."}
+        or path.startswith("/")
+        or path.endswith("/")
+        or parsed.as_posix() != path
+        or any(part in {"", ".", ".."} for part in parsed.parts)
+        or "\\" in path
+        or ":" in path
+        or any(marker in path for marker in ("*", "?", "[", "]"))
+        or any(ord(character) < 32 or ord(character) == 127 for character in path)
+    ):
+        raise ValidationError("accepted artifact path must be concrete normalized POSIX-relative text")
+    return path
+
+
+@dataclass(frozen=True)
+class AcceptedArtifactBinding:
+    """Independently authored immutable identity for one accepted Git artifact."""
+
+    path: str
+    accepted_commit: str
+    git_blob_sha: str
+    sha256: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "path", _accepted_artifact_path(self.path))
+        if not _GIT_SHA1_RE.fullmatch(self.accepted_commit):
+            raise ValidationError("accepted_commit must be an exact lowercase Git SHA-1")
+        if not _GIT_SHA1_RE.fullmatch(self.git_blob_sha):
+            raise ValidationError("git_blob_sha must be an exact lowercase Git SHA-1")
+        if not _SHA256_RE.fullmatch(self.sha256):
+            raise ValidationError("sha256 must be an exact lowercase SHA-256")
+
+    def as_dict(self) -> dict[str, str]:
+        return {
+            "path": self.path,
+            "accepted_commit": self.accepted_commit,
+            "git_blob_sha": self.git_blob_sha,
+            "sha256": self.sha256,
+        }
 
 
 def _sha256_file(path: Path) -> str:
@@ -46,6 +93,7 @@ class ReceiptExpectations:
     cases: Mapping[str, tuple[str, ...]]
     authority_boundaries: Mapping[str, bool]
     stage_boundary: Mapping[str, bool]
+    input_bindings: Mapping[str, AcceptedArtifactBinding] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         for name in ("receipt_kind", "harness_id", "harness_version"):
@@ -59,11 +107,21 @@ class ReceiptExpectations:
         cases = _require_mapping(self.cases, "receipt cases")
         boundaries = _require_mapping(self.authority_boundaries, "receipt authority_boundaries")
         stage = _require_mapping(self.stage_boundary, "receipt stage_boundary")
+        bindings = _require_mapping(self.input_bindings, "receipt input_bindings")
         if not paths or not cases:
             raise ValidationError("receipt expectations require inputs and cases")
         for name, path in paths.items():
             _require_text(name, "receipt input name", identifier=True)
             _require_text(path, f"receipt input path {name}")
+        if bindings and set(bindings) != set(paths):
+            raise ValidationError("receipt input_bindings must cover exactly every input path")
+        normalized_bindings: dict[str, AcceptedArtifactBinding] = {}
+        for name, binding in bindings.items():
+            if type(binding) is not AcceptedArtifactBinding:
+                raise ValidationError(f"receipt input binding {name} has the wrong type")
+            if binding.path != paths[name]:
+                raise ValidationError(f"receipt input binding {name} path mismatch")
+            normalized_bindings[name] = binding
         normalized_cases: dict[str, tuple[str, ...]] = {}
         for case_id, checks in cases.items():
             _require_text(case_id, "receipt case identity", identifier=True)
@@ -84,6 +142,7 @@ class ReceiptExpectations:
         object.__setattr__(self, "cases", _deep_freeze(normalized_cases))
         object.__setattr__(self, "authority_boundaries", _deep_freeze(dict(boundaries)))
         object.__setattr__(self, "stage_boundary", _deep_freeze(dict(stage)))
+        object.__setattr__(self, "input_bindings", _deep_freeze(normalized_bindings))
 
 
 def validate_receipt(receipt: Mapping[str, Any], expectations: ReceiptExpectations) -> None:
@@ -116,12 +175,25 @@ def validate_receipt(receipt: Mapping[str, Any], expectations: ReceiptExpectatio
     _require_exact_keys(inputs, expectations.input_paths, expectations.input_paths, "receipt.inputs")
     for name, expected_path in expectations.input_paths.items():
         item = _require_mapping(inputs[name], f"receipt.inputs.{name}")
-        _require_exact_keys(item, {"path", "sha256"}, {"path", "sha256"}, f"inputs.{name}")
+        binding = expectations.input_bindings.get(name)
+        fields = (
+            {"path", "accepted_commit", "git_blob_sha", "sha256"}
+            if binding is not None
+            else {"path", "sha256"}
+        )
+        _require_exact_keys(item, fields, fields, f"inputs.{name}")
         if _receipt_text(item["path"], f"inputs.{name}.path") != expected_path:
             raise ReceiptVerificationError(f"{name} authority path mismatch")
+        if binding is not None:
+            if item["accepted_commit"] != binding.accepted_commit:
+                raise ReceiptVerificationError(f"{name} accepted commit mismatch")
+            if item["git_blob_sha"] != binding.git_blob_sha:
+                raise ReceiptVerificationError(f"{name} Git blob mismatch")
         digest = _receipt_text(item["sha256"], f"inputs.{name}.sha256")
         if not _SHA256_RE.fullmatch(digest):
             raise ReceiptVerificationError(f"{name} digest is not a lowercase SHA-256")
+        if binding is not None and digest != binding.sha256:
+            raise ReceiptVerificationError(f"{name} accepted digest mismatch")
 
     cases = _require_sequence(receipt["cases"], "receipt.cases")
     if len(cases) != len(expectations.cases):
