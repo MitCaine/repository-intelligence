@@ -33,7 +33,9 @@ class ExecutionEvidence:
     terminal: bool
     evidence_session_id: str
     exit_code: Optional[int] = None
+    attempt_id: Optional[str] = None
     _authority: Optional[_Authority] = field(default=None, repr=False, compare=False)
+    _issuer: Any = field(default=None, repr=False, compare=False)
     _signature: str = field(default="", repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -62,11 +64,19 @@ class ExecutionEvidence:
             _require_exact_bool(getattr(self, name), f"execution {name}")
         if self.exit_code is not None and (type(self.exit_code) is not int or self.exit_code < 0):
             raise ValidationError("execution exit_code must be a nonnegative integer or null")
+        if self.attempt_id is not None:
+            _require_text(self.attempt_id, "execution attempt_id", identifier=True)
 
     def is_authenticated(self) -> bool:
         """Return whether the execution record has a valid harness signature."""
 
-        if self._authority is None or self.source_binding._authority is not self._authority:
+        if (
+            self._authority is None
+            or self.source_binding._authority is not self._authority
+            or self._issuer is None
+            or getattr(self._issuer, "_authority", None) is not self._authority
+            or getattr(self._issuer, "_execution_issued", {}).get(id(self)) is not self
+        ):
             return False
         expected = _sign(
             self._authority,
@@ -82,6 +92,7 @@ class ExecutionEvidence:
                 "terminal": self.terminal,
                 "evidence_session_id": self.evidence_session_id,
                 "exit_code": self.exit_code,
+                "attempt_id": self.attempt_id,
             },
         )
         return hmac.compare_digest(self._signature, expected)

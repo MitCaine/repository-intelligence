@@ -127,6 +127,7 @@ def assess_scoring(
         not item.is_authenticated()
         or item.source_binding._authority is not binding._authority
         or _binding_tuple(item.source_binding) != _binding_tuple(binding)
+        or item.attempt_id != record.attempt_id
         or item.status != "passed"
         or item.observed is not True
         or item.complete is not True

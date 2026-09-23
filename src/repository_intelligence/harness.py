@@ -41,6 +41,7 @@ class Harness:
         self._cache_reset_count = 0
         self._cache_reset_issued: dict[str, CacheResetObservation] = {}
         self._cache_reset_attempts: set[str] = set()
+        self._execution_issued: dict[int, ExecutionEvidence] = {}
 
     def authenticated_binding(
         self,
@@ -394,6 +395,7 @@ class Harness:
         terminal: bool,
         evidence_session_id: str,
         exit_code: Optional[int] = None,
+        attempt_id: Optional[str] = None,
     ) -> ExecutionEvidence:
         """Issue exact/bounded execution evidence through the harness path."""
 
@@ -412,7 +414,9 @@ class Harness:
             terminal=terminal,
             evidence_session_id=evidence_session_id,
             exit_code=exit_code,
+            attempt_id=attempt_id,
             _authority=self._authority,
+            _issuer=self,
         )
         object.__setattr__(
             record,
@@ -431,7 +435,9 @@ class Harness:
                     "terminal": record.terminal,
                     "evidence_session_id": record.evidence_session_id,
                     "exit_code": record.exit_code,
+                    "attempt_id": record.attempt_id,
                 },
             ),
         )
+        self._execution_issued[id(record)] = record
         return record

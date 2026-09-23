@@ -160,11 +160,13 @@ class AttemptLifecycleTests(unittest.TestCase):
         finished=ledger.finish(scheduled.attempt_id,status="completed",termination="normal",observed_at=13,disposition="terminal",evidence_refs=("execution-a",))
         cleanup=self.harness.observe_attempt_cleanup(finished.attempt_id,self.task,observed_at=14,disposition="clean")
         record=ledger.record_cleanup(finished.attempt_id,cleanup)
-        evidence=self.harness.observe_execution(evidence_id="execution-a",binding=self.task,command_id="command-a",test_id="test-a",artifact_id="artifact-a",status="passed",observed=True,complete=True,terminal=True,evidence_session_id="session-a",exit_code=0)
+        evidence=self.harness.observe_execution(evidence_id="execution-a",binding=self.task,command_id="command-a",test_id="test-a",artifact_id="artifact-a",status="passed",observed=True,complete=True,terminal=True,evidence_session_id="session-a",exit_code=0,attempt_id=record.attempt_id)
         predicate=AuthoredEvidencePredicate("predicate-a",self.task,"command-a","test-a","artifact-a")
         authority=QualificationAuthority((QualificationObligation("obligation-a",predicate),))
         score=lambda r,c,e,a=authority: attempts.assess_scoring(ledger,r,c,e,a)
         self.assertEqual(score(record,cache,(evidence,)).disposition,"eligible")
+        self.assertIn("execution_not_complete_passing",score(record,cache,(replace(evidence,attempt_id=None),)).reasons)
+        self.assertIn("execution_not_complete_passing",score(record,cache,(replace(evidence,attempt_id="another-attempt"),)).reasons)
         with self.assertRaises(ValidationError):
             score(replace(record,eligibility=AttemptEligibility("cold",False,False)),cache,(evidence,))
         self.assertEqual(score(record,None,(evidence,)).reasons,("cache_unverified",))
@@ -180,7 +182,7 @@ class AttemptLifecycleTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             score(replace(record,scheduled_at=9),cache,(evidence,))
         self.assertIs(ledger.records[0],record)
-        self.assertIn("execution_not_complete_passing",score(record,cache,(self.harness.observe_execution(evidence_id="execution-a",binding=self.task,command_id="command-a",test_id="test-a",artifact_id="artifact-a",status="passed",observed=True,complete=False,terminal=True,evidence_session_id="session-a",exit_code=0),)).reasons)
+        self.assertIn("execution_not_complete_passing",score(record,cache,(self.harness.observe_execution(evidence_id="execution-a",binding=self.task,command_id="command-a",test_id="test-a",artifact_id="artifact-a",status="passed",observed=True,complete=False,terminal=True,evidence_session_id="session-a",exit_code=0,attempt_id=record.attempt_id),)).reasons)
         self.assertIn("qualification_not_satisfied",score(record,cache,(evidence,),QualificationAuthority(())).reasons)
         mismatched_predicate=AuthoredEvidencePredicate("wrong",self.task,"command-other","test-a","artifact-a")
         self.assertIn("qualification_not_satisfied",score(record,cache,(evidence,),QualificationAuthority((QualificationObligation("wrong",mismatched_predicate),))).reasons)
