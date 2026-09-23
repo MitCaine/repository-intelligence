@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 import hmac
 from pathlib import PurePosixPath
+import re
 from typing import Any, Optional
 
 from .authority import _Authority, _binding_tuple, _require_authenticated_binding, _sign
@@ -46,6 +47,12 @@ _UNSAFE_SECURITY_DISPOSITIONS = {
     "cleanup": frozenset({"residue"}),
 }
 
+_WRITABLE_ROOT_NAMESPACES = frozenset({"working-tree", "scratch", "cache", "logs", "temp"})
+_BROAD_ROOT_TOKENS = frozenset({
+    "all", "any", "current", "discover", "discovered", "discovery", "everything",
+    "files", "head", "home", "host", "latest", "later", "root", "whatever", "workspace",
+})
+
 
 def _concrete_writable_roots(value: Any, *, nonempty: bool) -> tuple[str, ...]:
     if type(value) not in {tuple, list} or (nonempty and not value):
@@ -54,6 +61,7 @@ def _concrete_writable_roots(value: Any, *, nonempty: bool) -> tuple[str, ...]:
     for index, raw in enumerate(value):
         path = _require_text(raw, f"writable roots[{index}]")
         parsed = PurePosixPath(path)
+        parts = parsed.parts
         if (
             path in {".", ".."}
             or path.startswith(("/", "~"))
@@ -62,6 +70,9 @@ def _concrete_writable_roots(value: Any, *, nonempty: bool) -> tuple[str, ...]:
             or any(part in {"", ".", ".."} for part in parsed.parts)
             or any(marker in path for marker in ("*", "?", "[", "]", "\\", ":", "$", "%"))
             or any(ord(char) < 32 or ord(char) == 127 for char in path)
+            or len(parts) < 2
+            or parts[0] not in _WRITABLE_ROOT_NAMESPACES
+            or any(set(re.split(r"[^a-z0-9]+", part.lower())) & _BROAD_ROOT_TOKENS for part in parts)
         ):
             raise ValidationError("writable root must be normalized, concrete and anchor-relative")
         if any(path == other or path.startswith(other + "/") or other.startswith(path + "/") for other in roots):

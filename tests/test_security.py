@@ -47,18 +47,18 @@ class SecurityPolicyTests(unittest.TestCase):
         self.assertEqual(policy.roots,roots)
         self.assertEqual(security.evaluate_writable_roots(policy,observation,self.binding).status,"pass")
         self.assertEqual(security.evaluate_writable_roots(policy,self.h.observe_writable_roots(self.binding,"sandbox-a",()),self.binding).reasons,("missing:roots",))
-        self.assertEqual(security.evaluate_writable_roots(policy,self.h.observe_writable_roots(self.binding,"sandbox-a",("working-tree/candidate", "scratch/attempt", "extra/root")),self.binding).reasons,("conflict:roots",))
+        self.assertEqual(security.evaluate_writable_roots(policy,self.h.observe_writable_roots(self.binding,"sandbox-a",("working-tree/candidate", "scratch/attempt", "temp/extra")),self.binding).reasons,("conflict:roots",))
 
     def test_concrete_writable_roots_reject_broad_overlap_and_false_provenance(self):
         roots=("working-tree/candidate", "scratch/attempt")
         policy=security.WritableRootsPolicy("roots-a",self.binding,"sandbox-a",roots)
-        for invalid in ((),(".",),("/",),("~/data",),("$HOME",),("a/../b",),("a//b",),("a/*",),("a\\b",),("a", "a/b"),("a", "a")):
+        for invalid in ((),(".",),("/",),("~/data",),("$HOME",),("a/../b",),("a//b",),("a/*",),("a\\b",),("a", "a/b"),("a", "a"),("host-root",),("all-files",),("whatever-is-discovered-later",),("latest",),("root",),("workspace",),("working-tree/all-files",),("scratch/discover-later",),("working-tree",)):
             with self.subTest(invalid=invalid),self.assertRaises(ValidationError):
                 security.WritableRootsPolicy("invalid",self.binding,"sandbox-a",invalid)
         valid=self.h.observe_writable_roots(self.binding,"sandbox-a",roots)
         with self.assertRaises(ValidationError):
             security.evaluate_writable_roots(self.policy,valid,self.binding)
-        for forged in (copy.copy(valid),replace(valid,anchor_id="sandbox-b"),replace(valid,roots=("extra/root",)),security.WritableRootsObservation("direct",self.binding,"sandbox-a",roots)):
+        for forged in (copy.copy(valid),replace(valid,anchor_id="sandbox-b"),replace(valid,roots=("temp/extra",)),security.WritableRootsObservation("direct",self.binding,"sandbox-a",roots)):
             with self.subTest(forged=forged),self.assertRaises(ValidationError):
                 security.evaluate_writable_roots(policy,forged,self.binding)
         other=self.h.bind("other","other-material","other-config","other-generation")
