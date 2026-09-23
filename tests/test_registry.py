@@ -5,7 +5,7 @@ import copy
 import unittest
 
 from repository_intelligence.errors import ValidationError
-from repository_intelligence.registry import RegistryIdentityCatalog
+from repository_intelligence.registry import RegistryIdentityCatalog, SourceMatrixAuthority
 
 
 class RegistryIdentityCatalogTests(unittest.TestCase):
@@ -56,6 +56,72 @@ class RegistryIdentityCatalogTests(unittest.TestCase):
             declarations[1]["value"] = value
             with self.subTest(value=value), self.assertRaises(ValidationError):
                 RegistryIdentityCatalog(declarations)
+
+
+class SourceMatrixAuthorityTests(unittest.TestCase):
+    def setUp(self):
+        self.sources = [
+            {
+                "source_id": "source-a",
+                "repository": "example/repo",
+                "revision": "a" * 40,
+                "language": "Rust",
+                "source_state_mode": "immutable_committed",
+                "configuration_id": "config-a",
+            },
+            {
+                "source_id": "source-b",
+                "repository": "example/repo",
+                "revision": "b" * 40,
+                "language": "TypeScript",
+                "source_state_mode": "immutable_committed",
+                "configuration_id": "config-b",
+            },
+        ]
+
+    def test_exact_authored_geometry_and_caller_mutation(self):
+        authority = SourceMatrixAuthority(self.sources, ["controller", "reviewer"], ["navigate", "scope"])
+        fragment = authority.as_dict()
+        self.assertEqual(len(fragment["matrix"]), 8)
+        self.assertEqual({cell["disposition"] for cell in fragment["matrix"]}, {"not_executed"})
+        authority.validate(fragment)
+        self.sources[0]["revision"] = "c" * 40
+        authority.validate(fragment)
+        fragment["matrix"][0]["source_id"] = "source-b"
+        with self.assertRaises(ValidationError):
+            authority.validate(fragment)
+
+    def test_source_drift_and_self_rebuilt_matrix_fail(self):
+        authority = SourceMatrixAuthority(self.sources, ["controller"], ["navigate"])
+        fragment = authority.as_dict()
+        fragment["source_pins"][0]["revision"] = "c" * 40
+        fragment["matrix"][0]["revision"] = "c" * 40
+        with self.assertRaises(ValidationError):
+            authority.validate(fragment)
+        for mutation in (
+            lambda data: data["matrix"].reverse(),
+            lambda data: data["matrix"].append(data["matrix"][0]),
+            lambda data: data["matrix"][0].update(disposition="qualified"),
+            lambda data: data["source_pins"][0].update(extra="accepted"),
+        ):
+            changed = authority.as_dict()
+            mutation(changed)
+            with self.assertRaises(ValidationError):
+                authority.validate(changed)
+
+    def test_invalid_sources_roles_and_operations_fail(self):
+        for sources in (
+            [],
+            self.sources + [self.sources[0]],
+            [{**self.sources[0], "revision": "latest"}],
+            [{**self.sources[0], "revision": "A" * 40}],
+            [{**self.sources[0], "repository": "example/../other"}],
+        ):
+            with self.subTest(sources=sources), self.assertRaises(ValidationError):
+                SourceMatrixAuthority(sources, ["controller"], ["navigate"])
+        for roles, operations in (([], ["navigate"]), (["controller", "controller"], ["navigate"]), (["controller"], ["latest"])):
+            with self.assertRaises(ValidationError):
+                SourceMatrixAuthority(self.sources, roles, operations)
 
 
 if __name__ == "__main__":
