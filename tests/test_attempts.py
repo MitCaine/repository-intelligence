@@ -1,6 +1,7 @@
 """Direct tests for generic attempt lifecycle authority."""
 from __future__ import annotations
 from dataclasses import replace
+import copy
 import subprocess
 import sys
 import unittest
@@ -9,6 +10,7 @@ from repository_intelligence.attempts import AccessPlanes,AttemptEligibility
 from repository_intelligence.errors import DuplicateAttemptError,ValidationError
 from repository_intelligence.harness import Harness
 from repository_intelligence.scope import ScopeGrant
+from repository_intelligence.security import AttemptCleanupObservation
 
 class AttemptLifecycleTests(unittest.TestCase):
     def setUp(self):
@@ -89,4 +91,54 @@ class AttemptLifecycleTests(unittest.TestCase):
         self.assertEqual(interrupted.returncode,17)
         self.assertEqual(interrupted.stdout,"attempt-0001")
         self.assertEqual(restarted.stdout,"attempt-0001")
+
+    def test_cleanup_observation_is_exact_post_terminal_history(self):
+        ledger = attempts.AttemptLedger()
+        scheduled = ledger.allocate(**self.values)
+        started = ledger.start(scheduled.attempt_id, observed_at=11)
+        finished = ledger.finish(started.attempt_id, status="crashed", termination="crashed", observed_at=12, disposition="failure", evidence_refs=("failure-a",))
+        self.assertEqual((finished.cleanup_observation_id, finished.cleanup_disposition), (None, "unobserved"))
+        observation = self.harness.observe_attempt_cleanup(finished.attempt_id, self.task, observed_at=13, disposition="residue", candidate_claims={"cleanup": "clean"})
+        self.assertTrue(observation.is_authenticated())
+        cleaned = ledger.record_cleanup(finished.attempt_id, observation)
+        self.assertEqual((cleaned.cleanup_observation_id, cleaned.cleanup_observed_at, cleaned.cleanup_disposition), (observation.observation_id, 13, "residue"))
+        self.assertEqual(cleaned.evidence_refs, ("failure-a",))
+        self.assertIs(ledger.history[-2], finished)
+        self.assertEqual(ledger.history[-2].cleanup_disposition, "unobserved")
+        retry = ledger.rerun(finished.attempt_id, scheduled_at=14)
+        self.assertEqual(retry.cleanup_disposition, "unobserved")
+        self.assertEqual(ledger.records[0], cleaned)
+
+    def test_cleanup_identity_time_forgery_and_replay_fail_atomically(self):
+        ledger = attempts.AttemptLedger()
+        scheduled = ledger.allocate(**self.values)
+        early = self.harness.observe_attempt_cleanup(scheduled.attempt_id, self.task, observed_at=13, disposition="clean")
+        before = ledger.history
+        with self.assertRaises(ValidationError):
+            ledger.record_cleanup(scheduled.attempt_id, early)
+        self.assertEqual(ledger.history, before)
+        ledger.start(scheduled.attempt_id, observed_at=11)
+        finished = ledger.finish(scheduled.attempt_id, status="completed", termination="normal", observed_at=12, disposition="terminal")
+        valid = self.harness.observe_attempt_cleanup(finished.attempt_id, self.task, observed_at=13, disposition="clean")
+        wrong_source = self.harness.observe_attempt_cleanup(finished.attempt_id, self.provider, observed_at=13, disposition="clean")
+        wrong_attempt = self.harness.observe_attempt_cleanup("another-attempt", self.task, observed_at=13, disposition="clean")
+        same_time = self.harness.observe_attempt_cleanup(finished.attempt_id, self.task, observed_at=12, disposition="clean")
+        foreign_harness = Harness("foreign-cleanup")
+        foreign_binding = foreign_harness.bind("task-source", "task-material", "config-a", "task-generation")
+        foreign = foreign_harness.observe_attempt_cleanup(finished.attempt_id, foreign_binding, observed_at=13, disposition="clean")
+        direct = AttemptCleanupObservation("direct", finished.attempt_id, self.task, 13, "clean")
+        rejected = (wrong_source, wrong_attempt, same_time, foreign, direct, copy.copy(valid), {"disposition": "clean"})
+        before = ledger.history
+        for observation in rejected:
+            with self.subTest(observation=observation), self.assertRaises(ValidationError):
+                ledger.record_cleanup(finished.attempt_id, observation)
+            self.assertEqual(ledger.history, before)
+        with self.assertRaises(ValidationError):
+            replace(finished, cleanup_observation_id="fake", cleanup_observed_at=12, cleanup_disposition="clean")
+        with self.assertRaises(ValidationError):
+            replace(scheduled, cleanup_observation_id="fake", cleanup_observed_at=13, cleanup_disposition="clean")
+        accepted = ledger.record_cleanup(finished.attempt_id, valid)
+        with self.assertRaises(ValidationError):
+            ledger.record_cleanup(finished.attempt_id, valid)
+        self.assertEqual(ledger.records[0], accepted)
 if __name__=="__main__":unittest.main()

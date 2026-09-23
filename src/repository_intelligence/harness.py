@@ -20,7 +20,7 @@ from .evidence import (
 )
 from .identity import AuthenticatedBinding, IdentityBinding, _new_binding
 from .qualification import ExecutionEvidence
-from .security import SecurityObservation
+from .security import AttemptCleanupObservation, SecurityObservation
 from .validation import _json_value, _require_mapping, _require_text
 
 
@@ -33,6 +33,8 @@ class Harness:
         self._observation_count = 0
         self._evidence_count = 0
         self._security_count = 0
+        self._cleanup_count = 0
+        self._cleanup_issued: dict[str, AttemptCleanupObservation] = {}
 
     def authenticated_binding(
         self,
@@ -251,6 +253,44 @@ class Harness:
                 },
             ),
         )
+        return observation
+
+    def observe_attempt_cleanup(
+        self,
+        attempt_id: str,
+        binding: AuthenticatedBinding,
+        *,
+        observed_at: int,
+        disposition: str,
+        candidate_claims: Optional[Mapping[str, Any]] = None,
+    ) -> AttemptCleanupObservation:
+        """Issue independent attempt-bound cleanup evidence; ignore candidate claims."""
+
+        _require_text(attempt_id, "cleanup attempt_id", identifier=True)
+        expected = _require_authenticated_binding(binding, "cleanup binding")
+        if expected._authority is not self._authority:
+            raise ValidationError("cleanup binding was not issued by this harness")
+        if candidate_claims is not None:
+            _require_mapping(candidate_claims, "candidate_claims")
+        sequence = self._cleanup_count + 1
+        observation = AttemptCleanupObservation(
+            observation_id=f"cleanup-observation-{sequence:04d}",
+            attempt_id=attempt_id,
+            binding=expected,
+            observed_at=observed_at,
+            disposition=disposition,
+            _authority=self._authority,
+            _issuer=self,
+        )
+        object.__setattr__(observation, "_signature", _sign(self._authority, {
+            "observation_id": observation.observation_id,
+            "attempt_id": observation.attempt_id,
+            "binding": observation.binding.as_dict(),
+            "observed_at": observation.observed_at,
+            "disposition": observation.disposition,
+        }))
+        self._cleanup_count = sequence
+        self._cleanup_issued[observation.observation_id] = observation
         return observation
 
     def observe_execution(

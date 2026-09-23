@@ -10,6 +10,7 @@ from .authority import _binding_tuple, _require_authenticated_binding
 from .errors import DuplicateAttemptError, ValidationError
 from .identity import AuthenticatedBinding
 from .scope import ScopeGrant
+from .security import AttemptCleanupObservation
 from .validation import _require_text
 
 
@@ -80,6 +81,9 @@ class AttemptRecord:
     started_at: Optional[int] = None
     finished_at: Optional[int] = None
     last_observed_at: int = 0
+    cleanup_observation_id: Optional[str] = None
+    cleanup_observed_at: Optional[int] = None
+    cleanup_disposition: str = "unobserved"
     retry_of: Optional[str] = None
     retry_root_id: str = ""
     evidence_refs: tuple[str, ...] = ()
@@ -147,6 +151,21 @@ class AttemptRecord:
                 raise ValidationError("terminal attempt requires start and finish observations")
             if not (self.scheduled_at < self.started_at < self.finished_at <= self.last_observed_at):
                 raise ValidationError("terminal attempt time ordering is inconsistent")
+        if self.cleanup_observation_id is None:
+            if self.cleanup_observed_at is not None or self.cleanup_disposition != "unobserved":
+                raise ValidationError("cleanup fields require an authenticated observation identity")
+        else:
+            _require_text(self.cleanup_observation_id, "cleanup_observation_id", identifier=True)
+            if self.status in {"scheduled", "started"} or self.finished_at is None:
+                raise ValidationError("cleanup requires a terminal attempt")
+            if (
+                type(self.cleanup_observed_at) is not int
+                or self.cleanup_observed_at <= self.finished_at
+                or self.cleanup_observed_at > self.last_observed_at
+            ):
+                raise ValidationError("cleanup observation must follow terminal finish")
+            if self.cleanup_disposition not in {"clean", "residue", "unknown"}:
+                raise ValidationError("cleanup disposition is unsupported")
         if self.retry_of is not None:
             _require_text(self.retry_of, "retry_of", identifier=True)
         _require_text(self.retry_root_id, "retry_root_id", identifier=True)
@@ -396,6 +415,43 @@ class AttemptLedger:
                 last_observed_at=observed_at,
                 disposition=disposition,
                 evidence_refs=refs,
+            )
+            self._records[attempt_id] = updated
+            self._history.append(updated)
+            return updated
+
+    def record_cleanup(
+        self,
+        attempt_id: str,
+        observation: AttemptCleanupObservation,
+    ) -> AttemptRecord:
+        """Attach one independent post-terminal cleanup observation atomically."""
+
+        if type(observation) is not AttemptCleanupObservation or not observation.is_authenticated():
+            raise ValidationError("cleanup observation lacks independent issuer provenance")
+        with self._lock:
+            record = self._records.get(attempt_id)
+            if record is None:
+                raise ValidationError("unknown attempt_id")
+            if record.status not in self._TERMINAL or record.finished_at is None:
+                raise ValidationError("cleanup requires a terminal attempt")
+            if record.cleanup_observation_id is not None:
+                raise ValidationError("terminal cleanup observation cannot be rewritten")
+            if observation.attempt_id != attempt_id:
+                raise ValidationError("cleanup observation attempt identity mismatch")
+            if (
+                observation.binding._authority is not record.access_planes.task_source._authority
+                or _binding_tuple(observation.binding) != _binding_tuple(record.access_planes.task_source)
+            ):
+                raise ValidationError("cleanup observation source identity mismatch")
+            if observation.observed_at <= record.last_observed_at:
+                raise ValidationError("cleanup observation must follow terminal finish")
+            updated = replace(
+                record,
+                cleanup_observation_id=observation.observation_id,
+                cleanup_observed_at=observation.observed_at,
+                cleanup_disposition=observation.disposition,
+                last_observed_at=observation.observed_at,
             )
             self._records[attempt_id] = updated
             self._history.append(updated)
