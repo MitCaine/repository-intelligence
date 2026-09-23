@@ -9,8 +9,9 @@ from repository_intelligence import attempts
 from repository_intelligence.attempts import AccessPlanes,AttemptEligibility
 from repository_intelligence.errors import DuplicateAttemptError,ValidationError
 from repository_intelligence.harness import Harness
+from repository_intelligence.qualification import AuthoredEvidencePredicate, QualificationAuthority, QualificationObligation
 from repository_intelligence.scope import ScopeGrant
-from repository_intelligence.security import AttemptCleanupObservation
+from repository_intelligence.security import AttemptCleanupObservation, CacheResetObservation
 
 class AttemptLifecycleTests(unittest.TestCase):
     def setUp(self):
@@ -147,4 +148,45 @@ class AttemptLifecycleTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             ledger.record_cleanup(finished.attempt_id, valid)
         self.assertEqual(ledger.records[0], accepted)
+
+    def test_cache_reset_scoring_requires_independent_complete_exact_evidence(self):
+        ledger=attempts.AttemptLedger()
+        scheduled=ledger.allocate(**self.values)
+        cache=self.harness.observe_cache_reset(scheduled.attempt_id,self.task,observed_at=11,cache_state="cold",reset_disposition="complete",candidate_claims={"cache_state":"warm"})
+        self.assertTrue(cache.is_authenticated())
+        with self.assertRaises(ValidationError):
+            self.harness.observe_cache_reset(scheduled.attempt_id,self.task,observed_at=11,cache_state="cold",reset_disposition="complete")
+        ledger.start(scheduled.attempt_id,observed_at=12)
+        finished=ledger.finish(scheduled.attempt_id,status="completed",termination="normal",observed_at=13,disposition="terminal",evidence_refs=("execution-a",))
+        cleanup=self.harness.observe_attempt_cleanup(finished.attempt_id,self.task,observed_at=14,disposition="clean")
+        record=ledger.record_cleanup(finished.attempt_id,cleanup)
+        evidence=self.harness.observe_execution(evidence_id="execution-a",binding=self.task,command_id="command-a",test_id="test-a",artifact_id="artifact-a",status="passed",observed=True,complete=True,terminal=True,evidence_session_id="session-a",exit_code=0)
+        predicate=AuthoredEvidencePredicate("predicate-a",self.task,"command-a","test-a","artifact-a")
+        authority=QualificationAuthority((QualificationObligation("obligation-a",predicate),))
+        score=lambda r,c,e,a=authority: attempts.assess_scoring(r,c,e,a)
+        self.assertEqual(score(record,cache,(evidence,)).disposition,"eligible")
+        self.assertEqual(score(replace(record,eligibility=AttemptEligibility("cold",False,False)),cache,(evidence,)).disposition,"eligible")
+        self.assertEqual(score(record,None,(evidence,)).reasons,("cache_unverified",))
+        self.assertEqual(score(record,cache,()).disposition,"ineligible")
+        self.assertEqual(score(record,cache,(evidence,evidence)).disposition,"ineligible")
+        self.assertEqual(score(record,cache,(replace(evidence,evidence_id="extra"),)).disposition,"ineligible")
+        self.assertIn("execution_refs_incomplete",score(replace(record,evidence_refs=()),cache,(evidence,)).reasons)
+        self.assertIn("execution_not_complete_passing",score(record,cache,(replace(evidence,complete=False),)).reasons)
+        self.assertEqual(score(record,copy.copy(cache),(evidence,)).reasons,("cache_unverified",))
+        self.assertIn("cache_reset_wrong_boundary",score(replace(record,started_at=11),cache,(evidence,)).reasons)
+        self.assertIn("execution_not_complete_passing",score(record,cache,(self.harness.observe_execution(evidence_id="execution-a",binding=self.task,command_id="command-a",test_id="test-a",artifact_id="artifact-a",status="passed",observed=True,complete=False,terminal=True,evidence_session_id="session-a",exit_code=0),)).reasons)
+        self.assertIn("qualification_not_satisfied",score(record,cache,(evidence,),QualificationAuthority(())).reasons)
+        mismatched_predicate=AuthoredEvidencePredicate("wrong",self.task,"command-other","test-a","artifact-a")
+        self.assertIn("qualification_not_satisfied",score(record,cache,(evidence,),QualificationAuthority((QualificationObligation("wrong",mismatched_predicate),))).reasons)
+        unclean=ledger.rerun(record.attempt_id,scheduled_at=15)
+        self.assertEqual(score(unclean,cache,(evidence,)).disposition,"ineligible")
+        with self.assertRaises(ValidationError):
+            self.harness.observe_cache_reset("another-attempt",self.task,observed_at=11,cache_state="impossible",reset_disposition="complete")
+        direct=CacheResetObservation("direct",record.attempt_id,self.task,11,"cold","complete")
+        self.assertIn("cache_unverified",score(record,direct,(evidence,)).reasons)
+        stale=self.harness.observe_cache_reset("another-attempt",self.provider,observed_at=11,cache_state="unknown",reset_disposition="incomplete")
+        stale_reasons=score(record,stale,(evidence,)).reasons
+        self.assertIn("cache_identity_mismatch",stale_reasons)
+        self.assertIn("cache_reset_incomplete",stale_reasons)
+        self.assertIn("cache_state_mismatch",stale_reasons)
 if __name__=="__main__":unittest.main()

@@ -285,6 +285,51 @@ class AttemptCleanupObservation:
 
 
 @dataclass(frozen=True)
+class CacheResetObservation:
+    """Issuer-retained reset observation bound to one attempt and source."""
+
+    observation_id: str
+    attempt_id: str
+    binding: AuthenticatedBinding
+    observed_at: int
+    cache_state: str
+    reset_disposition: str
+    _authority: Optional[_Authority] = field(default=None, repr=False, compare=False)
+    _issuer: Any = field(default=None, repr=False, compare=False)
+    _signature: str = field(default="", repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        _require_text(self.observation_id, "cache observation_id", identifier=True)
+        _require_text(self.attempt_id, "cache attempt_id", identifier=True)
+        _require_authenticated_binding(self.binding, "cache binding")
+        if type(self.observed_at) is not int or self.observed_at < 0:
+            raise ValidationError("cache observed_at must be a nonnegative exact integer")
+        if self.cache_state not in {"cold", "warm", "unknown"}:
+            raise ValidationError("cache state is unsupported")
+        if self.reset_disposition not in {"complete", "incomplete", "unknown"}:
+            raise ValidationError("cache reset disposition is unsupported")
+
+    def is_authenticated(self) -> bool:
+        if (
+            self._authority is None
+            or self.binding._authority is not self._authority
+            or self._issuer is None
+            or getattr(self._issuer, "_authority", None) is not self._authority
+            or getattr(self._issuer, "_cache_reset_issued", {}).get(self.observation_id) is not self
+        ):
+            return False
+        expected = _sign(self._authority, {
+            "observation_id": self.observation_id,
+            "attempt_id": self.attempt_id,
+            "binding": self.binding.as_dict(),
+            "observed_at": self.observed_at,
+            "cache_state": self.cache_state,
+            "reset_disposition": self.reset_disposition,
+        })
+        return hmac.compare_digest(self._signature, expected)
+
+
+@dataclass(frozen=True)
 class SecurityEvaluation:
     """Derived security gate result and redacted reasons."""
 

@@ -9,8 +9,9 @@ from typing import Any, Optional, Sequence
 from .authority import _binding_tuple, _require_authenticated_binding
 from .errors import DuplicateAttemptError, ValidationError
 from .identity import AuthenticatedBinding
+from .qualification import ExecutionEvidence, QualificationAuthority
 from .scope import ScopeGrant
-from .security import AttemptCleanupObservation
+from .security import AttemptCleanupObservation, CacheResetObservation
 from .validation import _require_text
 
 
@@ -43,7 +44,7 @@ class AccessPlanes:
 
 @dataclass(frozen=True)
 class AttemptEligibility:
-    """Closed cache/reset observation and its scoring consequence."""
+    """Legacy descriptive cache flag; never authoritative for G2 scoring."""
 
     cache_state: str
     cache_state_verified: bool
@@ -58,6 +59,80 @@ class AttemptEligibility:
             not self.cache_state_verified or self.cache_state not in {"cold", "warm"}
         ):
             raise ValidationError("scoring eligibility requires verified cache/reset state")
+
+
+@dataclass(frozen=True)
+class ScoringDecision:
+    """Derived G2 eligibility, not a score or measurement."""
+
+    disposition: str
+    reasons: tuple[str, ...]
+    attempt_id: str
+    cache_observation_id: Optional[str]
+
+    def __post_init__(self) -> None:
+        if self.disposition not in {"eligible", "ineligible"} or (self.disposition == "eligible") != (not self.reasons):
+            raise ValidationError("scoring disposition and reasons are inconsistent")
+        _require_text(self.attempt_id, "scoring attempt_id", identifier=True)
+
+
+def assess_scoring(
+    record: "AttemptRecord",
+    cache_observation: Optional[CacheResetObservation],
+    execution_evidence: Sequence[ExecutionEvidence],
+    qualification_authority: QualificationAuthority,
+) -> ScoringDecision:
+    """Gate scoring on exact independent reset, cleanup and authored evidence."""
+
+    if type(record) is not AttemptRecord:
+        raise ValidationError("scoring requires one immutable attempt record")
+    if type(qualification_authority) is not QualificationAuthority:
+        raise ValidationError("scoring requires authored qualification authority")
+    evidence = tuple(execution_evidence)
+    binding = record.access_planes.task_source
+    reasons: list[str] = []
+    if record.status != "completed" or record.termination != "normal" or record.finished_at is None:
+        reasons.append("attempt_not_completed")
+    if record.cleanup_disposition != "clean" or record._cleanup_evidence is None or not record._cleanup_evidence.is_authenticated():
+        reasons.append("cleanup_not_clean")
+    cache_id = None
+    if type(cache_observation) is not CacheResetObservation or not cache_observation.is_authenticated():
+        reasons.append("cache_unverified")
+    else:
+        cache_id = cache_observation.observation_id
+        if (
+            cache_observation.attempt_id != record.attempt_id
+            or cache_observation.binding._authority is not binding._authority
+            or _binding_tuple(cache_observation.binding) != _binding_tuple(binding)
+        ):
+            reasons.append("cache_identity_mismatch")
+        if record.started_at is None or not (record.scheduled_at < cache_observation.observed_at < record.started_at):
+            reasons.append("cache_reset_wrong_boundary")
+        if cache_observation.reset_disposition != "complete":
+            reasons.append("cache_reset_incomplete")
+        if cache_observation.cache_state not in {"cold", "warm"} or cache_observation.cache_state != record.eligibility.cache_state:
+            reasons.append("cache_state_mismatch")
+    refs = record.evidence_refs
+    if not refs or len(set(refs)) != len(refs):
+        reasons.append("execution_refs_incomplete")
+    typed = all(type(item) is ExecutionEvidence for item in evidence)
+    ids = tuple(item.evidence_id for item in evidence) if typed else ()
+    if not typed or not evidence or len(set(ids)) != len(ids) or set(ids) != set(refs):
+        reasons.append("execution_identity_mismatch")
+    if any(
+        not item.is_authenticated()
+        or item.source_binding._authority is not binding._authority
+        or _binding_tuple(item.source_binding) != _binding_tuple(binding)
+        or item.status != "passed"
+        or item.observed is not True
+        or item.complete is not True
+        or item.terminal is not True
+        for item in evidence if type(item) is ExecutionEvidence
+    ):
+        reasons.append("execution_not_complete_passing")
+    if not qualification_authority.obligations or qualification_authority.assess(evidence, binding).disposition != "qualified":
+        reasons.append("qualification_not_satisfied")
+    return ScoringDecision("eligible" if not reasons else "ineligible", tuple(reasons), record.attempt_id, cache_id)
 
 
 @dataclass(frozen=True)

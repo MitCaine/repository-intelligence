@@ -20,7 +20,7 @@ from .evidence import (
 )
 from .identity import AuthenticatedBinding, IdentityBinding, _new_binding
 from .qualification import ExecutionEvidence
-from .security import AttemptCleanupObservation, SecurityObservation, WritableRootsObservation
+from .security import AttemptCleanupObservation, CacheResetObservation, SecurityObservation, WritableRootsObservation
 from .validation import _json_value, _require_mapping, _require_text
 
 
@@ -38,6 +38,9 @@ class Harness:
         self._cleanup_attempts: set[str] = set()
         self._writable_roots_count = 0
         self._writable_roots_issued: dict[str, WritableRootsObservation] = {}
+        self._cache_reset_count = 0
+        self._cache_reset_issued: dict[str, CacheResetObservation] = {}
+        self._cache_reset_attempts: set[str] = set()
 
     def authenticated_binding(
         self,
@@ -331,6 +334,50 @@ class Harness:
         }))
         self._writable_roots_count = sequence
         self._writable_roots_issued[observation.observation_id] = observation
+        return observation
+
+    def observe_cache_reset(
+        self,
+        attempt_id: str,
+        binding: AuthenticatedBinding,
+        *,
+        observed_at: int,
+        cache_state: str,
+        reset_disposition: str,
+        candidate_claims: Optional[Mapping[str, Any]] = None,
+    ) -> CacheResetObservation:
+        """Issue one controller-side cache/reset observation per exact attempt."""
+
+        _require_text(attempt_id, "cache attempt_id", identifier=True)
+        expected = _require_authenticated_binding(binding, "cache binding")
+        if expected._authority is not self._authority:
+            raise ValidationError("cache binding was not issued by this harness")
+        if candidate_claims is not None:
+            _require_mapping(candidate_claims, "candidate_claims")
+        if attempt_id in self._cache_reset_attempts:
+            raise ValidationError("cache reset observation already issued for attempt")
+        sequence = self._cache_reset_count + 1
+        observation = CacheResetObservation(
+            observation_id=f"cache-reset-observation-{sequence:04d}",
+            attempt_id=attempt_id,
+            binding=expected,
+            observed_at=observed_at,
+            cache_state=cache_state,
+            reset_disposition=reset_disposition,
+            _authority=self._authority,
+            _issuer=self,
+        )
+        object.__setattr__(observation, "_signature", _sign(self._authority, {
+            "observation_id": observation.observation_id,
+            "attempt_id": observation.attempt_id,
+            "binding": observation.binding.as_dict(),
+            "observed_at": observation.observed_at,
+            "cache_state": observation.cache_state,
+            "reset_disposition": observation.reset_disposition,
+        }))
+        self._cache_reset_count = sequence
+        self._cache_reset_issued[observation.observation_id] = observation
+        self._cache_reset_attempts.add(attempt_id)
         return observation
 
     def observe_execution(
