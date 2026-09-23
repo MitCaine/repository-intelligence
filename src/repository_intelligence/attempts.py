@@ -14,7 +14,7 @@ from .validation import _require_text
 
 @dataclass(frozen=True)
 class AttemptRecord:
-    """Immutable snapshot of one durable pre-execution attempt allocation."""
+    """Immutable snapshot of one process-local pre-execution allocation."""
 
     attempt_id: str
     benchmark_id: str
@@ -74,11 +74,13 @@ class AttemptRecord:
 
 
 class AttemptLedger:
-    """Thread-safe, append-retaining allocator for scheduled and rerun attempts.
+    """Thread-safe, process-local allocator for scheduled and rerun attempts.
 
     Validation and duplicate checks complete before the counter and record are
     changed.  A rerun receives a new identity linked by ``retry_of``; it never
-    rewrites the original snapshot or evidence references.
+    rewrites the original snapshot or evidence references. Records are retained
+    only for this Python process; no restart or interruption durability is
+    provided.
     """
 
     _TERMINAL = {

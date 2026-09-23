@@ -1,5 +1,7 @@
 """Direct tests for generic attempt lifecycle authority."""
 from __future__ import annotations
+import subprocess
+import sys
 import unittest
 from repository_intelligence import attempts
 from repository_intelligence.errors import DuplicateAttemptError,ValidationError
@@ -22,4 +24,25 @@ class AttemptLifecycleTests(unittest.TestCase):
         self.assertEqual([record.status for record in ledger.history],["scheduled","started","crashed","scheduled"])
     def test_configuration_must_match_authenticated_binding(self):
         with self.assertRaisesRegex(ValidationError,"configuration_id must equal"):attempts.AttemptLedger().allocate(**{**self.values,"configuration_id":"config-b"})
+    def test_abrupt_exit_does_not_persist_allocation_into_fresh_process(self):
+        allocate = (
+            "import os; from repository_intelligence.attempts import AttemptLedger; "
+            "from repository_intelligence.harness import Harness; "
+            "b=Harness('restart-proof').bind('source','material','config','generation'); "
+            "r=AttemptLedger().allocate(benchmark_id='benchmark',condition_id='condition',"
+            "corpus_id='corpus',case_id='case',task_id='task',source_binding=b,"
+            "configuration_id='config',schedule_block_id='block'); "
+            "os.write(1,r.attempt_id.encode())"
+        )
+        interrupted=subprocess.run(
+            [sys.executable,"-c",allocate+"; os._exit(17)"],
+            check=False,capture_output=True,text=True,
+        )
+        restarted=subprocess.run(
+            [sys.executable,"-c",allocate],
+            check=True,capture_output=True,text=True,
+        )
+        self.assertEqual(interrupted.returncode,17)
+        self.assertEqual(interrupted.stdout,"attempt-0001")
+        self.assertEqual(restarted.stdout,"attempt-0001")
 if __name__=="__main__":unittest.main()
