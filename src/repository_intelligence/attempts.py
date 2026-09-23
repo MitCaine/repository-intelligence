@@ -34,6 +34,8 @@ class AccessPlanes:
             raise ValidationError("edit_scope must be an immutable ScopeGrant")
         if _binding_tuple(self.edit_scope.source_binding) != _binding_tuple(self.task_source):
             raise ValidationError("edit_scope must bind the authenticated task source")
+        if self.edit_scope.source_binding._authority is not self.task_source._authority:
+            raise ValidationError("edit_scope and task source must share an authenticated issuer")
         if self.edit_scope.configuration_id != self.task_source.configuration_id:
             raise ValidationError("edit_scope configuration must match task source")
 
@@ -123,6 +125,10 @@ class AttemptRecord:
             raise ValidationError("scheduled_at must be a nonnegative integer")
         if type(self.last_observed_at) is not int or self.last_observed_at < self.scheduled_at:
             raise ValidationError("last_observed_at cannot precede scheduled_at")
+        for name in ("started_at", "finished_at"):
+            value = getattr(self, name)
+            if value is not None and type(value) is not int:
+                raise ValidationError(f"{name} must be an exact integer when present")
         if self.status == "scheduled":
             if self.termination != "not_started" or self.started_at is not None or self.finished_at is not None:
                 raise ValidationError("scheduled attempt lifecycle is inconsistent")

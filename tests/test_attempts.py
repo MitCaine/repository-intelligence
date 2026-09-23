@@ -1,5 +1,6 @@
 """Direct tests for generic attempt lifecycle authority."""
 from __future__ import annotations
+from dataclasses import replace
 import subprocess
 import sys
 import unittest
@@ -24,6 +25,10 @@ class AttemptLifecycleTests(unittest.TestCase):
         self.assertIs(planes.edit_scope,self.scope)
         with self.assertRaisesRegex(ValidationError,"distinct"):
             AccessPlanes(self.task,self.task,self.retrieval,self.scope)
+        foreign=Harness("foreign-issuer").bind("task-source","task-material","config-a","task-generation")
+        foreign_scope=ScopeGrant.accept({"grant_id":"foreign-edit","source_binding":foreign,"configuration_id":"config-a","registry_id":"registry-a","resolution_id":"resolution-a","operations":[{"operation":"modify","path":"src/example.py"}],"preconditions":{},"destinations":["working-tree"]},foreign)
+        with self.assertRaisesRegex(ValidationError,"issuer"):
+            AccessPlanes(self.task,self.provider,self.retrieval,foreign_scope)
     def test_scoring_eligibility_requires_verified_cache_state(self):
         self.assertTrue(AttemptEligibility("cold",True,True).scoring_eligible)
         for values in (("unknown",False,True),("warm",False,True),("invalid",True,False)):
@@ -46,6 +51,8 @@ class AttemptLifecycleTests(unittest.TestCase):
         ledger=attempts.AttemptLedger(); record=ledger.allocate(**self.values)
         with self.assertRaisesRegex(ValidationError,"after scheduled"):ledger.start(record.attempt_id,observed_at=10)
         started=ledger.start(record.attempt_id,observed_at=11)
+        with self.assertRaisesRegex(ValidationError,"integer"):
+            replace(started,started_at=10.5)
         with self.assertRaisesRegex(ValidationError,"terminal status and termination"):
             ledger.finish(started.attempt_id,status="completed",termination="crashed",observed_at=12,disposition="impossible")
     def test_retry_budget_applies_to_complete_root_lineage(self):
