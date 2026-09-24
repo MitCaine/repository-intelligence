@@ -1,4 +1,12 @@
-# On-demand Rust function locator pilot
+# Source-derived Rust function locator pilot
+
+> **Workflow correction:** The intended use is capsule-first. The controller
+> runs this locator before dispatch, selects a small source-bound function
+> packet, and puts that packet in the capsule. Codex starts with the packet and
+> may run the locator again only if it needs more context. The on-demand checks
+> below exercised the locator as an executor lookup, so their tool timings and
+> initial-output comparisons **must not** be used as evidence that the intended
+> capsule workflow is faster or uses less model context than its controls.
 
 This is a disposable, source-derived navigation aid, not another maintained
 dictionary. It reads one Rust file's bytes, asks a locally installed
@@ -81,3 +89,20 @@ this sample. It does **not** show faster agent completion or prove that it can
 replace the dictionary's richer behavioral descriptions. Search terms and
 limits were fixed for this trial, but one agent conducted all routes, so this
 is an engineering smoke test rather than a blinded A/B/C model evaluation.
+
+## Capsule-first comparison to run next
+
+For each fixed task and source snapshot, prepare three executor starts:
+
+1. Ordinary navigation: task capsule without a function packet; Codex may
+   inspect the source with normal tools.
+2. Dictionary: controller-selected, source-blob-verified dictionary excerpt
+   included in the capsule; Codex may expand into current source.
+3. Repository intelligence: controller-generated, source-hash-verified function
+   packet included in the capsule; Codex may ask the locator for more context.
+
+Record controller preparation time and packet bytes separately from Codex's
+time to a correct, source-verified answer, follow-up tool calls, and total
+model-visible context. A stale dictionary is an invalid preloaded packet, not
+a valid control answer. This is the workflow question the five-file on-demand
+check did not test.
