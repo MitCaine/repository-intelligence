@@ -1,8 +1,9 @@
 # Standalone orientation core: retention decision
 
-This records the #391 scope decision before #392 changes distribution. It does
-not move files, rename imports, or declare the current extracted package safe
-to publish independently.
+This records the #391 scope decision and its implementation. The working tree
+now retains only the Rust locator in the Python package. Historical pilot code,
+security modules, and extraction ledgers remain recoverable from Git history.
+This does not by itself qualify publication of a separate repository.
 
 ## Small interface to retain
 
@@ -16,26 +17,25 @@ certify that a worktree equals a Git commit, resolve calls semantically, or
 store a durable index. The ten-task capsule-first trial in
 `rust-function-locator-pilot.md` supports retaining this module.
 
-The standalone package should keep this module and its direct tests as its
-initial executable core. Add authored meaning only where a real task or the
+The standalone package keeps this module and its direct tests as its initial
+executable core. Add authored meaning only where a real task or the
 Poker sweep shows it is needed; authored Poker authority remains in Poker's
 source/comments and consumer configuration, not in generic Python code.
 
-## Keep historical modules in Poker, not the new core
+## Historical modules retired from the working tree
 
-The current extracted package also contains `acquisition`, `attempts`,
+The former extracted package contained `acquisition`, `attempts`,
 `authority`, `conformance`, `evidence`, `harness`, `identity`, `lineage`,
 `oracle`, `qualification`, `receipt`, `registry`, `scope`, `security`, and
-`validation`, plus common errors. Their present consumers are the legacy
+`validation`, plus common errors. Their consumers were the legacy
 `scripts/repository_intelligence_pilot.py` reexports, Poker-specific
 integration/compatibility tests, and historical benchmark contracts. The
-function locator does not import them. Do not copy them into the standalone
-orientation package merely because they were previously extracted.
+function locator does not import them. They are no longer in the working tree
+or the standalone package.
 
-Preserve these files and their accepted history in Poker until #392 supplies a
-compatibility-preserving packaging split. Do not maintain two independently
-edited copies. If a real future consumer needs one of these interfaces, it
-must establish that need and qualify the retained interface separately.
+Their accepted history remains in Poker Git. If a real future consumer needs
+one of these interfaces, it must establish that need and qualify a restored
+interface separately; do not silently reintroduce the whole pilot.
 
 ## #391 audit findings and disposition
 
@@ -47,10 +47,9 @@ must establish that need and qualify the retained interface separately.
 | `receipt.py` can equate integer schema version `1` with Boolean `True` | Historical generic receipt validator; exclude. Do not use an integer-version receipt as a current orientation-core proof. Fix if retained by a supported consumer. |
 | `evidence.py` compares a binding dictionary to itself | Historical evidence validator; exclude. The check proves nothing independent and should be removed if the validator is retained. |
 
-This is a retention decision, not a claim that the existing published package
-has already stopped exposing these modules or that their defects are repaired.
-#392 must enforce the split and verify actual imports before the standalone
-package is released. Until then, the old modules remain Poker-owned historical
-compatibility surfaces, not prerequisites for the map or sweep. #390 applies
+The removed modules' defects are not repaired; the modules are unsupported.
+The installed-wheel test asserts that only the locator ships, but that check
+still requires the pinned offline build wheels and must pass before a separate
+package is released. #390 applies
 only if a checkout-backed observer is retained or a new one claims exact Git
 worktree identity; the active locator's raw byte digest makes no such claim.
