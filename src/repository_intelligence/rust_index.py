@@ -9,6 +9,9 @@ import re
 import subprocess
 from pathlib import Path
 
+from .search import (compact as _compact, format_compact, format_tree_compact,
+                     query, rank, tokens as _tokens, validate_query)
+
 
 def _children(node: dict, kind: str) -> list[dict]:
     return [child for child in node.get("children", []) if child["kind"] == kind]
@@ -16,16 +19,6 @@ def _children(node: dict, kind: str) -> list[dict]:
 
 def _slice(source: bytes, node: dict) -> str:
     return source[node["start"][0] : node["end"][0]].decode("utf-8", "replace")
-
-
-def _compact(value: str, limit: int) -> str:
-    value = " ".join(value.split())
-    return value[: limit - 1] + "…" if len(value) > limit else value
-
-
-def _tokens(value: str) -> list[str]:
-    value = re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ", value)
-    return re.findall(r"[a-z0-9]+", value.lower())
 
 
 def _walk(node: dict, source: bytes, owners: tuple[str, ...], output: list[dict]) -> None:
@@ -103,34 +96,6 @@ def index_file(path: Path, *, analyzer: str = "rust-analyzer") -> dict:
             "relationship_kind": "lexical call candidates only; not resolved call graph"}
 
 
-def query(index: dict, terms: str, limit: int = 8) -> dict:
-    words = _tokens(terms)
-    if not words or not 1 <= limit <= 20:
-        raise ValueError("Provide query terms and a limit from 1 to 20")
-
-    ranked = sorted((entry for entry in index["functions"] if _score(entry, words) > 0),
-                    key=lambda entry: (_is_test_entry(entry),
-                                       -_score(entry, words), entry["line"]))
-    return {key: index[key] for key in ("path", "raw_sha256", "git_blob_sha1", "function_count", "parse_error_count", "relationship_kind")} | {
-        "query": terms, "matches": ranked[:limit], "total_matches": len(ranked)}
-
-
-def _score(entry: dict, words: list[str]) -> int:
-    name = set(_tokens(entry["name"]))
-    qualified = set(_tokens(entry["qualified_name"]))
-    docs = set(_tokens(entry["docs"]))
-    calls = set(word for call in entry["lexical_call_candidates"]
-                for word in _tokens(call.rsplit("::", 1)[-1]))
-    per_word = [8 * (word in name) + 3 * (word in qualified) + (word in docs)
-                + (word in calls) for word in words]
-    return sum(per_word) + 20 * max(0, sum(value > 0 for value in per_word) - 1)
-
-
-def _is_test_entry(entry: dict) -> bool:
-    return ("tests" in Path(entry.get("path", "")).parts
-            or "tests" in entry["qualified_name"].split("::")[:-1])
-
-
 def _authority_records(directory: Path) -> dict[str, list[dict]]:
     """Read existing authored anchors; they remain claims to confirm in source."""
     if not directory.is_dir():
@@ -191,9 +156,7 @@ def _guidance_for(entry: dict, root: Path, records: dict[str, list[dict]]) -> li
 def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-analyzer",
                authority_dir: Path | None = None) -> dict:
     """Query current Rust files without a second maintained function map."""
-    words = _tokens(terms)
-    if not words or not 1 <= limit <= 20:
-        raise ValueError("Provide query terms and a limit from 1 to 20")
+    words = validate_query(terms, limit)
     if not root.is_dir():
         raise ValueError("Rust query root must be an existing directory")
     candidates = []
@@ -211,12 +174,10 @@ def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-
         scanned += 1
         parse_errors += index["parse_error_count"]
         for entry in index["functions"]:
-            if _score(entry, words) > 0:
-                candidates.append({**entry, "path": str(path), "raw_sha256": index["raw_sha256"],
-                                   "git_blob_sha1": index["git_blob_sha1"],
-                                   "parse_error_count": index["parse_error_count"]})
-    candidates.sort(key=lambda entry: (_is_test_entry(entry),
-                                       -_score(entry, words), entry["path"], entry["line"]))
+            candidates.append({**entry, "path": str(path), "raw_sha256": index["raw_sha256"],
+                               "git_blob_sha1": index["git_blob_sha1"],
+                               "parse_error_count": index["parse_error_count"]})
+    candidates = rank(candidates, words)
     selected = candidates[:limit]
     if authority_dir is not None:
         records = _authority_records(authority_dir)
@@ -227,46 +188,6 @@ def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-
     return {"root": str(root), "query": terms, "scanned_files": scanned,
             "parse_error_count": parse_errors, "failures": failures,
             "total_matches": len(candidates), "matches": selected}
-
-
-def format_tree_compact(result: dict) -> str:
-    lines = [f"{result['root']} scanned={result['scanned_files']} "
-             f"parse_errors={result['parse_error_count']} failures={len(result['failures'])}",
-             f"query={result['query']!r} matches={result['total_matches']} "
-             f"shown={len(result['matches'])}; calls are lexical candidates, not a call graph"]
-    for entry in result["matches"]:
-        lines.append(f"{entry['path']}:{entry['line']}-{entry['end_line']} "
-                     f"{entry['qualified_name']} sha256={entry['raw_sha256']}")
-        if entry.get("guidance_candidates"):
-            shown = entry["guidance_candidates"]
-            extra = entry["guidance_candidate_count"] - len(shown)
-            lines.append("  guidance?: " + ", ".join(
-                record["authority"] for record in shown)
-                + (f" (+{extra} more)" if extra else ""))
-    if result["failures"]:
-        lines.append("INCOMPLETE: some files could not be indexed; no absence claim is valid")
-    return "\n".join(lines)
-
-
-def format_compact(result: dict) -> str:
-    """Render a bounded navigation packet; JSON remains available for machines."""
-    lines = [
-        f"{result['path']} sha256={result['raw_sha256']} "
-        f"functions={result['function_count']} parse_errors={result['parse_error_count']}",
-        f"query={result['query']!r} matches={result['total_matches']} "
-        f"shown={len(result['matches'])}; calls are lexical candidates, not a call graph",
-    ]
-    terms = set(_tokens(result["query"]))
-    for entry in result["matches"]:
-        line = f"L{entry['line']}-{entry['end_line']} {entry['qualified_name']}"
-        if entry["docs"]:
-            line += f" | doc: {_compact(entry['docs'], 120)}"
-        relevant_calls = [call for call in entry["lexical_call_candidates"]
-                          if terms & set(_tokens(call.rsplit("::", 1)[-1]))]
-        if relevant_calls:
-            line += f" | calls?: {', '.join(relevant_calls[:2])}"
-        lines.append(line)
-    return "\n".join(lines)
 
 
 def main() -> None:

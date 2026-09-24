@@ -1,1 +1,1 @@
-"""Rust function orientation for repository-intelligence consumers."""
+"""Source-derived function orientation for repository-intelligence consumers."""
