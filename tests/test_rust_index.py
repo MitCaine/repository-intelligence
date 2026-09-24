@@ -60,9 +60,12 @@ class RustIndexTests(unittest.TestCase):
             (root / "src" / "game.rs").write_bytes(self.SOURCE)
             (root / "target").mkdir()
             (root / "target" / "ignored.rs").write_text("fn award_pot() {}")
+            (root / "tests").mkdir()
+            (root / "tests" / "game_contract.rs").write_text("fn award_pot() {}")
             result = query_tree(root, "award pot", 2)
-            self.assertEqual(result["scanned_files"], 1)
-            self.assertEqual(result["total_matches"], 1)
+            self.assertEqual(result["scanned_files"], 2)
+            self.assertEqual(result["total_matches"], 2)
+            self.assertEqual(result["matches"][0]["path"], str(root / "src" / "game.rs"))
             self.assertEqual(result["matches"][0]["line"], 5)
             self.assertEqual(result["matches"][0]["raw_sha256"],
                              hashlib.sha256(self.SOURCE).hexdigest())
@@ -84,12 +87,18 @@ class RustIndexTests(unittest.TestCase):
             (guidance / "game.md").write_text(
                 "### game.pot\n\nContract: Award a completed pot.\n\n"
                 "Must not: Invent settlement.\n\n"
+                "Anchors: `src/game.rs::{Game}`.\n\n"
+                "### game.pot-2\n\nContract: Another relevant contract.\n\n"
+                "Anchors: `src/game.rs::{Game}`.\n\n"
+                "### game.pot-3\n\nContract: Third relevant contract.\n\n"
                 "Anchors: `src/game.rs::{Game}`.\n")
             result = query_tree(root, "award pot", authority_dir=guidance)
             match = result["matches"][0]
             self.assertEqual(match["guidance_candidates"][0]["contract"],
                              "Award a completed pot.")
             self.assertIn("game.md (game.pot)", format_tree_compact(result))
+            self.assertEqual(match["guidance_candidate_count"], 3)
+            self.assertIn("(+1 more)", format_tree_compact(result))
             self.assertEqual(match["raw_sha256"], hashlib.sha256(self.SOURCE).hexdigest())
             with self.assertRaises(ValueError):
                 query_tree(root, "award pot", authority_dir=root / "missing")

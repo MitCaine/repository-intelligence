@@ -126,6 +126,10 @@ def _score(entry: dict, words: list[str]) -> int:
     return sum(per_word) + 20 * max(0, sum(value > 0 for value in per_word) - 1)
 
 
+def _is_test_entry(entry: dict) -> bool:
+    return "tests" in Path(entry["path"]).parts or "::tests::" in entry["qualified_name"]
+
+
 def _authority_records(directory: Path) -> dict[str, list[dict]]:
     """Read existing authored anchors; they remain claims to confirm in source."""
     if not directory.is_dir():
@@ -180,7 +184,7 @@ def _guidance_for(entry: dict, root: Path, records: dict[str, list[dict]]) -> li
         matched.append((rank, record))
     matched.sort(key=lambda item: (-item[0], item[1]["authority"]))
     return [{key: value for key, value in record.items() if key != "symbols"}
-            for _, record in matched[:2]]
+            for _, record in matched]
 
 
 def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-analyzer",
@@ -210,13 +214,15 @@ def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-
                 candidates.append({**entry, "path": str(path), "raw_sha256": index["raw_sha256"],
                                    "git_blob_sha1": index["git_blob_sha1"],
                                    "parse_error_count": index["parse_error_count"]})
-    candidates.sort(key=lambda entry: ("::tests::" in entry["qualified_name"],
+    candidates.sort(key=lambda entry: (_is_test_entry(entry),
                                        -_score(entry, words), entry["path"], entry["line"]))
     selected = candidates[:limit]
     if authority_dir is not None:
         records = _authority_records(authority_dir)
         for entry in selected:
-            entry["guidance_candidates"] = _guidance_for(entry, root, records)
+            guidance = _guidance_for(entry, root, records)
+            entry["guidance_candidate_count"] = len(guidance)
+            entry["guidance_candidates"] = guidance[:2]
     return {"root": str(root), "query": terms, "scanned_files": scanned,
             "parse_error_count": parse_errors, "failures": failures,
             "total_matches": len(candidates), "matches": selected}
@@ -231,8 +237,11 @@ def format_tree_compact(result: dict) -> str:
         lines.append(f"{entry['path']}:{entry['line']}-{entry['end_line']} "
                      f"{entry['qualified_name']} sha256={entry['raw_sha256']}")
         if entry.get("guidance_candidates"):
+            shown = entry["guidance_candidates"]
+            extra = entry["guidance_candidate_count"] - len(shown)
             lines.append("  guidance?: " + ", ".join(
-                record["authority"] for record in entry["guidance_candidates"]))
+                record["authority"] for record in shown)
+                + (f" (+{extra} more)" if extra else ""))
     if result["failures"]:
         lines.append("INCOMPLETE: some files could not be indexed; no absence claim is valid")
     return "\n".join(lines)
