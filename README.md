@@ -1,11 +1,11 @@
 # Repository Intelligence
 
 A small, source-derived function locator for AI-assisted repository navigation.
-It parses current Rust files with `rust-analyzer`, returns compact function
-locations and source hashes, and can attach candidate guidance from an
-existing authored authority directory. It creates no database or maintained
-function dictionary. It does not grant edit authority, resolve a call graph,
-or replace checking the relevant source.
+The common query interface currently supports Python (`ast`) and Rust
+(`rust-analyzer`) files in any local project. It returns compact function
+locations and source hashes without a database or maintained function
+dictionary. It does not grant edit authority, resolve a call graph, or replace
+checking the relevant source. Other languages are not yet supported.
 
 This is the reusable core extracted from the [Poker App](https://github.com/MitCaine/poker-app)
 pilot. Poker-specific authority maps, capsule rules, and consumer configuration
@@ -14,20 +14,28 @@ preserved in Git history but is not part of the current package.
 
 ## Use
 
-Python 3.12 or 3.13 and a local `rust-analyzer` executable are required. No
-hosted service or Python runtime dependency is needed. From this repository:
+Python 3.12 or 3.13 is required. A local `rust-analyzer` executable is also
+required when scanning Rust; Python source needs no external parser. No hosted
+service or Python runtime dependency is needed. From this repository:
 
 ```sh
-PYTHONPATH=src python3.13 -m repository_intelligence.rust_index \
-  /path/to/rust/project --query 'pause resume clock' --limit 8
+PYTHONPATH=src python3.13 -m repository_intelligence.locator \
+  /path/to/project --query 'pause resume clock' --limit 8
 ```
 
-For one large file, pass its path instead of a directory. Add `--json` for
-structured output. Add `--authority-dir /path/to/project/authority` only if the
-consumer has authored `Anchors:` entries; these are candidate guidance, not
-source truth. Results report parse errors and files that could not be indexed.
-The raw SHA-256 identifies bytes read, not a verified Git checkout. Lexical
-call candidates are not resolved relationships.
+Pass one `.py` or `.rs` file instead of a directory to narrow the scan. Add
+`--json` for structured output. Directory results report files that could not
+be indexed; an unsupported single-file type is rejected explicitly. A directory
+scan covers supported files only, so no result is **not** proof that an
+unsupported language has no relevant function. The raw SHA-256 identifies
+bytes read, not a verified Git checkout. Lexical call candidates are not
+resolved relationships.
+
+The earlier Rust-only command remains available as
+`python3.13 -m repository_intelligence.rust_index`. Its optional
+`--authority-dir` consumes Poker-style authored Markdown anchors as *candidate*
+guidance. A project-neutral guidance format for the shared command is still
+planned; guidance is never needed to use source-derived lookup.
 
 ## Verify
 
@@ -45,6 +53,7 @@ RI_REQUIRE_STANDALONE=1 PYTHONDONTWRITEBYTECODE=1 \
 python3.13 -m unittest discover -s tests -p test_installed_package.py
 ```
 
-The [pilot report](docs/rust-function-locator-pilot.md) records Poker navigation
-trials and their measurement limits. The [extraction decision](docs/standalone-core-seam.md)
-explains why the earlier research modules are not included.
+The [pilot report](docs/rust-function-locator-pilot.md) records earlier Poker
+navigation trials and their measurement limits. The
+[extraction decision](docs/standalone-core-seam.md) explains why the earlier
+research modules are not included.

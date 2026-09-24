@@ -1,4 +1,4 @@
-"""Offline wheel smoke test from an unrelated Rust consumer directory."""
+"""Offline wheel smoke test from an unrelated mixed-language directory."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ class InstalledPackageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="ri-installed-") as raw:
             temp = Path(raw)
             build, install, output = (temp / name for name in ("build", "install", "wheels"))
-            consumer = temp / "neutral-rust-consumer"
+            consumer = temp / "neutral-consumer"
             run(sys.executable, "-m", "venv", build, env=environment)
             build_python = build / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
             run(build_python, "-m", "pip", "install", "--no-index", "--no-deps",
@@ -54,23 +54,27 @@ class InstalledPackageTests(unittest.TestCase):
                 modules = {name for name in archive.namelist()
                            if name.startswith("repository_intelligence/") and name.endswith(".py")}
             self.assertEqual(modules, {"repository_intelligence/__init__.py",
-                                       "repository_intelligence/rust_index.py"})
+                                       "repository_intelligence/rust_index.py",
+                                       "repository_intelligence/python_index.py",
+                                       "repository_intelligence/search.py",
+                                       "repository_intelligence/locator.py"})
             run(sys.executable, "-m", "venv", install, env=environment)
             installed_python = install / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
             run(installed_python, "-m", "pip", "install", "--no-index", "--no-deps",
                 built[0], env=environment)
             (consumer / "src").mkdir(parents=True)
             (consumer / "src/lib.rs").write_text("pub fn calculate_total(a: i32, b: i32) -> i32 { a + b }\n")
+            (consumer / "src/orders.py").write_text("def calculate_total(price):\n    return price\n")
             script = temp / "smoke.py"
             script.write_text(
                 "import json\n"
                 "from pathlib import Path\n"
-                "from repository_intelligence.rust_index import index_file, query\n"
-                "result = query(index_file(Path('src/lib.rs')), 'calculate total')\n"
-                "print(json.dumps([item['name'] for item in result['matches']]))\n")
+                "from repository_intelligence.locator import query_path\n"
+                "result = query_path(Path('src'), 'calculate total')\n"
+                "print(json.dumps(sorted(item['path'] for item in result['matches'])))\n")
             environment["PATH"] = str(Path(analyzer).parent) + os.pathsep + environment.get("PATH", "")
             result = run(installed_python, "-I", script, cwd=consumer, env=environment)
-            self.assertEqual(json.loads(result), ["calculate_total"])
+            self.assertEqual(json.loads(result), ["src/lib.rs", "src/orders.py"])
 
 
 if __name__ == "__main__":
