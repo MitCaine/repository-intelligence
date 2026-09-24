@@ -108,22 +108,68 @@ def query(index: dict, terms: str, limit: int = 8) -> dict:
     if not words or not 1 <= limit <= 20:
         raise ValueError("Provide query terms and a limit from 1 to 20")
 
-    def score(entry: dict) -> int:
-        name = set(_tokens(entry["name"]))
-        qualified = set(_tokens(entry["qualified_name"]))
-        docs = set(_tokens(entry["docs"]))
-        calls = set(word for call in entry["lexical_call_candidates"]
-                    for word in _tokens(call.rsplit("::", 1)[-1]))
-        per_word = [8 * (word in name) + 3 * (word in qualified) + (word in docs)
-                    + (word in calls)
-                    for word in words]
-        return sum(per_word) + 20 * max(0, sum(value > 0 for value in per_word) - 1)
-
-    ranked = sorted((entry for entry in index["functions"] if score(entry) > 0),
+    ranked = sorted((entry for entry in index["functions"] if _score(entry, words) > 0),
                     key=lambda entry: ("::tests::" in entry["qualified_name"],
-                                       -score(entry), entry["line"]))
+                                       -_score(entry, words), entry["line"]))
     return {key: index[key] for key in ("path", "raw_sha256", "git_blob_sha1", "function_count", "parse_error_count", "relationship_kind")} | {
         "query": terms, "matches": ranked[:limit], "total_matches": len(ranked)}
+
+
+def _score(entry: dict, words: list[str]) -> int:
+    name = set(_tokens(entry["name"]))
+    qualified = set(_tokens(entry["qualified_name"]))
+    docs = set(_tokens(entry["docs"]))
+    calls = set(word for call in entry["lexical_call_candidates"]
+                for word in _tokens(call.rsplit("::", 1)[-1]))
+    per_word = [8 * (word in name) + 3 * (word in qualified) + (word in docs)
+                + (word in calls) for word in words]
+    return sum(per_word) + 20 * max(0, sum(value > 0 for value in per_word) - 1)
+
+
+def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-analyzer") -> dict:
+    """Query current Rust files without a second maintained function map."""
+    words = _tokens(terms)
+    if not words or not 1 <= limit <= 20:
+        raise ValueError("Provide query terms and a limit from 1 to 20")
+    if not root.is_dir():
+        raise ValueError("Rust query root must be an existing directory")
+    candidates = []
+    failures = []
+    scanned = 0
+    parse_errors = 0
+    for path in sorted(root.rglob("*.rs")):
+        if any(part.startswith(".") or part == "target" for part in path.relative_to(root).parts):
+            continue
+        try:
+            index = index_file(path, analyzer=analyzer)
+        except (OSError, ValueError, subprocess.SubprocessError, json.JSONDecodeError) as error:
+            failures.append({"path": str(path), "error": type(error).__name__})
+            continue
+        scanned += 1
+        parse_errors += index["parse_error_count"]
+        for entry in index["functions"]:
+            if _score(entry, words) > 0:
+                candidates.append({**entry, "path": str(path), "raw_sha256": index["raw_sha256"],
+                                   "git_blob_sha1": index["git_blob_sha1"],
+                                   "parse_error_count": index["parse_error_count"]})
+    candidates.sort(key=lambda entry: ("::tests::" in entry["qualified_name"],
+                                       -_score(entry, words), entry["path"], entry["line"]))
+    return {"root": str(root), "query": terms, "scanned_files": scanned,
+            "parse_error_count": parse_errors, "failures": failures,
+            "total_matches": len(candidates), "matches": candidates[:limit]}
+
+
+def format_tree_compact(result: dict) -> str:
+    lines = [f"{result['root']} scanned={result['scanned_files']} "
+             f"parse_errors={result['parse_error_count']} failures={len(result['failures'])}",
+             f"query={result['query']!r} matches={result['total_matches']} "
+             f"shown={len(result['matches'])}; calls are lexical candidates, not a call graph"]
+    for entry in result["matches"]:
+        lines.append(f"{entry['path']}:{entry['line']}-{entry['end_line']} "
+                     f"{entry['qualified_name']} sha256={entry['raw_sha256']}")
+    if result["failures"]:
+        lines.append("INCOMPLETE: some files could not be indexed; no absence claim is valid")
+    return "\n".join(lines)
 
 
 def format_compact(result: dict) -> str:
@@ -154,8 +200,12 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=8)
     parser.add_argument("--json", action="store_true", help="emit structured JSON instead of compact text")
     args = parser.parse_args()
-    result = query(index_file(args.source), args.query, args.limit)
-    print(json.dumps(result, indent=2) if args.json else format_compact(result))
+    if args.source.is_dir():
+        result = query_tree(args.source, args.query, args.limit)
+        print(json.dumps(result, indent=2) if args.json else format_tree_compact(result))
+    else:
+        result = query(index_file(args.source), args.query, args.limit)
+        print(json.dumps(result, indent=2) if args.json else format_compact(result))
 
 
 if __name__ == "__main__":

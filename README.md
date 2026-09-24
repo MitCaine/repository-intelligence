@@ -15,3 +15,13 @@ RI_REQUIRE_STANDALONE=1 PYTHONDONTWRITEBYTECODE=1 python3.12 scripts/test_reposi
 The command makes isolated build and install environments, builds a wheel without network access, installs it without `PYTHONPATH`, and indexes a Rust file in an unrelated temporary consumer directory. It fails if the offline wheels or `rust-analyzer` are missing. It does not build Poker or WASM. The same command can use `python3.13`; use the desired interpreter explicitly. Ordinary test discovery skips this integration check if the wheel inputs are absent.
 
 This checkout has not been separated or published. Do not treat the legacy pilot records, receipts, schemas, or historical benchmark evidence as a general-purpose package contract.
+
+## Source-derived project lookup
+
+From the Poker repository root, a directory query searches current Rust source without generating or maintaining a second map:
+
+```sh
+PYTHONPATH=repository-intelligence/src python3.12 -m repository_intelligence.rust_index . --query 'practice reset starting position' --limit 8
+```
+
+Each result includes a narrow line range and raw source hash. The output reports files it could not index and parse-error counts; lexical call candidates are navigation hints, not resolved relationships. The controller should add relevant audited authority guidance to the task packet and confirm narrow source before editing. A full 308-file Poker checkout query took about 13 seconds on the current macOS host; no database, cache, hosted CI, or committed generated map is required.

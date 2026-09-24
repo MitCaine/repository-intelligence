@@ -6,7 +6,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from repository_intelligence.rust_index import _tokens, format_compact, index_file, query
+from repository_intelligence.rust_index import (
+    _tokens, format_compact, format_tree_compact, index_file, query, query_tree,
+)
 
 
 @unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer not installed")
@@ -50,6 +52,27 @@ class RustIndexTests(unittest.TestCase):
             query({"functions": []}, "pot", 21)
         with self.assertRaises(ValueError):
             query({"functions": []}, "", 1)
+
+    def test_tree_query_is_source_bound_and_reports_incomplete_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            (root / "src" / "game.rs").write_bytes(self.SOURCE)
+            (root / "target").mkdir()
+            (root / "target" / "ignored.rs").write_text("fn award_pot() {}")
+            result = query_tree(root, "award pot", 2)
+            self.assertEqual(result["scanned_files"], 1)
+            self.assertEqual(result["total_matches"], 1)
+            self.assertEqual(result["matches"][0]["line"], 5)
+            self.assertEqual(result["matches"][0]["raw_sha256"],
+                             hashlib.sha256(self.SOURCE).hexdigest())
+            self.assertIn("game.rs:5", format_tree_compact(result))
+            (root / "src" / "missing.rs").symlink_to(root / "does-not-exist.rs")
+            incomplete = query_tree(root, "award pot")
+            self.assertEqual(len(incomplete["failures"]), 1)
+            self.assertIn("INCOMPLETE", format_tree_compact(incomplete))
+            with self.assertRaises(ValueError):
+                query_tree(root / "missing", "award pot")
 
 
 if __name__ == "__main__":
