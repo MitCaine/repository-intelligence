@@ -25,3 +25,7 @@ PYTHONPATH=repository-intelligence/src python3.12 -m repository_intelligence.rus
 ```
 
 Each result includes a narrow line range and raw source hash. The output reports files it could not index and parse-error counts; lexical call candidates are navigation hints, not resolved relationships. The controller should add relevant audited authority guidance to the task packet and confirm narrow source before editing. A full 308-file Poker checkout query took about 13 seconds on the current macOS host; no database, cache, hosted CI, or committed generated map is required.
+
+The former hand-maintained Poker source dictionaries are retired. They remain recoverable in Git
+history but are not a required input or current navigation authority. For authored ownership and
+invariants, use Poker's audited `engineering/authority/` documents and relevant source comments.
