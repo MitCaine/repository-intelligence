@@ -74,6 +74,26 @@ class RustIndexTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 query_tree(root / "missing", "award pot")
 
+    def test_tree_query_adds_matching_authored_guidance_without_replacing_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            (root / "src" / "game.rs").write_bytes(self.SOURCE)
+            guidance = root / "authority"
+            guidance.mkdir()
+            (guidance / "game.md").write_text(
+                "### game.pot\n\nContract: Award a completed pot.\n\n"
+                "Must not: Invent settlement.\n\n"
+                "Anchors: `src/game.rs::{Game}`.\n")
+            result = query_tree(root, "award pot", authority_dir=guidance)
+            match = result["matches"][0]
+            self.assertEqual(match["guidance_candidates"][0]["contract"],
+                             "Award a completed pot.")
+            self.assertIn("game.md (game.pot)", format_tree_compact(result))
+            self.assertEqual(match["raw_sha256"], hashlib.sha256(self.SOURCE).hexdigest())
+            with self.assertRaises(ValueError):
+                query_tree(root, "award pot", authority_dir=root / "missing")
+
 
 if __name__ == "__main__":
     unittest.main()

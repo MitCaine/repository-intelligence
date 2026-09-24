@@ -126,7 +126,65 @@ def _score(entry: dict, words: list[str]) -> int:
     return sum(per_word) + 20 * max(0, sum(value > 0 for value in per_word) - 1)
 
 
-def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-analyzer") -> dict:
+def _authority_records(directory: Path) -> dict[str, list[dict]]:
+    """Read existing authored anchors; they remain claims to confirm in source."""
+    if not directory.is_dir():
+        raise ValueError("Authority directory must be an existing directory")
+    records: dict[str, list[dict]] = {}
+    for document in sorted(directory.glob("*.md")):
+        heading = ""
+        fields: dict[str, str] = {}
+
+        def finish() -> None:
+            for token in re.findall(r"`([^`]+)`", fields.get("Anchors", "")):
+                anchor = re.fullmatch(r"(.+?\.rs)(?:::(.*))?", token)
+                if anchor is None:
+                    continue
+                symbols = anchor.group(2) or ""
+                names = [part.strip() for part in symbols.strip("{}").split(",") if part.strip()]
+                records.setdefault(anchor.group(1), []).append({
+                    "authority": f"{document} ({heading})",
+                    "contract": fields.get("Contract", ""),
+                    "origin": fields.get("Origin / mutation", ""),
+                    "must_not": fields.get("Must not", ""),
+                    "symbols": names,
+                })
+
+        for line in [*document.read_text().splitlines(), "### END"]:
+            if line.startswith("### "):
+                finish()
+                heading = line[4:].strip()
+                fields = {}
+            elif heading and ": " in line:
+                key, value = line.split(": ", 1)
+                if key in {"Contract", "Origin / mutation", "Must not", "Anchors"}:
+                    fields[key] = value
+    return records
+
+
+def _guidance_for(entry: dict, root: Path, records: dict[str, list[dict]]) -> list[dict]:
+    path = Path(entry["path"]).resolve().relative_to(root.resolve()).as_posix()
+    qualified = entry["qualified_name"]
+    identifiers = set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", qualified))
+    matched = []
+    for record in records.get(path, []):
+        symbols = record["symbols"]
+        if not symbols:
+            rank = 0
+        elif any(qualified.endswith(symbol) for symbol in symbols if "::" in symbol):
+            rank = 2
+        elif any(symbol in identifiers for symbol in symbols if "::" not in symbol):
+            rank = 1
+        else:
+            continue
+        matched.append((rank, record))
+    matched.sort(key=lambda item: (-item[0], item[1]["authority"]))
+    return [{key: value for key, value in record.items() if key != "symbols"}
+            for _, record in matched[:2]]
+
+
+def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-analyzer",
+               authority_dir: Path | None = None) -> dict:
     """Query current Rust files without a second maintained function map."""
     words = _tokens(terms)
     if not words or not 1 <= limit <= 20:
@@ -154,9 +212,14 @@ def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-
                                    "parse_error_count": index["parse_error_count"]})
     candidates.sort(key=lambda entry: ("::tests::" in entry["qualified_name"],
                                        -_score(entry, words), entry["path"], entry["line"]))
+    selected = candidates[:limit]
+    if authority_dir is not None:
+        records = _authority_records(authority_dir)
+        for entry in selected:
+            entry["guidance_candidates"] = _guidance_for(entry, root, records)
     return {"root": str(root), "query": terms, "scanned_files": scanned,
             "parse_error_count": parse_errors, "failures": failures,
-            "total_matches": len(candidates), "matches": candidates[:limit]}
+            "total_matches": len(candidates), "matches": selected}
 
 
 def format_tree_compact(result: dict) -> str:
@@ -167,6 +230,9 @@ def format_tree_compact(result: dict) -> str:
     for entry in result["matches"]:
         lines.append(f"{entry['path']}:{entry['line']}-{entry['end_line']} "
                      f"{entry['qualified_name']} sha256={entry['raw_sha256']}")
+        if entry.get("guidance_candidates"):
+            lines.append("  guidance?: " + ", ".join(
+                record["authority"] for record in entry["guidance_candidates"]))
     if result["failures"]:
         lines.append("INCOMPLETE: some files could not be indexed; no absence claim is valid")
     return "\n".join(lines)
@@ -198,10 +264,12 @@ def main() -> None:
     parser.add_argument("source", type=Path)
     parser.add_argument("--query", required=True)
     parser.add_argument("--limit", type=int, default=8)
+    parser.add_argument("--authority-dir", type=Path,
+                        help="optional authored Markdown anchor directory for candidate guidance")
     parser.add_argument("--json", action="store_true", help="emit structured JSON instead of compact text")
     args = parser.parse_args()
     if args.source.is_dir():
-        result = query_tree(args.source, args.query, args.limit)
+        result = query_tree(args.source, args.query, args.limit, authority_dir=args.authority_dir)
         print(json.dumps(result, indent=2) if args.json else format_tree_compact(result))
     else:
         result = query(index_file(args.source), args.query, args.limit)
