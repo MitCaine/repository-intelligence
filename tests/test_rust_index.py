@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from repository_intelligence.rust_index import index_file, query
+from repository_intelligence.rust_index import _tokens, format_compact, index_file, query
 
 
 @unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer not installed")
@@ -34,10 +34,18 @@ class RustIndexTests(unittest.TestCase):
             self.assertIn("winning pot", award["docs"])
             self.assertIn("record_result", award["lexical_call_candidates"])
             self.assertNotIn("records", query(indexed, "missing term")["matches"])
+            compact = format_compact(query(indexed, "award record", 1))
+            self.assertEqual(len(compact.splitlines()), 3)
+            self.assertIn(indexed["raw_sha256"], compact)
+            self.assertIn("doc: Records a winning pot.", compact)
+            self.assertIn("calls?: record_result", compact)
+            self.assertIn("shown=1", compact)
             source_path.write_bytes(self.SOURCE + b"\n")
             self.assertNotEqual(indexed["raw_sha256"], index_file(source_path)["raw_sha256"])
 
     def test_query_rejects_unbounded_output(self):
+        self.assertEqual(_tokens("TournamentTableSettlement::award_pot"),
+                         ["tournament", "table", "settlement", "award", "pot"])
         with self.assertRaises(ValueError):
             query({"functions": []}, "pot", 21)
         with self.assertRaises(ValueError):
