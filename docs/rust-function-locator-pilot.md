@@ -42,3 +42,42 @@ lines/1,274 bytes for a manually narrowed symbol search. These are output-size
 observations, **not** measured model-token or task-time savings. The dictionary
 still contains behavioral explanations absent from the source comments; the
 generated packet must lead to narrow source inspection for those claims.
+
+## Five-file navigation check
+
+The same natural-language location question was tried three ways for each
+file: ordinary `rg` over the Rust source (first 40 result lines), `rg` over its
+source dictionary (first 40), and this locator (first eight functions). The
+questions concerned destination movement burden, seat-private canonical
+export, causal presentation grouping, entrant-seat assignment, and hybrid
+saved-pair validation, respectively. All five local source blobs matched the
+remote `main` blobs. Numbers below are **model-visible initial result bytes**
+and median local tool round-trip milliseconds over three repeats; they are not
+model tokens or agent task-completion times.
+
+| Rust file | Source search | Dictionary search | Locator | Dictionary source match? |
+| --- | ---: | ---: | ---: | --- |
+| `poker-game/src/lib.rs` | 2,726 B / 56 ms | 3,369 B / 51 ms | 1,186 B / 233 ms | No |
+| `poker-session/src/holdem.rs` | 2,493 B / 49 ms | 5,488 B / 49 ms | 1,582 B / 163 ms | Yes |
+| `poker-client/src/presentation.rs` | 2,425 B / 50 ms | 2,295 B / 50 ms | 872 B / 161 ms | Yes |
+| `poker-tournament/src/domain.rs` | 1,994 B / 50 ms | 4,273 B / 50 ms | 1,027 B / 132 ms | Yes |
+| `poker-app/src/tournament.rs` | 2,316 B / 50 ms | 3,557 B / 51 ms | 1,235 B / 214 ms | No |
+
+Across these five prompts, the locator returned the primary production entry
+point in its first eight matches every time. The first 40 ordinary source hits
+missed the primary declaration for assignment and hybrid validation, requiring
+refinement. The two stale dictionaries cannot be trusted for current line
+numbers or behavioral claims: `poker-game/src/lib.rs` is now 6,566 lines versus
+the dictionary's 6,554, and `poker-app/src/tournament.rs` is 5,259 versus
+4,885. A correct dictionary-assisted workflow must check its recorded blob
+and fall back to current source for those files.
+
+Initial result output totaled 11,954 B for ordinary source search, 18,982 B
+for dictionary search, and 5,902 B for the locator. Reading the same focused
+source spans to verify all five answers adds 11,309 B to **each** route; under
+that deliberately uniform verification rule, totals are 23,263 B, 30,291 B,
+and 17,211 B. This makes the locator a useful navigation and freshness aid in
+this sample. It does **not** show faster agent completion or prove that it can
+replace the dictionary's richer behavioral descriptions. Search terms and
+limits were fixed for this trial, but one agent conducted all routes, so this
+is an engineering smoke test rather than a blinded A/B/C model evaluation.
