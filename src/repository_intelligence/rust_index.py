@@ -23,6 +23,11 @@ def _compact(value: str, limit: int) -> str:
     return value[: limit - 1] + "…" if len(value) > limit else value
 
 
+def _tokens(value: str) -> list[str]:
+    value = re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ", value)
+    return re.findall(r"[a-z0-9]+", value.lower())
+
+
 def _walk(node: dict, source: bytes, owners: tuple[str, ...], output: list[dict]) -> None:
     kind = node["kind"]
     if kind == "MODULE":
@@ -99,22 +104,47 @@ def index_file(path: Path, *, analyzer: str = "rust-analyzer") -> dict:
 
 
 def query(index: dict, terms: str, limit: int = 8) -> dict:
-    words = re.findall(r"[a-z0-9]+", terms.lower())
+    words = _tokens(terms)
     if not words or not 1 <= limit <= 20:
         raise ValueError("Provide query terms and a limit from 1 to 20")
 
     def score(entry: dict) -> int:
-        name = set(re.findall(r"[a-z0-9]+", entry["name"].lower()))
-        qualified = set(re.findall(r"[a-z0-9]+", entry["qualified_name"].lower()))
-        docs = set(re.findall(r"[a-z0-9]+", entry["docs"].lower()))
+        name = set(_tokens(entry["name"]))
+        qualified = set(_tokens(entry["qualified_name"]))
+        docs = set(_tokens(entry["docs"]))
+        calls = set(word for call in entry["lexical_call_candidates"]
+                    for word in _tokens(call.rsplit("::", 1)[-1]))
         per_word = [8 * (word in name) + 3 * (word in qualified) + (word in docs)
+                    + (word in calls)
                     for word in words]
         return sum(per_word) + 20 * max(0, sum(value > 0 for value in per_word) - 1)
 
-    ranked = sorted((entry for entry in index["functions"] if score(entry)),
-                    key=lambda entry: (-score(entry), entry["line"]))
+    ranked = sorted((entry for entry in index["functions"] if score(entry) > 0),
+                    key=lambda entry: ("::tests::" in entry["qualified_name"],
+                                       -score(entry), entry["line"]))
     return {key: index[key] for key in ("path", "raw_sha256", "git_blob_sha1", "function_count", "parse_error_count", "relationship_kind")} | {
         "query": terms, "matches": ranked[:limit], "total_matches": len(ranked)}
+
+
+def format_compact(result: dict) -> str:
+    """Render a bounded navigation packet; JSON remains available for machines."""
+    lines = [
+        f"{result['path']} sha256={result['raw_sha256']} "
+        f"functions={result['function_count']} parse_errors={result['parse_error_count']}",
+        f"query={result['query']!r} matches={result['total_matches']} "
+        f"shown={len(result['matches'])}; calls are lexical candidates, not a call graph",
+    ]
+    terms = set(_tokens(result["query"]))
+    for entry in result["matches"]:
+        line = f"L{entry['line']}-{entry['end_line']} {entry['qualified_name']}"
+        if entry["docs"]:
+            line += f" | doc: {_compact(entry['docs'], 120)}"
+        relevant_calls = [call for call in entry["lexical_call_candidates"]
+                          if terms & set(_tokens(call.rsplit("::", 1)[-1]))]
+        if relevant_calls:
+            line += f" | calls?: {', '.join(relevant_calls[:2])}"
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def main() -> None:
@@ -122,8 +152,10 @@ def main() -> None:
     parser.add_argument("source", type=Path)
     parser.add_argument("--query", required=True)
     parser.add_argument("--limit", type=int, default=8)
+    parser.add_argument("--json", action="store_true", help="emit structured JSON instead of compact text")
     args = parser.parse_args()
-    print(json.dumps(query(index_file(args.source), args.query, args.limit), indent=2))
+    result = query(index_file(args.source), args.query, args.limit)
+    print(json.dumps(result, indent=2) if args.json else format_compact(result))
 
 
 if __name__ == "__main__":
