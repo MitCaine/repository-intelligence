@@ -1,0 +1,77 @@
+"""Offline wheel smoke test from an unrelated Rust consumer directory."""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+import zipfile
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def run(*args: object, cwd: Path | None = None, env: dict[str, str] | None = None) -> str:
+    result = subprocess.run([str(arg) for arg in args], cwd=cwd, env=env,
+                            text=True, capture_output=True, check=True, timeout=120)
+    return result.stdout
+
+
+class InstalledPackageTests(unittest.TestCase):
+    def test_offline_wheel_works_outside_source_tree(self):
+        required = os.environ.get("RI_REQUIRE_STANDALONE") == "1"
+        names = ("RI_SETUPTOOLS_WHEEL", "RI_WHEEL_WHEEL")
+        wheels = [Path(os.environ[name]).resolve() for name in names if os.environ.get(name)]
+        analyzer = shutil.which(os.environ.get("RI_RUST_ANALYZER", "rust-analyzer"))
+        if len(wheels) != 2 or not all(path.is_file() for path in wheels) or analyzer is None:
+            message = "offline setuptools/wheel files and rust-analyzer are required"
+            if required:
+                self.fail(message)
+            self.skipTest(message)
+
+        environment = {key: value for key, value in os.environ.items() if key != "PYTHONPATH"}
+        environment.update(PIP_NO_INDEX="1", PIP_NO_CACHE_DIR="1",
+                           PIP_DISABLE_PIP_VERSION_CHECK="1", PYTHONDONTWRITEBYTECODE="1")
+        with tempfile.TemporaryDirectory(prefix="ri-installed-") as raw:
+            temp = Path(raw)
+            build, install, output = (temp / name for name in ("build", "install", "wheels"))
+            consumer = temp / "neutral-rust-consumer"
+            run(sys.executable, "-m", "venv", build, env=environment)
+            build_python = build / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+            run(build_python, "-m", "pip", "install", "--no-index", "--no-deps",
+                *wheels, env=environment)
+            output.mkdir()
+            run(build_python, "-m", "pip", "wheel", "--no-index", "--no-build-isolation",
+                "--no-deps", "--wheel-dir", output, ROOT, cwd=temp, env=environment)
+            built = list(output.glob("repository_intelligence-*.whl"))
+            self.assertEqual(len(built), 1)
+            with zipfile.ZipFile(built[0]) as archive:
+                modules = {name for name in archive.namelist()
+                           if name.startswith("repository_intelligence/") and name.endswith(".py")}
+            self.assertEqual(modules, {"repository_intelligence/__init__.py",
+                                       "repository_intelligence/rust_index.py"})
+            run(sys.executable, "-m", "venv", install, env=environment)
+            installed_python = install / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+            run(installed_python, "-m", "pip", "install", "--no-index", "--no-deps",
+                built[0], env=environment)
+            (consumer / "src").mkdir(parents=True)
+            (consumer / "src/lib.rs").write_text("pub fn calculate_total(a: i32, b: i32) -> i32 { a + b }\n")
+            script = temp / "smoke.py"
+            script.write_text(
+                "import json\n"
+                "from pathlib import Path\n"
+                "from repository_intelligence.rust_index import index_file, query\n"
+                "result = query(index_file(Path('src/lib.rs')), 'calculate total')\n"
+                "print(json.dumps([item['name'] for item in result['matches']]))\n")
+            environment["PATH"] = str(Path(analyzer).parent) + os.pathsep + environment.get("PATH", "")
+            result = run(installed_python, "-I", script, cwd=consumer, env=environment)
+            self.assertEqual(json.loads(result), ["calculate_total"])
+
+
+if __name__ == "__main__":
+    unittest.main()

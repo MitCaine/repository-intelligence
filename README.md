@@ -1,31 +1,50 @@
-# Repository intelligence (Poker checkout)
+# Repository Intelligence
 
-The reusable orientation surface is `repository_intelligence.rust_index`: it indexes one Rust file with `rust-analyzer parse --json`, returns source-bound function locations, and formats a compact query result. It does not resolve a call graph or attest a Git checkout. The historical Poker pilot machinery has been retired from the working tree; its accepted history remains recoverable in Git.
+A small, source-derived function locator for AI-assisted repository navigation.
+It parses current Rust files with `rust-analyzer`, returns compact function
+locations and source hashes, and can attach candidate guidance from an
+existing authored authority directory. It creates no database or maintained
+function dictionary. It does not grant edit authority, resolve a call graph,
+or replace checking the relevant source.
 
-Supported Python: 3.12 and 3.13 on the tested macOS controller. `rust-analyzer` must be installed separately. Windows and older Python versions are not qualified yet.
+This is the reusable core extracted from the [Poker App](https://github.com/MitCaine/poker-app)
+pilot. Poker-specific authority maps, capsule rules, and consumer configuration
+belong to Poker, not this package. Earlier benchmark and security machinery is
+preserved in Git history but is not part of the current package.
 
-## Offline installed-package check
+## Use
 
-From the Poker repository root, set `RI_SETUPTOOLS_WHEEL` and `RI_WHEEL_WHEEL` to local wheel files matching the pinned build requirements in `pyproject.toml`, then run:
-
-```sh
-RI_REQUIRE_STANDALONE=1 PYTHONDONTWRITEBYTECODE=1 python3.12 scripts/test_repository_intelligence_standalone.py
-```
-
-The command makes isolated build and install environments, builds a wheel without network access, installs it without `PYTHONPATH`, and indexes a Rust file in an unrelated temporary consumer directory. It fails if the offline wheels or `rust-analyzer` are missing. It does not build Poker or WASM. The same command can use `python3.13`; use the desired interpreter explicitly. Ordinary test discovery skips this integration check if the wheel inputs are absent.
-
-This checkout has not been separated or published. The installed package contains only the locator, not the historical pilot records, receipts, schemas, or benchmark machinery.
-
-## Source-derived project lookup
-
-From the Poker repository root, a directory query searches current Rust source without generating or maintaining a second map:
+Python 3.12 or 3.13 and a local `rust-analyzer` executable are required. No
+hosted service or Python runtime dependency is needed. From this repository:
 
 ```sh
-PYTHONPATH=repository-intelligence/src python3.12 -m repository_intelligence.rust_index . --query 'practice reset starting position' --limit 8 --authority-dir engineering/authority
+PYTHONPATH=src python3.13 -m repository_intelligence.rust_index \
+  /path/to/rust/project --query 'pause resume clock' --limit 8
 ```
 
-Each result includes a narrow line range and raw source hash; production files rank ahead of integration-test files. An optional authority directory adds candidate guidance from existing authored `Anchors:` sections and indicates when more matching sections were omitted from the compact view. The controller must confirm applicability and read the actual contract before using it. The output reports files it could not index and parse-error counts; lexical call candidates are navigation hints, not resolved relationships. A full 308-file Poker checkout query took about 13 seconds on the current macOS host; no database, cache, hosted CI, or committed generated map is required.
+For one large file, pass its path instead of a directory. Add `--json` for
+structured output. Add `--authority-dir /path/to/project/authority` only if the
+consumer has authored `Anchors:` entries; these are candidate guidance, not
+source truth. Results report parse errors and files that could not be indexed.
+The raw SHA-256 identifies bytes read, not a verified Git checkout. Lexical
+call candidates are not resolved relationships.
 
-The former hand-maintained Poker source dictionaries are retired. They remain recoverable in Git
-history but are not a required input or current navigation authority. For authored ownership and
-invariants, use Poker's audited `engineering/authority/` documents and relevant source comments.
+## Verify
+
+```sh
+PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 python3.13 -m unittest discover -s tests
+```
+
+The optional installed-wheel check uses two local build-dependency wheels and
+never downloads packages:
+
+```sh
+RI_SETUPTOOLS_WHEEL=/path/to/setuptools-79.0.1-py3-none-any.whl \
+RI_WHEEL_WHEEL=/path/to/wheel-0.47.0-py3-none-any.whl \
+RI_REQUIRE_STANDALONE=1 PYTHONDONTWRITEBYTECODE=1 \
+python3.13 -m unittest discover -s tests -p test_installed_package.py
+```
+
+The [pilot report](docs/rust-function-locator-pilot.md) records Poker navigation
+trials and their measurement limits. The [extraction decision](docs/standalone-core-seam.md)
+explains why the earlier research modules are not included.
