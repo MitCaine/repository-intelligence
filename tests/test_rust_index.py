@@ -53,6 +53,22 @@ class RustIndexTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             query({"functions": []}, "", 1)
 
+    def test_inline_test_module_does_not_outrank_production_function(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = Path(directory) / "clock.rs"
+            source_path.write_text(
+                "fn resume_clock() {}\n"
+                "mod tests {\n"
+                "    /// Pause and resume the clock.\n"
+                "    fn resume_clock() {}\n"
+                "}\n")
+            matches = query(index_file(source_path), "pause resume clock", 2)["matches"]
+            self.assertEqual(matches[0]["qualified_name"], "resume_clock")
+            self.assertEqual(matches[1]["qualified_name"], "tests::resume_clock")
+            tree_matches = query_tree(Path(directory), "pause resume clock", 2)["matches"]
+            self.assertEqual([item["qualified_name"] for item in tree_matches],
+                             ["resume_clock", "tests::resume_clock"])
+
     def test_tree_query_is_source_bound_and_reports_incomplete_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

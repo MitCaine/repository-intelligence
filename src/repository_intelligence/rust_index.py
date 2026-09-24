@@ -109,7 +109,7 @@ def query(index: dict, terms: str, limit: int = 8) -> dict:
         raise ValueError("Provide query terms and a limit from 1 to 20")
 
     ranked = sorted((entry for entry in index["functions"] if _score(entry, words) > 0),
-                    key=lambda entry: ("::tests::" in entry["qualified_name"],
+                    key=lambda entry: (_is_test_entry(entry),
                                        -_score(entry, words), entry["line"]))
     return {key: index[key] for key in ("path", "raw_sha256", "git_blob_sha1", "function_count", "parse_error_count", "relationship_kind")} | {
         "query": terms, "matches": ranked[:limit], "total_matches": len(ranked)}
@@ -127,7 +127,8 @@ def _score(entry: dict, words: list[str]) -> int:
 
 
 def _is_test_entry(entry: dict) -> bool:
-    return "tests" in Path(entry["path"]).parts or "::tests::" in entry["qualified_name"]
+    return ("tests" in Path(entry.get("path", "")).parts
+            or "tests" in entry["qualified_name"].split("::")[:-1])
 
 
 def _authority_records(directory: Path) -> dict[str, list[dict]]:

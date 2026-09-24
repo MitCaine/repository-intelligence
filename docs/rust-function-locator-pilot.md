@@ -1,5 +1,25 @@
 # Source-derived Rust function locator pilot
 
+## Post-cleanup usability smoke (2026-09-24)
+
+Two current-source navigation questions still resolved to narrow production
+functions after the reviewer-security cleanup. A whole-repository query for
+`pause resume clock` indexed 308 Rust files with zero parse errors or failed
+files and led to `TournamentHybridLevelControllerV1::resume_clock` and
+`TournamentClock::resume`, with tournament-timing authority hints. Reading those
+small source spans confirmed the first delegates to the logical clock and can
+enter final-table mode, while the second restores the clock phase. A direct
+query of the 5,000-line `poker-app/src/tournament.rs` for `restore saved pair`
+led first to `validate_hybrid_pair_common` and
+`validate_hybrid_pair_for_launch`; the returned lines contained the saved-state
+checks. No maintained dictionary was used.
+
+The first query also exposed an inline `tests` module ranking above production
+code. The locator now recognizes a leading `tests::` owner as test code, and a
+regression test covers that case. This smoke check supports continued practical
+use; it does not remeasure agent token use or prove that every semantic
+relationship can be inferred from source.
+
 > **Workflow correction:** The intended use is capsule-first. The controller
 > runs this locator before dispatch, selects a small source-bound function
 > packet, and puts that packet in the capsule. Codex starts with the packet and
