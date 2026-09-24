@@ -113,7 +113,8 @@ Every executor produced a correct, source-cited answer and confirmed the
 scoped source hash. The numbers are per-agent shell reads, returned shell
 output characters, and elapsed wall-clock time from its first to final tool
 call. They exclude prompt text, model-internal tokens, controller planning,
-and executor startup before the first tool call. The dictionary condition
+and executor startup before the first tool call; actual runner token telemetry
+is reported below. The dictionary condition
 read the dictionary at execution time; it did **not** receive a controller-
 selected dictionary excerpt in advance.
 
@@ -133,7 +134,7 @@ context that is absent from the shell-output column. These observations
 therefore support a narrower conclusion: in these five navigation tasks, a
 pre-generated, source-bound function packet reduced follow-up reading and
 first-to-final-tool elapsed time while preserving answer quality. They do not
-establish actual model-token savings, statistical reliability, or a general
+by themselves establish model-token savings, statistical reliability, or a general
 speed advantage over a well-selected dictionary excerpt. Maintaining stale
 dictionaries had a separate, nontrivial cost, and remains outside the executor
 timings.
@@ -167,15 +168,36 @@ tool-call elapsed time was approximately 113, 161, and 171 seconds, but these
 agent timings were not run in a controlled isolated environment and are weaker
 evidence than the returned-text counts.
 
-**Measurement boundary:** Returned characters are a reproducible proxy for
-context presented through shell tools, not tokenizer or billing counts. The
-locator packets and condition-specific prompt text also enter model context,
-while model-internal reasoning, tool-call arguments, and any cached tokens are
-not measured here. The actual packet text was short relative to the returned
-output, but no exact all-in token total is available from these executor
-sessions. The ten questions were deliberately selected from five files, not a
-random sample of future work; the five-file clustering and one answer-quality
-miss preclude a general statistical performance claim. This trial does support
-the local workflow choice to front-load a source-bound function packet and
-recheck source, then measure real token telemetry when an accessible executor
-exposes it.
+**Measurement boundary:** Returned characters are a proxy for context
+presented through shell tools, not tokenizer or billing counts. The locator
+packets and condition-specific prompt text also enter model context. The ten
+questions were deliberately selected from five files, not a random sample of
+future work; the five-file clustering and one answer-quality miss preclude a
+general statistical performance claim.
+
+### Recorded token usage
+
+The Codex runner wrote a `token_usage_record` for each of the 30 read-only
+executor turns. The final record's cumulative `turn_token_usage` was extracted
+for each turn from local session logs. These are runner-reported model tokens,
+not model guesses or character-to-token conversions. They include repeated
+context across multiple model calls; a turn total may therefore exceed the
+model's context-window size without any individual call doing so.
+
+| Ten matched tasks | Undirected | Dictionary-directed | Preloaded locator |
+| --- | ---: | ---: | ---: |
+| Input tokens, including cached | 2,556,023 | 2,824,209 | 1,938,746 |
+| Of those, cached input tokens | 2,420,352 | 2,683,776 | 1,852,928 |
+| Input tokens excluding cached | 135,671 | 140,433 | 85,818 |
+| Output tokens | 8,625 | 8,987 | 7,154 |
+| Total tokens | 2,564,648 | 2,833,196 | 1,945,900 |
+
+The preloaded route used fewer recorded input tokens in **10/10 matched
+tasks**: 24.1% fewer than undirected and 31.4% fewer than dictionary-directed.
+Its non-cached input was 36.7% and 38.9% lower, respectively. The smaller
+all-in percentage than the shell-text percentage reflects shared instructions,
+tool definitions, prompt text, and context replay. Cached tokens remain input
+tokens and are not free; these totals are not a cost or billing estimate.
+Controller packet generation and prompt preparation are outside the executor
+turns. Local logs contain more than usage data, so only aggregates are
+published here.
