@@ -143,12 +143,12 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 name = (_text(source, name_node) if name_node is not None else inferred
                         or f"<{'default' if export_kind == 'default' else 'anonymous'}@{node.start_byte}>")
                 qualified = ".".join((*owners, name))
-                method_prefix = source[node.start_byte:name_node.start_byte].strip() \
-                    if node.type == "method_definition" and name_node is not None else b""
+                method_tokens = tuple(child.type for child in node.children
+                                      if name_node is not None and child.end_byte <= name_node.start_byte)
                 kind = ("arrow" if node.type == "arrow_function" else
                         "constructor" if node.type == "method_definition" and name == "constructor" else
-                        "getter" if method_prefix.startswith(b"get") else
-                        "setter" if method_prefix.startswith(b"set") else
+                        "getter" if "get" in method_tokens else
+                        "setter" if "set" in method_tokens else
                         "method" if node.type == "method_definition" else "function")
                 functions.append({
                     "name": name, "qualified_name": qualified,
@@ -161,8 +161,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     "anonymous": anonymous,
                     **declaration(source, kind, qualified, node.start_byte, node.end_byte),
                 })
-                if node.type in {"function_declaration", "generator_function_declaration",
-                                 "function_expression", "generator_function"}:
+                if node.type in CALLABLES:
                     owners = (*owners, name)
         pending.extend((child, owners) for child in reversed(node.named_children))
     assign_named_ids(functions)

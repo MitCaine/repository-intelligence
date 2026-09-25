@@ -10,6 +10,29 @@ from repository_intelligence.locator import index_file
 
 
 class CFamilyTests(unittest.TestCase):
+    def test_spaced_operator_is_not_conversion(self):
+        result = self._index(".cpp", b"struct C { C operator +(const C&) { return *this; } };\n")
+        self.assertEqual([(item["qualified_name"], item["declaration_kind"])
+                          for item in result["functions"]], [("C.operator +", "operator")])
+
+    def test_pointer_reference_overloads_survive_insert_and_reorder(self):
+        before = b"struct C { int f(int* p){return 1;} int f(int& r){return 2;} };\n"
+        after = (b"struct C { int f(double d){return 3;} int f(int& r){return 2;} "
+                 b"int f(int* p){return 1;} };\n")
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "C.cpp").write_bytes(before)
+            (right / "C.cpp").write_bytes(after)
+            delta = compare_inventories(inventory_tree(left, stable=True),
+                                        inventory_tree(right, stable=True))
+            self.assertEqual(delta["status"], "comparable_candidate_delta")
+            changes = delta["declaration_changes"]
+            self.assertEqual(tuple(len(changes[key]) for key in
+                                   ("added", "removed", "modified", "unchanged")),
+                             (1, 0, 0, 2))
+            self.assertEqual({item["planning"]["signature"] for item in changes["unchanged"]},
+                             {item["candidate"]["signature"] for item in changes["unchanged"]})
     def _index(self, suffix: str, source: bytes, *, language=None) -> dict:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / f"fixture{suffix}"

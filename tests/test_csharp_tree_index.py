@@ -6,9 +6,31 @@ import unittest
 from pathlib import Path
 
 from repository_intelligence.locator import index_file
+from repository_intelligence.inventory import compare_inventories, inventory_tree
 
 
 class CSharpTreeIndexTests(unittest.TestCase):
+    def test_file_scoped_namespace_owns_members(self):
+        result = self._index(b"namespace Example; class C { void Run(){} }\n")
+        self.assertEqual({item["qualified_name"] for item in result["functions"]},
+                         {"Example.C.Run"})
+
+    def test_ref_out_overloads_survive_insert_and_reorder(self):
+        before = b"class C { int F(ref int x){return 1;} int F(out int y){y=2;return y;} }\n"
+        after = (b"class C { int F(double d){return 3;} "
+                 b"int F(out int y){y=2;return y;} int F(ref int x){return 1;} }\n")
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "C.cs").write_bytes(before)
+            (right / "C.cs").write_bytes(after)
+            delta = compare_inventories(inventory_tree(left, stable=True),
+                                        inventory_tree(right, stable=True))
+            self.assertEqual(delta["status"], "comparable_candidate_delta")
+            changes = delta["declaration_changes"]
+            self.assertEqual(tuple(len(changes[key]) for key in
+                                   ("added", "removed", "modified", "unchanged")),
+                             (1, 0, 0, 2))
     def _index(self, source: bytes) -> dict:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "Fixture.cs"

@@ -17,8 +17,8 @@ from .source import SCHEMA_VERSION, git_object_format
 from .structural import probe
 
 
-INVENTORY_SCHEMA_VERSION = 6
-MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v1"
+INVENTORY_SCHEMA_VERSION = 7
+MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v2"
 
 
 def _digest(scope: dict, files: list[dict]) -> str:
@@ -229,6 +229,17 @@ def compare_inventories(planning: dict, candidate: dict) -> dict:
     declaration_changes = {status: [] for status in ("added", "removed", "modified", "unchanged")}
     for identity in sorted(before.keys() | after.keys()):
         prior, current = before.get(identity), after.get(identity)
+        if (prior is not None and current is not None
+                and (prior.get("identity_ambiguous") or current.get("identity_ambiguous"))
+                and planning_files[identity[0]]["source_identity"]["raw_sha256"]
+                != candidate_files[identity[0]]["source_identity"]["raw_sha256"]):
+            declaration_changes["removed"].append(
+                {"path": identity[0], "declaration_id": identity[1],
+                 "planning": prior, "candidate": None})
+            declaration_changes["added"].append(
+                {"path": identity[0], "declaration_id": identity[1],
+                 "planning": None, "candidate": current})
+            continue
         if prior is None:
             status = "added"
         elif current is None:

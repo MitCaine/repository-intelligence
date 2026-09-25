@@ -28,6 +28,26 @@ def _name(node, source: bytes) -> str | None:
     return None
 
 
+def _parameter_identity(parameter, source: bytes) -> str:
+    """Keep C/C++ declarator shape but omit the parameter's local name."""
+    type_node = parameter.child_by_field_name("type")
+    declarator = parameter.child_by_field_name("declarator")
+    if type_node is None:
+        return _text(source, parameter)
+    prefix = source[parameter.start_byte:declarator.start_byte] if declarator else source[
+        parameter.start_byte:parameter.end_byte]
+    if declarator is None:
+        return "".join(prefix.decode("utf-8").split())
+    leaf = declarator
+    while leaf.child_by_field_name("declarator") is not None:
+        leaf = leaf.child_by_field_name("declarator")
+    shape = ((source[declarator.start_byte:leaf.start_byte]
+              + source[leaf.end_byte:declarator.end_byte])
+             if leaf.type in {"identifier", "field_identifier"} else
+             source[declarator.start_byte:declarator.end_byte])
+    return "".join((prefix + shape).decode("utf-8").split())
+
+
 def _calls(body, source: bytes) -> list[str]:
     calls = set()
     pending = [body]
@@ -122,10 +142,26 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 visible_owners = (tuple(part for part in owners
                                         if part[0] == "namespace_definition") if friend else owners)
                 qualified = ".".join((*[part[1] for part in visible_owners], name))
-                kind = ("lambda" if anonymous else "conversion" if name.startswith("operator ")
-                        else "operator" if name.startswith("operator") else
+                operator_node = declarator
+                while operator_node is not None and operator_node.type != "operator_cast":
+                    if operator_node.type == "operator_name":
+                        break
+                    operator_node = operator_node.child_by_field_name("declarator")
+                kind = ("lambda" if anonymous else "conversion" if operator_node is not None
+                        and operator_node.type == "operator_cast" else
+                        "operator" if name.startswith("operator") else
                         "destructor" if name.startswith("~") else
                         "friend_function" if friend else "function")
+                parameter_node = declarator
+                while parameter_node is not None and parameter_node.type != "function_declarator":
+                    parameter_node = parameter_node.child_by_field_name("declarator")
+                parameters = (parameter_node.child_by_field_name("parameters")
+                              if parameter_node is not None else None)
+                identity_signature = None
+                if parameters is not None and not anonymous:
+                    identity_signature = ",".join(
+                        _parameter_identity(parameter, source)
+                        for parameter in parameters.named_children)
                 functions.append({
                     "name": name, "qualified_name": qualified,
                     "line": node.start_point.row + 1,
@@ -134,6 +170,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     "signature": source[node.start_byte:body.start_byte].decode("utf-8"),
                     "docs": "", "lexical_call_candidates": _calls(body, source),
                     "syntax_kind": node.type, "anonymous": anonymous,
+                    "identity_signature": identity_signature,
                     **declaration(source, kind, qualified, start, node.end_byte),
                 })
                 owners = (*owners, ("callable", name))
