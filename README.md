@@ -1,128 +1,82 @@
 # Repository Intelligence
 
-The [project direction](docs/project-direction.md) shows the intended
-controller/Codex review workflow, source-evidence pipeline, coverage invariant,
-and what RI deliberately does not own. The capabilities below describe the
-current implementation, which is narrower than that end state.
+Repository Intelligence (RI) is a local Python package for source navigation and structural change review. It reads current source, locates callables, and compares caller-supplied planning and candidate trees. It does not maintain a database, run a service, grant edit permission, or replace reading the source and full Git diff.
 
-A small, source-derived navigation and structural-inventory package for
-AI-assisted work in unrelated repositories.
-The common query interface currently supports Python, Rust, JavaScript, JSX,
-TypeScript, TSX, Java, Go, C#, C, and C++ through
-Tree-sitter navigation in any local project. The Python standard-library AST
-adapter remains available directly as a reference/fallback.
-It returns compact function
-locations and source hashes without a database or maintained function
-dictionary. It does not grant edit authority, resolve a call graph, or replace
-checking the relevant source. Other languages are not yet supported.
+Ordinary operation uses pinned Tree-sitter grammars for Python, Rust, JavaScript/JSX, TypeScript/TSX, Java, Go, C#, C, and C++. A separate, optional Rust API asks `rust-analyzer` to resolve one reference. Native analyzers are not required for ordinary navigation or inventories.
 
-Direct queries are navigation-only; a zero-match result is not an absence
-proof. The separate inventory command checks the documented source-level
-callable contract for supported files and compares stable materializations
-supplied by the caller. Neither result proves semantic resolution or, for
-C/C++, which declarations a configured build will compile.
+## Current state
 
-This is the reusable core extracted from the [Poker App](https://github.com/MitCaine/poker-app)
-pilot. Poker-specific authority maps, capsule rules, and consumer configuration
-belong to Poker, not this package. Earlier benchmark and security machinery is
-preserved in Git history but is not part of the current package.
+The implementation baseline is merge commit `80d56d9433813a7da8debafb3a3a88b96178695c` ([PR #61](https://github.com/MitCaine/repository-intelligence/pull/61)). It emits navigation schema **5**, inventory schema **11**, adapter version **4**, and mapping contract `python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v4`. Package metadata remains version `0.1.0`; use the result contracts and a pinned RI revision, not the package version alone, to identify behavior.
 
-## Use
+PR #61 records 139 passing pinned tests, including the offline installed-wheel check and live Rust lookup. That is recorded verification for that revision, not a guarantee of exhaustive language coverage. The follow-up source/logic review identified four bounded C++/C# and identity-handling issues; see [known limitations](docs/known-limitations.md) before relying on declaration deltas. The documentation does not mark those issues fixed.
 
-The package requires Python 3.12 or newer; macOS ARM64 Python 3.12 and 3.13
-are the combinations verified so far. The package pins the Tree-sitter runtime
-and pinned language grammar wheels. Ordinary navigation uses Tree-sitter
-without `rust-analyzer`. The analyzer remains available as an opt-in Rust
-source and metadata route when needed. No hosted service is needed. From this
-repository:
+## Install and navigate
+
+Python 3.12 or newer is required. The recorded exercised hosts are macOS ARM64 with Python 3.12 and 3.13; other platforms are not qualified merely because compatible wheels exist.
+
+From an unrelated consumer project, install one RI checkout into the consumer environment:
 
 ```sh
-PYTHONPATH=src python3.13 -m repository_intelligence.locator \
-  /path/to/project --query 'pause resume clock' --limit 8
+python3.13 -m venv .venv
+.venv/bin/python -m pip install /path/to/repository-intelligence
+.venv/bin/python -m repository_intelligence.locator . \
+  --query 'calculate total' --limit 8 --json
 ```
 
-For a separate project, follow the [local install and verification guide](docs/install-and-verify.md).
+Installation may download pinned dependencies. [Install and verify](docs/install-and-verify.md) explains the offline path and recorded host details. A non-editable installation must be reinstalled after changing the RI checkout.
 
-Pass one file instead of a directory to narrow the scan. Add `--json` for
-structured output. For a direct file, `--root /path/to/project` confines
-identity to that root; a path outside it or a symlink is reported as excluded
-without reading bytes. An ambiguous direct file (for example, `snippet.h`)
-stays `unsupported` unless an explicit shipped `--language` selects its parser.
-Conflicting selections for known extensions are rejected. `.h` is deliberately
-ambiguous: choose `--language c` or `--language cpp` for a C/C++ header; a
-directory scan does not guess its language. An unsupported file still returns
-its byte identity, marked `unsupported`.
-Directory results report files that could not be indexed and
-explicit scan exclusions. A directory scan covers supported files only, so no
-result is **not** proof that an unsupported language has no relevant function.
-The raw SHA-256 identifies
-bytes read, not a verified Git checkout. Lexical call candidates are not
-resolved relationships.
+Pass a file to narrow a query. Use `--root` to set its identity root. Ambiguous C/C++ headers need an explicit parser:
 
-The shared command's [versioned result contract](docs/navigation-result-v5.md)
-explains source identity, incomplete results, and directory scope. It is for
-navigation, not candidate-change qualification.
+```sh
+.venv/bin/python -m repository_intelligence.locator include/api.h \
+  --root . --language cpp --query 'calculate total'
+```
 
-Parsed entries carry exact byte ranges and declaration hashes, plus the
-installed parser/runtime/grammar/adapter versions. Anonymous-callable IDs
-include source positions and may shift after unrelated preceding edits.
-Unsupported files have byte identity but no structural interpretation;
-excluded paths are reported without reading their bytes. Directory scans read
-a mutable working tree non-atomically. The [callable contracts](docs/tree-sitter-baseline.md)
-state each language's source-level promise and limits.
+For a directory, use repeatable `--header-language include/api.h=cpp` instead. Unselected `.h` files remain visible as unsupported. The locator emits useful partial results, but a zero-match result is not an absence proof. Read JSON status and failure fields; the locator does not encode mapping completeness in its exit status.
 
-The query-independent [structural inventory and candidate delta](docs/inventory-delta-v1.md)
-records all supported in-scope source files, including zero-callable files.
-Planning-to-candidate comparison requires compatible, caller-supplied stable
-materializations; RI reports factual changes and does not authorize them. The
-`python3.13 -m repository_intelligence.inventory` command provides bounded
-compact or full JSON output for controller inspection.
+## Compare planning and candidate source
 
-The public locator is the normal navigation interface. Its shared scan seam
-selects files, records exclusions/failures, reads exact bytes, and invokes the
-explicit adapter registry; navigation ranks the resulting callables while
-inventory records and compares them. The 4 MB limit bounds parser input;
-regular files up to 32 MB can still receive exact byte identity and an
-incomplete mapping when too large to parse. RI rejects non-regular files
-before reading and stops reads above 32 MB, reporting an incomplete packet
-without byte identity. The Rust-only
-`rust_index` command remains an opt-in native parsing route with its existing
-distinct unversioned directory result (`legacy_rust_query`). RI does not
-interpret project-specific authority Markdown; callers can combine RI's
-source locations with their own documents.
+Supply stable source trees and the same scan policy on both sides:
 
-For a specific Rust reference whose definition matters, the separate
-[semantic definition proof](docs/rust-semantic-definition.md) asks
-`rust-analyzer` one opt-in question and labels its answer separately from
-structural or lexical candidates.
+```sh
+.venv/bin/python -m repository_intelligence.inventory compare \
+  /snapshots/planning /snapshots/candidate \
+  --assert-stable-materialization --compact-json
+```
+
+The stability flag is the caller's assertion, not RI snapshot verification. Without it, inventories are marked non-atomic/incomplete and no comparable delta is emitted. The inventory command returns 0 for complete/comparable results, 2 for incomplete results, and 3 for incompatible results; argument or execution errors can fail separately.
+
+Inventory includes supported in-scope files with zero callables. It reports file and declaration additions, removals, modifications, and unchanged entries. Anonymous positions can shift, and genuinely ambiguous named identities are compared conservatively. Always reconcile with the full changed-file list, including configuration, unsupported languages, imports, and initializers.
+
+## Limits and evidence
+
+The shared scanner limits source acquisition to **32,000,000 bytes**. Larger files are incomplete without byte identity. Its separate **4,000,000-byte** parser-input limit means readable supported files above that limit retain byte identity but are not parsed. Non-regular files are not read. These limits describe the shared scanner, not every legacy/native API.
+
+Raw SHA-256 and declaration hashes identify observed bytes. Computed Git blob IDs do not prove commit membership. Directory reads are non-atomic. C/C++ uses unexpanded source; macro-generated and build-configured program coverage is not claimed. Lexical call candidates are not resolved calls.
 
 ## Verify
 
+With pinned dependencies installed, run from the RI checkout:
+
 ```sh
-PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 python3.13 -m unittest discover -s tests
+PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 \
+  python3.13 -m unittest discover -s tests
 ```
 
-The optional installed-wheel check uses two local build-dependency wheels and
-the ten pinned Tree-sitter wheels and never downloads packages:
+The installed-wheel test requires local build wheels and a grammar wheelhouse:
 
 ```sh
 RI_SETUPTOOLS_WHEEL=/path/to/setuptools-79.0.1-py3-none-any.whl \
 RI_WHEEL_WHEEL=/path/to/wheel-0.47.0-py3-none-any.whl \
 RI_TREE_SITTER_WHEELHOUSE=/path/to/pinned-tree-sitter-wheels \
 RI_REQUIRE_STANDALONE=1 PYTHONDONTWRITEBYTECODE=1 \
-python3.13 -m unittest discover -s tests -p test_installed_package.py
+  python3.13 -m unittest discover -s tests -p test_installed_package.py
 ```
 
-The [pilot report](docs/rust-function-locator-pilot.md) records earlier Poker
-navigation trials and their measurement limits. The
-[extraction decision](docs/standalone-core-seam.md) explains why the earlier
-research modules are not included.
+A green discovery run can contain skipped optional tests. [Maintenance](docs/maintenance.md) explains verification expectations and contract changes.
 
-[Cross-project observations](docs/adoption-observations.md) show read-only
-navigation in two non-Poker, mixed-language repositories. The closed
-[project charter issue #1](https://github.com/MitCaine/repository-intelligence/issues/1)
-records the extraction-era Rust baseline; the current shared contracts and
-language adapters supersede that historical package description.
+## Documentation
 
-The [Tree-sitter baseline note](docs/tree-sitter-baseline.md) records pinned
-versions, current coverage contracts, and fixture evidence.
+Start with the [documentation index](docs/README.md), [consumer guide](docs/consumer-guide.md), [navigation v5 reference](docs/navigation-result-v5.md), or [inventory/delta contract](docs/inventory-delta-v1.md). [Architecture](docs/architecture.md) describes implementation ownership; [callable contracts](docs/tree-sitter-baseline.md) define per-language promises.
+
+RI was extracted from [Poker App](https://github.com/MitCaine/poker-app). Project authority maps, capsule rules, and review decisions remain consumer-owned. The [project direction](docs/project-direction.md), [extraction decision](docs/standalone-core-seam.md), and [historical pilot](docs/rust-function-locator-pilot.md) explain the intent and history, not additional current capabilities. RI has no project license file yet; public redistribution requires a separate licensing decision.
