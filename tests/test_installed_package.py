@@ -73,6 +73,8 @@ class InstalledPackageTests(unittest.TestCase):
                                        "repository_intelligence/source.py",
                                        "repository_intelligence/declarations.py",
                                        "repository_intelligence/structural.py",
+                                       "repository_intelligence/adapters.py",
+                                       "repository_intelligence/scan.py",
                                        "repository_intelligence/locator.py",
                                        "repository_intelligence/inventory.py"})
             run(sys.executable, "-m", "venv", install, env=environment)

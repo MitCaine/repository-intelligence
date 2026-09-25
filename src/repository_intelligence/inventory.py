@@ -12,7 +12,7 @@ import json
 import sys
 from pathlib import Path
 
-from .locator import PARSERS, SUFFIX_LANGUAGE, index_file, parse_language_choices, walk_supported_paths
+from .scan import PARSERS, SUFFIX_LANGUAGE, index_file, parse_language_choices, walk_supported_paths
 from .source import SCHEMA_VERSION, git_object_format
 from .structural import ScanSetup
 

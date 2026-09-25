@@ -42,9 +42,10 @@ def score(entry: dict, words: list[str]) -> int:
 
 
 def rank(entries: list[dict], words: list[str]) -> list[dict]:
-    return sorted((entry for entry in entries if score(entry, words) > 0),
-                  key=lambda entry: (-score(entry, words),
-                                     entry.get("path", ""), entry["line"]))
+    scored = [(score(entry, words), entry) for entry in entries]
+    return [entry for value, entry in sorted(
+        (pair for pair in scored if pair[0] > 0),
+        key=lambda pair: (-pair[0], pair[1].get("path", ""), pair[1]["line"]))]
 
 
 def display_entry(entry: dict, words: list[str]) -> dict:

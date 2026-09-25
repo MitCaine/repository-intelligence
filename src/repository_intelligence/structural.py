@@ -24,6 +24,7 @@ import tree_sitter_c
 import tree_sitter_cpp
 
 from .source import physical_lines
+from .adapters import PARSERS
 
 
 ADAPTER_VERSION = 3
@@ -84,27 +85,6 @@ def python_input(source: bytes) -> tuple[bytes, str, _RawOffsets | None]:
     utf8 = decoded.encode("utf-8")
     return utf8, encoding, (_RawOffsets(source, decoded, encoding)
                             if utf8 != source else None)
-
-
-def rust_attachments(node, source: bytes) -> list:
-    """Return Rust outer attributes/docs, including intervening trivia."""
-    start = node.start_byte
-    prior = node.prev_named_sibling
-    attached_nodes = []
-    while prior is not None:
-        snippet = source[prior.start_byte:prior.end_byte]
-        attached = (prior.type == "attribute_item"
-                    or (prior.type == "line_comment"
-                        and snippet.startswith(b"///") and not snippet.startswith(b"////"))
-                    or (prior.type == "block_comment"
-                        and snippet.startswith(b"/**") and not snippet.startswith(b"/***")))
-        if not attached and prior.type not in {"line_comment", "block_comment"}:
-            break
-        if attached:
-            start = prior.start_byte
-            attached_nodes.append(prior)
-        prior = prior.prev_named_sibling
-    return list(reversed(attached_nodes))
 
 
 class ScanSetup:
@@ -193,7 +173,6 @@ def with_mapping(syntax: dict, indexed: dict) -> dict:
 def probe(suffix: str, source: bytes, *, setup: ScanSetup | None = None) -> dict:
     """Return syntax evidence and adapter-owned callable presentation."""
     from pathlib import Path
-    from .locator import PARSERS
     syntax, tree, parse_bytes, offsets = scan(suffix, source, setup=setup)
     adapter = PARSERS[suffix]
     indexed = (adapter(Path("probe" + suffix), source, tree=tree,

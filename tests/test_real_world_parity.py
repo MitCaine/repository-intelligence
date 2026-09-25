@@ -1,6 +1,7 @@
 """Compare useful navigation fields on RI's own nontrivial Python modules."""
 
 import hashlib
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -13,6 +14,26 @@ ROOT = Path(__file__).resolve().parents[1] / "src" / "repository_intelligence"
 
 
 class RealWorldParityTests(unittest.TestCase):
+    def test_python_comments_and_docstrings_match_ast_reference(self):
+        source = (b"# module comment\n"
+                  b"def decorate(fn): return fn\n"
+                  b"@decorate  # attached decorator\n"
+                  b"def deliver(value):\n"
+                  b"    \"\"\"Deliver a parcel.\n\n    Keep its label.\"\"\"\n"
+                  b"    # inside body\n"
+                  b"    return print(value)\n")
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "fixture.py"
+            path.write_bytes(source)
+            current = index_file(path)
+            reference = ast_index_source(path, source)
+        self.assertEqual(current["mapping_status"], "navigation_only")
+        self.assertEqual(len(current["functions"]), len(reference["functions"]))
+        for actual, expected in zip(current["functions"], reference["functions"]):
+            for field in ("qualified_name", "signature", "docs", "byte_range",
+                          "declaration_sha256", "lexical_call_candidates"):
+                self.assertEqual(actual[field], expected[field])
+
     def test_ri_python_modules_preserve_ast_navigation_fields(self):
         for path in sorted(ROOT.glob("*.py")):
             with self.subTest(module=path.name):
