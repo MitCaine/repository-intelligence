@@ -47,9 +47,18 @@ Python/Rust fixtures and installed-wheel check before adoption. The wheel
 distributions do not ship `node-types.json`; this is an upgrade review step,
 not a runtime registry.
 
+For that review, download the generated files from the exact pinned grammar
+tags ([Python 0.25.0](https://raw.githubusercontent.com/tree-sitter/tree-sitter-python/v0.25.0/src/node-types.json),
+[Rust 0.24.2](https://raw.githubusercontent.com/tree-sitter/tree-sitter-rust/v0.24.2/src/node-types.json))
+outside the repository and run
+`python scripts/check_grammar_nodes.py PYTHON_NODE_TYPES RUST_NODE_TYPES`.
+The check flags missing nodes and changed required fields used by the adapters;
+also inspect declaration-node additions/field type changes and run the full
+fixtures before changing any pin. It does not run on ordinary queries.
+
 Current fixtures cover Python decorated async/nested functions, methods and
-lambdas; Rust attributed generic functions, trait/impl methods, nested
-functions and closures; raw-byte
+lambdas, plus navigation parity across RI's own Python modules; Rust attributed
+generic functions, trait/impl methods, nested functions and closures; raw-byte
 mapping for declared Latin-1 Python; and both `ERROR` and `MISSING` recovery
 nodes. The probe returns bounded declaration and diagnostic detail arrays,
 with total counts. It is not an exhaustive contract. Rust navigation parity
@@ -58,9 +67,10 @@ lexical call candidates. Python Tree-sitter navigation is fixture-compared with
 the standard-library AST adapter for signatures, docs, calls, and raw-byte
 ranges, including declared Latin-1 source.
 
-Remaining #8 work: broaden parity against more real-world syntax, verify
-declaration-node changes against upstream generated `node-types.json` during
-grammar upgrades, and support explicit language selection for ambiguous
-extensions. This contract still is not proof of exhaustive Python or Rust
+Explicit language selection is available for ambiguous direct files, but only
+Python and Rust adapters are shipped. The pinned upstream node types have been
+checked with the documented maintainer command; future grammar upgrades must
+repeat that review and fixtures. Broader consumer-project parity may still find
+unhandled syntax. This contract is not proof of exhaustive Python or Rust
 language coverage. #9 owns repository-wide complete inventories and candidate
 deltas.

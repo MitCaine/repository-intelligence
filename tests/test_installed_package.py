@@ -70,6 +70,7 @@ class InstalledPackageTests(unittest.TestCase):
             (consumer / "src").mkdir(parents=True)
             (consumer / "src/lib.rs").write_text("pub fn calculate_total(a: i32, b: i32) -> i32 { a + b }\n")
             (consumer / "src/orders.py").write_text("def calculate_total(price):\n    return price\n")
+            (consumer / "src/explicit.h").write_text("fn calculate_total() {}\n")
             script = temp / "smoke.py"
             script.write_text(
                 "import json\n"
@@ -82,6 +83,10 @@ class InstalledPackageTests(unittest.TestCase):
                 "assert single['parser']['name'] == 'tree-sitter'\n"
                 "rust = query_path(Path('src/lib.rs'), 'calculate total')\n"
                 "assert rust['parser']['name'] == 'tree-sitter'\n"
+                "ambiguous = query_path(Path('src/explicit.h'), 'calculate total')\n"
+                "assert ambiguous['mapping_status'] == 'unsupported'\n"
+                "selected = query_path(Path('src/explicit.h'), 'calculate total', language='rust')\n"
+                "assert selected['matches'][0]['name'] == 'calculate_total'\n"
                 "print(json.dumps(sorted(item['path'] for item in result['matches'])))\n")
             consumer_environment = {**environment, "PATH": str(install / "bin")}
             result = run(installed_python, "-I", script, cwd=consumer, env=consumer_environment)

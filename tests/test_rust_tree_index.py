@@ -72,6 +72,44 @@ class RustTreeNavigationTests(unittest.TestCase):
             self.assertEqual(result["mapping_status"], "incomplete")
             self.assertGreater(result["structural"]["diagnostic_count"], 0)
 
+    def test_richer_rust_syntax_retains_exact_attribute_generic_and_closure_ranges(self):
+        source = (b"mod api {\n"
+                  b"  pub trait Store<T> { fn get(&self, id: T);\n"
+                  b"    fn map<F>(&self, input: T, apply: F) -> T where F: Fn(T) -> T { apply(input) }\n"
+                  b"  }\n"
+                  b"  struct Cache<T>(T);\n"
+                  b"  impl<T> Store<T> for Cache<T> {\n"
+                  b"    /// Map through a cache.\n"
+                  b"    #[inline]\n"
+                  b"    fn map<F>(&self, input: T, apply: F) -> T where F: Fn(T) -> T {\n"
+                  b"      let transform = move |value: T| apply(value);\n"
+                  b"      transform(input)\n"
+                  b"    }\n"
+                  b"    fn get(&self, id: T) {}\n"
+                  b"  }\n"
+                  b"}\n")
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "richer.rs"
+            path.write_bytes(source)
+            result = index_file(path)
+            self.assertEqual(result["mapping_status"], "navigation_only")
+            self.assertEqual(result["adapter_coverage"]["bodyless_excluded_count"], 1)
+            self.assertEqual(result["adapter_coverage"]["mapped_node_count"], 4)
+            impl_map = next(item for item in result["functions"]
+                            if item["qualified_name"].endswith("::map")
+                            and "impl" in item["qualified_name"])
+            span = impl_map["byte_range"]
+            self.assertTrue(source[span["start"]:span["end"]].startswith(b"/// Map"))
+            self.assertIn("Map through a cache", impl_map["docs"])
+            self.assertIn("apply", impl_map["lexical_call_candidates"])
+            self.assertEqual(impl_map["declaration_sha256"],
+                             hashlib.sha256(source[span["start"]:span["end"]]).hexdigest())
+            closure = next(item for item in result["functions"]
+                           if item["declaration_kind"] == "closure")
+            cspan = closure["byte_range"]
+            self.assertEqual(source[cspan["start"]:cspan["end"]],
+                             b"move |value: T| apply(value)")
+
     @unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer unavailable")
     def test_named_navigation_parity_with_optional_rust_analyzer(self):
         with tempfile.TemporaryDirectory() as raw:

@@ -1,7 +1,7 @@
 # Navigation result v2
 
-`repository_intelligence.locator.index_file(path, root=...)` identifies one
-source file before language parsing. `query_path(path, terms, root=...)` adds
+`repository_intelligence.locator.index_file(path, root=..., language=...)` identifies one
+source file before language parsing. `query_path(path, terms, root=..., language=...)` adds
 bounded matches; `root` is optional for direct files and defaults to the file's
 parent. The shared file and directory results return `schema_version: 2`.
 Consumers must check that version before interpreting fields. The older
@@ -41,6 +41,13 @@ Semantic resolution completeness would require a separate native-analysis
 question, configuration, and provider result; there is no such claim here.
 `navigation_only`, `incomplete`, `unsupported`, and `excluded` never support
 an absence claim. An `incomplete` result may still contain usable matches.
+For a direct file with an ambiguous extension, `language="python"` or
+`language="rust"` explicitly chooses a shipped adapter; without it, the file
+is `unsupported` with `unsupported_reason: no_language_adapter_selected`.
+A conflicting selection for a known `.py` or `.rs` extension returns
+`unsupported` with `unsupported_reason: language_extension_mismatch`.
+Unknown language names and directory-level language selection are rejected.
+Selecting Rust for `.h` does not imply support for C or C++ syntax.
 
 The directory command currently scans `.py` and `.rs` files. Its `scan_scope`
 states these extensions and labels the source `working_tree_non_atomic`: files
