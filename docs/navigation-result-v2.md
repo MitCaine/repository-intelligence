@@ -29,9 +29,10 @@ identity instead.
   a complete navigation pass; byte identity is retained when reading succeeded;
 - `unsupported`: the bytes were identified but no structural parser is shipped
   for the file type;
-- `excluded`: a direct path was outside the supplied root or was a symlink,
+- `excluded`: a direct path was outside the supplied root or was a symlink
+  (including dangling links and links to directories),
   so its bytes were not read, `source_identity` is null, and `excluded_reason`
-  states why.
+  states why (`outside_root` or `symlink_path`).
 
 `complete` is deliberately not emitted by current adapters. It would mean
 that a stated structural declaration contract was exhaustively covered in the

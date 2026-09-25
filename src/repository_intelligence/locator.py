@@ -37,7 +37,7 @@ def index_file(path: Path, *, root: Path | None = None,
                object_format: str | None | object = _AUTO_FORMAT) -> dict:
     """Identify one file's bytes, then attempt structural navigation if supported."""
     root = root or path.parent
-    excluded_reason = ("symlink_file" if path.is_symlink() else
+    excluded_reason = ("symlink_path" if path.is_symlink() else
                        "outside_root" if not path.resolve().is_relative_to(root.resolve())
                        else None)
     if excluded_reason is not None:
@@ -94,6 +94,8 @@ def index_file(path: Path, *, root: Path | None = None,
 
 def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = None) -> dict:
     words = validate_query(terms, limit)
+    if source.is_symlink():
+        return query(index_file(source, root=root), terms, limit)
     if source.is_file():
         return query(index_file(source, root=root), terms, limit)
     if not source.is_dir():
@@ -196,7 +198,7 @@ def main() -> None:
     args = parser.parse_args()
     result = query_path(args.source, args.query, args.limit, root=args.root)
     print(json.dumps(result, indent=2) if args.json else
-          (format_tree_compact(result) if args.source.is_dir() else format_compact(result)))
+          (format_tree_compact(result) if "scan_scope" in result else format_compact(result)))
 
 
 if __name__ == "__main__":
