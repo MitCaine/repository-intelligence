@@ -94,8 +94,8 @@ project/build configuration, and unresolved limits. Neither Tree-sitter nor a
 native analyzer should manufacture certainty about reflection, generated
 source, conditional compilation, or dynamic dispatch.
 
-Target languages are Python and Rust first, then JavaScript/TypeScript, Java,
-C/C++, Go, and C#. Kotlin may follow when useful. Each adapter needs a
+The Python, Rust, JavaScript/TypeScript, Java, C/C++, Go, and C# structural
+adapters now ship. Kotlin may follow when useful. Each adapter needs a
 language-specific callable/declaration contract and fixtures, including an
 explicit policy for anonymous functions, executable accessors/operators, and
 bodyless declarations where the language has them. C/C++ must state its
