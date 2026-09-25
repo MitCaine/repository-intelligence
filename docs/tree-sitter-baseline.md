@@ -68,10 +68,21 @@ anonymous literals receive source-position-based IDs. Interface `method_elem`
 nodes are counted as bodyless, with their interface owner, not as executable
 functions. This is syntax coverage, not Go type/package resolution.
 
+For pinned C#, `.cs` promises body-bearing methods, constructors (including
+static), destructors, operators/conversions, local functions, lambdas,
+anonymous methods, and `accessor_declaration` nodes. Expression-bodied
+properties/indexers without explicit accessor nodes map as executable getters.
+Namespaces, classes, structs, interfaces, records, and property/indexer/event
+containers contribute ownership. Bodyless interface/abstract methods and
+semicolon accessors are counted separately, not as executable declarations.
+Attributes and modifiers within each callable node's source range affect its
+hash. This is syntax navigation, not Roslyn semantic resolution.
+
 Pinned package versions in `pyproject.toml` are `tree-sitter==0.25.0`,
 `tree-sitter-python==0.25.0`, `tree-sitter-rust==0.24.2`,
 `tree-sitter-javascript==0.25.0`, `tree-sitter-typescript==0.23.2`, and
-`tree-sitter-java==0.23.5`, and `tree-sitter-go==0.25.0`. Results record
+`tree-sitter-java==0.23.5`, `tree-sitter-go==0.25.0`, and
+`tree-sitter-c-sharp==0.23.5`. Results record
 actual installed distribution versions, grammar ABI, and adapter version 1.
 Changing a grammar pin requires reviewing that grammar's upstream generated
 `node-types.json` for changed declaration nodes/fields, then running the

@@ -2,8 +2,8 @@
 
 `repository_intelligence.inventory.inventory_tree(root, stable=False,
 logical_root=".")` scans supported Python, Rust, JavaScript, JSX, TypeScript,
-TSX, Java, and Go source without query terms. The current inventory schema is
-version 4; older packets are incompatible with it.
+TSX, Java, Go, and C# source without query terms. The current inventory schema
+is version 5; older packets are incompatible with it.
 Every supported in-scope file appears in `files`, including files with zero
 mapped callables. Each file carries its exact `source_identity`, parser and
 adapter coverage, structural diagnostics, mapping status, and contracted

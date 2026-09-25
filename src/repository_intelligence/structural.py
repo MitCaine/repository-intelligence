@@ -20,6 +20,7 @@ import tree_sitter_javascript
 import tree_sitter_typescript
 import tree_sitter_java
 import tree_sitter_go
+import tree_sitter_c_sharp
 
 from .source import physical_lines
 
@@ -38,6 +39,7 @@ GRAMMARS = {
     ".tsx": ("TSX", "tree-sitter-typescript", tree_sitter_typescript.language_tsx),
     ".java": ("Java", "tree-sitter-java", tree_sitter_java.language),
     ".go": ("Go", "tree-sitter-go", tree_sitter_go.language),
+    ".cs": ("CSharp", "tree-sitter-c-sharp", tree_sitter_c_sharp.language),
 }
 
 JS_CALLABLES = {"function_declaration", "generator_function_declaration",
@@ -168,10 +170,26 @@ def scan(suffix: str, source: bytes) -> tuple[dict, Node, bytes, _RawOffsets | N
                                                 "func_literal"}:
             selected = node
             name_node = node.child_by_field_name("name")
+        elif suffix == ".cs" and node.type in {"method_declaration", "constructor_declaration",
+                                                "destructor_declaration", "operator_declaration",
+                                                "conversion_operator_declaration",
+                                                "local_function_statement", "lambda_expression",
+                                                "anonymous_method_expression",
+                                                "accessor_declaration", "property_declaration",
+                                                "indexer_declaration"} \
+                and (node.child_by_field_name("body") is not None or
+                     (node.type == "anonymous_method_expression" and any(
+                         child.type == "block" for child in node.named_children)) or
+                     (node.type in {"property_declaration", "indexer_declaration"} and
+                      node.child_by_field_name("value") is not None and
+                      node.child_by_field_name("value").type == "arrow_expression_clause")):
+            selected = node
+            name_node = node.child_by_field_name("name")
         if selected is not None:
             declaration_count += 1
             if len(declarations) < MAX_DECLARATION_DETAILS:
-                kind = ("lambda" if selected.type in {"lambda", "lambda_expression", "func_literal"}
+                kind = ("lambda" if selected.type in {"lambda", "lambda_expression", "func_literal",
+                                                       "anonymous_method_expression"}
                         else "closure" if selected.type == "closure_expression"
                         else "arrow" if selected.type == "arrow_function" else "function")
                 start = raw(_rust_start(node, source) if suffix == ".rs"
