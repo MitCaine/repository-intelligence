@@ -28,6 +28,12 @@ returned target's URI, range, and byte identity when readable. It says
 `resolved` when a target was returned, `unresolved` when none was returned,
 and `incomplete_changed_source` if checked local inputs changed during the
 question. An analyzer failure raises an exception; it is not an absence proof.
+Target bytes are captured before the final local checksum. A local target's
+`byte_binding` says `checked_against_final_local_snapshot` only after that
+check passes. External or unreadable targets remain
+`post_analysis_observation`: their bytes, if available, are not verified to
+match what the analyzer used. None of these checks makes the working tree
+atomic.
 
 The snapshot is a non-atomic checksum of local `.rs` files, Cargo manifests
 and lockfiles, Rust toolchain files, and `.cargo` configuration below the

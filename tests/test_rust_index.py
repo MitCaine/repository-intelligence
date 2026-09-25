@@ -11,7 +11,6 @@ from repository_intelligence.rust_index import (
 )
 
 
-@unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer not installed")
 class RustIndexTests(unittest.TestCase):
     SOURCE = b"""mod table {
     struct Game;
@@ -23,6 +22,7 @@ class RustIndexTests(unittest.TestCase):
 }
 """
 
+    @unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer not installed")
     def test_source_bound_locations_docs_and_lexical_calls(self):
         with tempfile.TemporaryDirectory() as directory:
             source_path = Path(directory) / "sample.rs"
@@ -36,7 +36,9 @@ class RustIndexTests(unittest.TestCase):
             self.assertEqual(award["qualified_name"], "table::impl Game::award_pot")
             self.assertIn("winning pot", award["docs"])
             self.assertIn("record_result", award["lexical_call_candidates"])
-            self.assertNotIn("records", query(indexed, "missing term")["matches"])
+            missing = query(indexed, "missing term")
+            self.assertEqual(missing["matches"], [])
+            self.assertEqual(missing["total_matches"], 0)
             compact = format_compact(query(indexed, "award record", 1))
             self.assertEqual(len(compact.splitlines()), 3)
             self.assertIn(indexed["raw_sha256"], compact)
@@ -54,6 +56,7 @@ class RustIndexTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             query({"functions": []}, "", 1)
 
+    @unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer not installed")
     def test_rust_declaration_range_includes_attached_attribute(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "attr.rs"
@@ -65,6 +68,7 @@ class RustIndexTests(unittest.TestCase):
             self.assertEqual(entry["declaration_sha256"],
                              hashlib.sha256(source[span["start"]:span["end"]]).hexdigest())
 
+    @unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer not installed")
     def test_ranking_sees_rust_docs_and_calls_beyond_packet_limits(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "search.rs"
@@ -79,6 +83,7 @@ class RustIndexTests(unittest.TestCase):
             self.assertLessEqual(len(by_doc["matches"][0]["docs"]), 220)
             self.assertIn("call_19", by_call["matches"][0]["lexical_call_candidates"])
 
+    @unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer not installed")
     def test_ranking_uses_relevance_without_project_specific_test_demotion(self):
         with tempfile.TemporaryDirectory() as directory:
             source_path = Path(directory) / "clock.rs"
@@ -95,6 +100,7 @@ class RustIndexTests(unittest.TestCase):
             self.assertEqual([item["qualified_name"] for item in tree_matches],
                              ["tests::resume_clock", "resume_clock"])
 
+    @unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer not installed")
     def test_tree_query_is_source_bound_and_reports_incomplete_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

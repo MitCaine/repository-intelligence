@@ -138,6 +138,17 @@ class InstalledPackageTests(unittest.TestCase):
                 "    assert parser['runtime_version'] == expected_versions['tree-sitter']\n"
                 "    assert parser['grammar_version'] == expected_versions[distribution]\n"
                 "    assert parser['adapter_version'] == 1\n"
+                "polyglot = inventory_tree(Path('.'), stable=True)\n"
+                "assert polyglot['status'] == 'complete'\n"
+                "assert {f['path'] for f in polyglot['files']} == "
+                "{'src/lib.rs', 'src/orders.py', 'fixture.js', 'fixture.ts', 'fixture.tsx', "
+                "'fixture.java', 'fixture.go', 'fixture.cs', 'fixture.c', 'fixture.cpp'}\n"
+                "Path('fixture.js').write_text('export function calculate_total(){ return 2; }\\n')\n"
+                "changed = inventory_tree(Path('.'), stable=True)\n"
+                "delta = compare_inventories(polyglot, changed)\n"
+                "assert delta['status'] == 'comparable_candidate_delta'\n"
+                "assert [f['path'] for f in delta['file_changes']['modified']] == ['fixture.js']\n"
+                "assert len(delta['declaration_changes']['modified']) == 1\n"
                 "print(json.dumps({'matches': sorted(item['path'] for item in result['matches']), "
                 "'versions': {name: version(name) for name in expected_versions}}))\n")
             consumer_environment = {**environment, "PATH": str(install / "bin")}
