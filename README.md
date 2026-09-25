@@ -78,11 +78,11 @@ materializations; RI reports factual changes and does not authorize them. The
 `python3.13 -m repository_intelligence.inventory` command provides bounded
 compact or full JSON output for controller inspection.
 
-The Rust-only analyzer command remains available as an opt-in escalation,
-`python3.13 -m repository_intelligence.rust_index`. Its output uses a distinct
-unversioned result shape (`legacy_rust_query`); that label distinguishes the
-protocol, not support status. RI does not interpret project-specific authority
-Markdown; callers can combine RI's source locations with their own documents.
+The shared locator is the normal navigation interface. The Rust-only
+`rust_index` command remains an opt-in native parsing route with its existing
+distinct unversioned directory result (`legacy_rust_query`). RI does not
+interpret project-specific authority Markdown; callers can combine RI's
+source locations with their own documents.
 
 For a specific Rust reference whose definition matters, the separate
 [semantic definition proof](docs/rust-semantic-definition.md) asks

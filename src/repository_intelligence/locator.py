@@ -10,7 +10,7 @@ from pathlib import Path
 from . import c_family_tree_index, csharp_tree_index, go_tree_index, java_tree_index, js_tree_index, python_tree_index, rust_tree_index, structural
 from .search import (display_entry, format_compact, format_tree_compact, query, rank,
                      validate_query)
-from .source import SCHEMA_VERSION, git_object_format, identify_bytes
+from .source import SCHEMA_VERSION, git_object_format, identify_bytes, legacy_git_blob_sha1
 
 
 PARSERS = {".py": python_tree_index.index_source, ".rs": rust_tree_index.index_source,
@@ -131,6 +131,8 @@ def index_file(path: Path, *, root: Path | None = None,
                 "structural": syntax,
                 "failures": [{"error": type(error).__name__}]}
     return {**indexed, "schema_version": SCHEMA_VERSION, "source_identity": identity,
+            "raw_sha256": identity["raw_sha256"],
+            "git_blob_sha1": legacy_git_blob_sha1(source),
             "parser": parser_info, "structural": syntax,
             "mapping_status": ("incomplete" if indexed["parse_error_count"]
                                or syntax["error_count"] or syntax["missing_count"]
@@ -205,6 +207,7 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
     if language is not None:
         raise ValueError("Explicit language applies only to a direct file query; use language_choices for a directory")
     candidates: list[dict] = []
+    files: dict[str, dict] = {}
     paths, excluded_paths, failures, out_of_scope, unsupported = walk_supported_paths(
         source, language_choices=language_choices, excluded_directories=excluded_directories)
     scanned = 0
@@ -219,6 +222,9 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
         except (OSError, ValueError) as error:
             failures.append({"path": str(path), "error": type(error).__name__})
             continue
+        files[str(path)] = {key: indexed.get(key) for key in
+                            ("source_identity", "parser", "structural", "preprocessing",
+                             "adapter_coverage", "mapping_status", "parse_error_count")}
         if indexed["failures"]:
             failures.extend({"path": str(path), "source_identity": indexed["source_identity"],
                              **failure} for failure in indexed["failures"])
@@ -246,6 +252,7 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
             "mapping_status": ("incomplete" if failures or parse_errors or structural_errors
                                else "unsupported" if not paths else "navigation_only"),
             "scanned_files": scanned,
+            "files": files,
             "parse_error_count": parse_errors, "structural_error_count": structural_errors,
             "failures": failures,
             "total_matches": len(ranked),

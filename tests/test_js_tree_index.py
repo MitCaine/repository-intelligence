@@ -10,6 +10,14 @@ from repository_intelligence.locator import index_file, query_path
 
 
 class JavaScriptTypeScriptTests(unittest.TestCase):
+    def test_nearby_comment_terms_find_opaque_method_name(self):
+        source = b"// Reconcile overdue invoices.\nfunction run(){}\n"
+        result = self._index(".ts", source)
+        self.assertIn("overdue invoices", result["functions"][0]["docs"])
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "fixture.ts"
+            path.write_bytes(source)
+            self.assertEqual(query_path(path, "overdue invoices")["matches"][0]["name"], "run")
     def test_nested_owners_and_static_accessors(self):
         source = (b"class C { first(){ function helper(){} } second(){ function helper(){} }\n"
                   b"static get value(){return 1} static set value(v){} }\n"

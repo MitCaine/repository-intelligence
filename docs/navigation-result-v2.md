@@ -5,9 +5,10 @@ source file before language parsing. `query_path(path, terms, root=..., language
 bounded matches; `root` is optional for direct files and defaults to the file's
 parent. The shared file and directory results return `schema_version: 2`.
 Consumers must check that version before interpreting fields. The older
-`rust_index.query_tree` result instead says `result_kind: legacy_rust_query`;
-it has different traversal and is
-**not** this versioned result. New consumers use the shared locator.
+`rust_index.query_tree` compatibility function instead says
+`result_kind: legacy_rust_query`; it has different traversal and is **not**
+this versioned result. New consumers use the shared locator; the `rust_index`
+command remains an opt-in native parsing route.
 Version 2 retains the navigation fields from interim version 1 but adds the
 `excluded` status and display `column`; consumers accepting only version 1
 must not silently treat these as version-1 results.
@@ -18,8 +19,18 @@ with the repository's storage algorithm (`sha1` or `sha256`). An unsupported
 source extension still gets this identity. The computed blob ID says what Git
 would hash for those bytes; it does **not** prove membership in a commit or an
 unchanged checkout. Legacy `git_blob_sha1` fields remain temporarily on parsed
-Rust/Python results for existing consumers; new consumers should use the tagged
+results for existing consumers and are computed by common source handling;
+new consumers should use the tagged
 identity instead.
+
+Directory results include one `files` record keyed by the match's `path`
+string (absolute only when the queried root is absolute). Each record carries
+the same parser, structural, preprocessing,
+source-identity, adapter-coverage, mapping-status and parse-error evidence as a
+direct-file result, without copying that record into every match. C/C++
+preprocessing remains raw-source-only in both JSON and compact presentation.
+Failed reads/parses retain a file record when a packet was produced, alongside
+the directory `failures` list. Match entries refer to records by their `path`.
 
 `mapping_status` is one of:
 

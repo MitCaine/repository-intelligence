@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import hashlib
 import inspect
 from pathlib import Path
 
@@ -127,9 +126,7 @@ def index_source(path: Path, source: bytes, *, tree, parse_bytes: bytes, offsets
         pending.extend((child, owners) for child in reversed(node.named_children))
     assign_named_ids(functions)
     coverage = finalize_coverage(functions, promised_count, unhandled_count, 0)
-    blob = hashlib.sha1(f"blob {len(source)}\0".encode() + source).hexdigest()
-    return {"path": str(path), "raw_sha256": hashlib.sha256(source).hexdigest(),
-            "git_blob_sha1": blob, "function_count": len(functions),
+    return {"path": str(path), "function_count": len(functions),
             "parse_error_count": unhandled_count, "unhandled_declarations": unhandled,
             "adapter_coverage": coverage,
             "functions": functions,

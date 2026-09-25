@@ -49,6 +49,8 @@ bodyless, not implementations. Source ranges are exact UTF-8 byte ranges.
 `module_bindings` reports syntactic imports/exports only; call candidates are
 lexical, not resolved. `ERROR`, `MISSING`, and unhandled promised nodes make
 the result incomplete.
+Nearby syntactic comments are small search hints for callable terms; they are
+not authority metadata or resolved documentation links.
 
 For pinned Java, `.java` promises every body-bearing `method_declaration`,
 `constructor_declaration`, `compact_constructor_declaration`, and
