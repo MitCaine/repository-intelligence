@@ -53,6 +53,25 @@ class StructuralTests(unittest.TestCase):
             span = syntax["declarations"][0]["byte_range"]
             self.assertEqual(source[span["start"]:span["end"]].splitlines()[0], b"#[inline]")
 
+    def test_rust_only_attached_doc_comments_enter_declaration_hash(self):
+        cases = [
+            (b"// unrelated\nfn f() {}\n", b"fn f() {}"),
+            (b"/* unrelated */\nfn f() {}\n", b"fn f() {}"),
+            (b"//// ordinary\nfn f() {}\n", b"fn f() {}"),
+            (b"//! module docs\nfn f() {}\n", b"fn f() {}"),
+            (b"/*! module docs */\nfn f() {}\n", b"fn f() {}"),
+            (b"/// function docs\nfn f() {}\n", b"/// function docs\nfn f() {}"),
+            (b"/** function docs */\nfn f() {}\n", b"/** function docs */\nfn f() {}"),
+            (b"/// separated docs\n\nfn f() {}\n", b"fn f() {}"),
+        ]
+        for source, expected in cases:
+            with self.subTest(source=source):
+                entry = probe(".rs", source)["declarations"][0]
+                span = entry["byte_range"]
+                self.assertEqual(source[span["start"]:span["end"]], expected)
+                self.assertEqual(entry["declaration_sha256"],
+                                 hashlib.sha256(expected).hexdigest())
+
     def test_declared_latin1_positions_still_bind_raw_bytes(self):
         source = b'# coding: latin-1\nx = "\x85"\ndef target(): return "caf\xe9"\n'
         syntax = probe(".py", source)

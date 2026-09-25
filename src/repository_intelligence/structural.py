@@ -17,7 +17,7 @@ from tree_sitter import Language, Parser
 import tree_sitter_python
 import tree_sitter_rust
 
-from .python_index import _physical_lines
+from .source import physical_lines
 
 
 ADAPTER_VERSION = 1
@@ -37,9 +37,9 @@ class _RawOffsets:
         self.utf8 = decoded.encode("utf-8")
         self.utf8_starts = [0]
         self.raw_starts = [0]
-        for line in _physical_lines(self.utf8):
+        for line in physical_lines(self.utf8):
             self.utf8_starts.append(self.utf8_starts[-1] + len(line))
-        for line in _physical_lines(source):
+        for line in physical_lines(source):
             self.raw_starts.append(self.raw_starts[-1] + len(line))
         if len(self.utf8_starts) != len(self.raw_starts):
             raise ValueError("Transcoded Python line structure differs from raw source")
@@ -64,9 +64,19 @@ def _rust_start(node, source: bytes) -> int:
     """Include adjacent Rust attributes/doc comments in the source envelope."""
     start = node.start_byte
     prior = node.prev_named_sibling
-    while prior is not None and prior.type in {
-            "attribute_item", "inner_attribute_item", "line_comment", "block_comment"}:
-        if source[prior.end_byte:start].strip():
+    while prior is not None:
+        snippet = source[prior.start_byte:prior.end_byte]
+        attached = (prior.type == "attribute_item"
+                    or (prior.type == "line_comment"
+                        and snippet.startswith(b"///") and not snippet.startswith(b"////"))
+                    or (prior.type == "block_comment"
+                        and snippet.startswith(b"/**") and not snippet.startswith(b"/***")))
+        if not attached:
+            break
+        gap = source[prior.end_byte:start]
+        breaks = (gap.replace(b"\r\n", b"\n").replace(b"\r", b"\n").count(b"\n")
+                  + int(snippet.endswith((b"\n", b"\r"))))
+        if gap.strip() or breaks > 1:
             break
         start = prior.start_byte
         prior = prior.prev_named_sibling
