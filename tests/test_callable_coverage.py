@@ -5,10 +5,19 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from repository_intelligence.declarations import finalize_coverage
 from repository_intelligence.locator import index_file
 
 
 class CallableCoverageTests(unittest.TestCase):
+    def test_shared_finalizer_rejects_missing_or_duplicate_mapping(self):
+        entry = {"declaration_kind": "function", "byte_range": {"start": 0, "end": 4}}
+        with self.assertRaisesRegex(ValueError, "not accounted"):
+            finalize_coverage([entry], promised=2, unhandled=0, bodyless_excluded=0)
+        with self.assertRaisesRegex(ValueError, "mapped more than once"):
+            finalize_coverage([entry, entry], promised=2, unhandled=0,
+                              bodyless_excluded=0)
+
     def _index(self, filename: str, source: bytes) -> dict:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / filename

@@ -28,7 +28,8 @@ inside a `trait_item` or `foreign_mod_item` it is counted as excluded from the
 callable map. Elsewhere it is treated as adapter-unhandled and makes the result
 incomplete. Missing/zero-width bodies or names on promised nodes do likewise.
 
-Each direct-file result's `adapter_coverage` counts promised syntax nodes, mapped entries,
+Each successfully parsed supported direct-file result's `adapter_coverage`
+counts promised syntax nodes, mapped entries,
 adapter-unhandled nodes, and explicitly excluded bodyless signatures. The first
 count must equal mapped plus unhandled; a duplicate mapped source range is a
 failure, not a second callable. Unhandled detail is bounded to 50 entries, while
