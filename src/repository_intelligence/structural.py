@@ -26,7 +26,7 @@ import tree_sitter_cpp
 from .source import physical_lines
 
 
-ADAPTER_VERSION = 2
+ADAPTER_VERSION = 3
 MAX_DECLARATION_DETAILS = 100
 MAX_DIAGNOSTIC_DETAILS = 50
 GRAMMARS = {

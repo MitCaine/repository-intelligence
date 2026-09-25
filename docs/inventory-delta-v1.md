@@ -70,6 +70,10 @@ Repeated named declarations with the same syntactic identity carry
 `identity_ambiguous`; in a changed file, these are conservatively reported as
 removed and added even when their positional IDs coincide. Java, C#, and C++
 overloads use syntactic parameters, not resolved compiler symbols, for identity.
+The current mapping contract also distinguishes Java declarator array dimensions,
+C# generic arity and indexer parameter ownership, and C++ member cv/ref
+qualifiers. Out-of-class C++ constructor/destructor/operator kinds follow terminal syntax.
+This remains source-level identity, not semantic type resolution.
 
 Example from two separately materialized source roots:
 

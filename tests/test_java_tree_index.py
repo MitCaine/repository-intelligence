@@ -10,6 +10,25 @@ from repository_intelligence.locator import index_file, query_path
 
 
 class JavaTreeIndexTests(unittest.TestCase):
+    def test_array_declarator_dimensions_distinguish_overloads(self):
+        before = b"class C { int f(int x){return 1;} int f(int x[]){return 2;} }\n"
+        indexed = self._index(before)
+        self.assertEqual({before[e["byte_range"]["start"]:e["byte_range"]["end"]]
+                          for e in indexed["functions"]},
+                         {b"int f(int x){return 1;}", b"int f(int x[]){return 2;}"})
+        self.assertFalse(any(e.get("identity_ambiguous") for e in indexed["functions"]))
+        after = (b"// unrelated\nclass C { int f(int x[]){return 2;} "
+                 b"int f(int x){return 1;} }\n")
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "C.java").write_bytes(before)
+            (right / "C.java").write_bytes(after)
+            changes = compare_inventories(inventory_tree(left, stable=True),
+                                          inventory_tree(right, stable=True))["declaration_changes"]
+            self.assertEqual(tuple(len(changes[k]) for k in
+                                   ("added", "removed", "modified", "unchanged")),
+                             (0, 0, 0, 2))
     def test_nearby_javadoc_terms_find_opaque_method_name(self):
         source = b"class C { /** Reconcile overdue invoices. */\n void run(){} }\n"
         result = self._index(source)
