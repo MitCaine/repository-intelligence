@@ -12,8 +12,15 @@ def compact(value: str, limit: int) -> str:
 
 
 def tokens(value: str) -> list[str]:
-    value = re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ", value)
-    return re.findall(r"[a-z0-9]+", value.lower())
+    separated: list[str] = []
+    for position, character in enumerate(value):
+        if position and character.isupper():
+            prior = value[position - 1]
+            following = value[position + 1] if position + 1 < len(value) else ""
+            if prior.islower() or prior.isdigit() or (prior.isupper() and following.islower()):
+                separated.append(" ")
+        separated.append(character)
+    return re.findall(r"[^\W_]+", "".join(separated).casefold(), flags=re.UNICODE)
 
 
 def validate_query(terms: str, limit: int) -> list[str]:
