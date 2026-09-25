@@ -31,6 +31,8 @@ def validate_query(terms: str, limit: int) -> list[str]:
 
 def score(entry: dict, words: list[str]) -> int:
     name = set(tokens(entry["name"]))
+    for alias in entry.get("binding_aliases", []):
+        name.update(tokens(alias))
     qualified = set(tokens(entry["qualified_name"]))
     docs = set(tokens(entry["docs"]))
     calls = set(word for call in entry["lexical_call_candidates"] for word in tokens(call))

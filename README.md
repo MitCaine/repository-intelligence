@@ -59,7 +59,7 @@ The raw SHA-256 identifies
 bytes read, not a verified Git checkout. Lexical call candidates are not
 resolved relationships.
 
-The shared command's [versioned result contract](docs/navigation-result-v3.md)
+The shared command's [versioned result contract](docs/navigation-result-v4.md)
 explains source identity, incomplete results, and directory scope. It is for
 navigation, not candidate-change qualification.
 

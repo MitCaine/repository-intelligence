@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def legacy_git_blob_sha1(source: bytes) -> str:

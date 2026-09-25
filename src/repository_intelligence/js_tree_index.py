@@ -35,6 +35,8 @@ def _name_from_assignment(node, source: bytes) -> str | None:
 def _export_kind(node, source: bytes) -> str | None:
     ancestor = node.parent
     while ancestor is not None and ancestor.type != "program":
+        if ancestor.type in CALLABLES:
+            return None  # An enclosing callable's export does not export its nested callable.
         if ancestor.type == "assignment_expression":
             target = ancestor.child_by_field_name("left")
             if target is not None and _text(source, target).startswith(("module.exports", "exports.")):
@@ -141,6 +143,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 anonymous = name_node is None and inferred is None
                 name = (_text(source, name_node) if name_node is not None else inferred
                         or f"<{'default' if export_kind == 'default' else 'anonymous'}@{node.start_byte}>")
+                aliases = [inferred] if inferred is not None and inferred != name else []
                 qualified = ".".join((*owners, name))
                 method_tokens = tuple(child.type for child in node.children
                                       if name_node is not None and child.end_byte <= name_node.start_byte)
@@ -151,6 +154,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                         "method" if node.type == "method_definition" else "function")
                 functions.append({
                     "name": name, "qualified_name": qualified,
+                    "binding_aliases": aliases,
                     "line": node.start_point.row + 1,
                     "column": utf8_display_column(source, node.start_byte),
                     "end_line": node.end_point.row + (node.end_point.column != 0),
