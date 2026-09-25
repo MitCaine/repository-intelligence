@@ -3,34 +3,21 @@
 from __future__ import annotations
 
 import argparse
-from functools import lru_cache
 import json
 import os
 import platform
-import subprocess
 from pathlib import Path
 
-from . import python_index, rust_index, structural
+from . import python_index, rust_tree_index, structural
 from .search import (display_entry, format_compact, format_tree_compact, query, rank,
                      validate_query)
 from .source import SCHEMA_VERSION, git_object_format, identify_bytes
 
 
-PARSERS = {".py": python_index.index_source, ".rs": rust_index.index_source}
+PARSERS = {".py": python_index.index_source, ".rs": rust_tree_index.index_source}
 MAX_PARSE_BYTES = 4_000_000
-PARSE_FAILURES = (OSError, ValueError, SyntaxError, UnicodeError,
-                  subprocess.SubprocessError, json.JSONDecodeError)
+PARSE_FAILURES = (OSError, ValueError, SyntaxError, UnicodeError)
 _AUTO_FORMAT = object()
-
-
-@lru_cache(maxsize=1)
-def _rust_analyzer_version() -> str | None:
-    try:
-        result = subprocess.run(["rust-analyzer", "--version"], capture_output=True,
-                                text=True, check=True, timeout=5)
-    except (OSError, subprocess.SubprocessError):
-        return None
-    return result.stdout.strip() or None
 
 
 def index_file(path: Path, *, root: Path | None = None,
@@ -67,28 +54,26 @@ def index_file(path: Path, *, root: Path | None = None,
     parser = PARSERS.get(path.suffix.lower())
     if parser is None:
         return {**basic, "mapping_status": "unsupported", "parser": None}
-    parser_name = "python.ast" if path.suffix.lower() == ".py" else "rust-analyzer"
-    parser_info = {"name": parser_name,
-                   "version": (platform.python_version() if parser_name == "python.ast"
-                               else _rust_analyzer_version()),
-                   "adapter_version": 2,
-                   "runtime": ("CPython" if parser_name == "python.ast" else None),
-                   "runtime_version": (platform.python_version()
-                                       if parser_name == "python.ast" else None),
-                   "grammar": ("Python" if parser_name == "python.ast" else "Rust"),
-                   "grammar_version": (platform.python_version()
-                                       if parser_name == "python.ast" else None)}
     if len(source) > MAX_PARSE_BYTES:
-        return {**basic, "mapping_status": "incomplete", "parser": parser_info,
+        return {**basic, "mapping_status": "incomplete", "parser": None,
                 "failures": [{"error": "SourceLimitExceeded", "limit_bytes": MAX_PARSE_BYTES}]}
     try:
-        syntax = structural.probe(path.suffix.lower(), source)
+        syntax, tree = structural.scan(path.suffix.lower(), source)
     except (OSError, ValueError, UnicodeError, ImportError, SyntaxError, LookupError) as error:
-        return {**basic, "mapping_status": "incomplete", "parser": parser_info,
+        return {**basic, "mapping_status": "incomplete", "parser": None,
                 "structural": None,
                 "failures": [{"error": type(error).__name__, "stage": "tree_sitter"}]}
+    if path.suffix.lower() == ".py":
+        parser_info = {"name": "python.ast", "version": platform.python_version(),
+                       "adapter_version": 2, "runtime": "CPython",
+                       "runtime_version": platform.python_version(),
+                       "grammar": "Python", "grammar_version": platform.python_version()}
+    else:
+        parser_info = {**syntax["parser"], "version": syntax["parser"]["runtime_version"],
+                       "runtime": "tree-sitter"}
     try:
-        indexed = parser(path, source)
+        indexed = (parser(path, source, tree=tree) if path.suffix.lower() == ".rs"
+                   else parser(path, source))
     except PARSE_FAILURES as error:
         return {**basic, "mapping_status": "incomplete", "parser": parser_info,
                 "structural": syntax,

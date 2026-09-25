@@ -13,7 +13,7 @@ import tokenize
 from bisect import bisect_right
 from importlib.metadata import version
 
-from tree_sitter import Language, Parser
+from tree_sitter import Language, Node, Parser
 import tree_sitter_python
 import tree_sitter_rust
 
@@ -60,10 +60,11 @@ def _python_input(source: bytes) -> tuple[bytes, str, _RawOffsets | None]:
                             if utf8 != source else None)
 
 
-def _rust_start(node, source: bytes) -> int:
-    """Include adjacent Rust attributes/doc comments in the source envelope."""
+def rust_attachments(node, source: bytes) -> list:
+    """Return immediately attached outer attributes/doc comments, in source order."""
     start = node.start_byte
     prior = node.prev_named_sibling
+    attached_nodes = []
     while prior is not None:
         snippet = source[prior.start_byte:prior.end_byte]
         attached = (prior.type == "attribute_item"
@@ -79,12 +80,18 @@ def _rust_start(node, source: bytes) -> int:
         if gap.strip() or breaks > 1:
             break
         start = prior.start_byte
+        attached_nodes.append(prior)
         prior = prior.prev_named_sibling
-    return start
+    return list(reversed(attached_nodes))
 
 
-def probe(suffix: str, source: bytes) -> dict:
-    """Return partial structural evidence; no exhaustive coverage is asserted."""
+def _rust_start(node, source: bytes) -> int:
+    attachments = rust_attachments(node, source)
+    return attachments[0].start_byte if attachments else node.start_byte
+
+
+def scan(suffix: str, source: bytes) -> tuple[dict, Node]:
+    """Return partial evidence and the parsed tree for a current-language adapter."""
     grammar_name, distribution, module = GRAMMARS[suffix]
     language = Language(module.language())
     parse_bytes, encoding, offsets = (_python_input(source) if suffix == ".py"
@@ -144,7 +151,7 @@ def probe(suffix: str, source: bytes) -> dict:
                                      "byte_range": {"start": start, "end": end},
                                      "declaration_sha256": hashlib.sha256(source[start:end]).hexdigest()})
         pending.extend(reversed(node.children))
-    return {"parser": {"name": "tree-sitter", "runtime_version": version("tree-sitter"),
+    result = {"parser": {"name": "tree-sitter", "runtime_version": version("tree-sitter"),
                        "grammar": grammar_name, "grammar_version": version(distribution),
                        "grammar_abi_version": language.abi_version,
                        "adapter_version": ADAPTER_VERSION},
@@ -156,3 +163,9 @@ def probe(suffix: str, source: bytes) -> dict:
             "details_truncated": (declaration_count > len(declarations)
                                   or error_count + missing_count > len(diagnostics)),
             "coverage": "partial_navigation_evidence"}
+    return result, root
+
+
+def probe(suffix: str, source: bytes) -> dict:
+    """Return partial structural evidence without exposing parser objects."""
+    return scan(suffix, source)[0]

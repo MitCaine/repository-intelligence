@@ -24,6 +24,12 @@ def physical_lines(value: bytes | str) -> list[bytes] | list[str]:
     return lines
 
 
+def utf8_display_column(source: bytes, offset: int) -> int:
+    """One-based character column for a UTF-8 byte offset; never an identity."""
+    line_start = max(source.rfind(b"\n", 0, offset), source.rfind(b"\r", 0, offset)) + 1
+    return len(source[line_start:offset].decode("utf-8", "replace")) + 1
+
+
 def git_object_format(root: Path) -> str | None:
     """Return this checkout's storage format, if root is in a Git repository."""
     try:

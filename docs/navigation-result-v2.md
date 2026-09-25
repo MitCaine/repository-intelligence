@@ -55,26 +55,29 @@ silently mapped. Directory scans omit symlinks, duplicate physical files,
 hidden/generated directories, and nested repositories with reported reasons.
 
 The parser metadata names the current adapter and parser version when
-available. Python uses the running interpreter's AST parser; Rust uses the
-installed `rust-analyzer`. `parser.name` identifies the provider of the
+available. Python navigation still uses the running interpreter's AST parser;
+ordinary Rust navigation uses the pinned Tree-sitter runtime and Rust grammar.
+The separate rust-analyzer route remains available as opt-in escalation.
+`parser.name` identifies the provider of the
 `lexical_call_candidates`; these are syntactic observations, not resolved
-relationships. Rust's separately identifiable grammar version is unavailable
-and recorded as null rather than guessed. The controller still chooses task
+relationships. The controller still chooses task
 scope and confirms relevant source. Ranking has no project-directory special
 cases; it scores complete extracted evidence before the displayed packet is
 truncated.
 
-For supported files within the size limit, `structural` adds a pinned
-Tree-sitter probe: actual runtime/grammar versions and grammar ABI, raw-byte
+For supported files within the size limit, `structural` adds pinned
+Tree-sitter evidence: actual runtime/grammar versions and grammar ABI, raw-byte
 declaration envelopes, `ERROR`/`MISSING` counts and diagnostic samples. Its
 `coverage` is `partial_navigation_evidence`, not a contracted complete
 inventory. Detail arrays are bounded at 100 declarations and 50 diagnostics;
 counts and `details_truncated` disclose omissions from those arrays. Python
 declared encodings are decoded and parsed as UTF-8, with reported offsets mapped
 back to the original raw bytes. If Tree-sitter reports syntax errors, the
-shared result is `incomplete` even if the native navigation adapter returned
-some matches. The existing `parser` and navigation fields still come from the
-native adapters during the #8 parity phase.
+shared result is `incomplete` even if navigation returned some matches. Python
+navigation still comes from its standard-library adapter; Rust navigation now
+uses the same Tree-sitter parse as this structural evidence. The Rust adapter
+also reports promised `function_item`/`closure_expression` nodes it cannot
+handle as incomplete. This remains navigation evidence, not complete coverage.
 
 Parsed callable entries include a `declaration_id` synthesized from kind and
 qualified name. Named functions also carry a source-order ordinal among

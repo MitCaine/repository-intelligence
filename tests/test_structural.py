@@ -49,7 +49,7 @@ class StructuralTests(unittest.TestCase):
                               for entry in syntax["declarations"]],
                              [("function", "outer"), ("closure", None),
                               ("function", "method")])
-            self.assertEqual(result["function_count"], 2)
+            self.assertEqual(result["function_count"], 3)
             span = syntax["declarations"][0]["byte_range"]
             self.assertEqual(source[span["start"]:span["end"]].splitlines()[0], b"#[inline]")
 

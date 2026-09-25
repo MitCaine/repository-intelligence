@@ -1,9 +1,10 @@
 # Tree-sitter baseline: first #8 slice
 
-The shared locator now runs a small structural probe before its existing
-navigation adapter. This proves a common parser can report Python and Rust
-syntax and source envelopes without changing existing navigation fields or
-claiming exhaustive language coverage.
+The shared locator runs a small structural probe. Python still uses its
+standard-library navigation adapter; ordinary Rust navigation now comes from
+the same Tree-sitter parse as the probe. The separate rust-analyzer route is
+preserved as an opt-in escalation for richer source/metadata questions. No
+exhaustive language coverage is claimed.
 
 Pinned package versions in `pyproject.toml` are `tree-sitter==0.25.0`,
 `tree-sitter-python==0.25.0`, and `tree-sitter-rust==0.24.2`. Results record
@@ -15,15 +16,18 @@ distributions do not ship `node-types.json`; this is an upgrade review step,
 not a runtime registry.
 
 Current fixtures cover Python decorated async/nested functions, methods and
-lambdas; Rust attributed generic functions, methods and closures; raw-byte
+lambdas; Rust attributed generic functions, trait/impl methods, nested
+functions and closures; raw-byte
 mapping for declared Latin-1 Python; and both `ERROR` and `MISSING` recovery
 nodes. The probe returns bounded declaration and diagnostic detail arrays,
-with total counts. It is not an exhaustive contract or a replacement for the
-native adapters yet.
+with total counts. It is not an exhaustive contract. Rust navigation parity
+with the optional analyzer is fixture-tested for names, locations, docs, and
+lexical call candidates.
 
-Remaining #8 work: enumerate every promised body-bearing syntax form, detect
-adapter-unhandled nodes, align structural declarations with the existing
-navigation fields, verify behavior on grammar upgrades, support explicit
-language selection for ambiguous extensions, and make `rust-analyzer`
-optional for ordinary structural navigation. #9 owns repository-wide complete
-inventories and candidate deltas.
+Remaining #8 work: enumerate every promised body-bearing syntax form across
+both languages, broaden parity fixtures, align Python structural declarations
+with its navigation fields, verify behavior on grammar upgrades, and support
+explicit language selection for ambiguous extensions. Rust `function_item`
+and `closure_expression` nodes are handled or visibly marked incomplete, but
+this is not proof of exhaustive Rust syntax coverage. #9 owns repository-wide
+complete inventories and candidate deltas.
