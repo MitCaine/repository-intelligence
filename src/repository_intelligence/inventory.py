@@ -12,13 +12,13 @@ import json
 import sys
 from pathlib import Path
 
-from .locator import PARSERS, index_file, walk_supported_paths
+from .locator import PARSERS, SUFFIX_LANGUAGE, index_file, walk_supported_paths
 from .source import SCHEMA_VERSION, git_object_format
 from .structural import probe
 
 
-INVENTORY_SCHEMA_VERSION = 1
-MAPPING_CONTRACT = "python-rust-source-callables-v1"
+INVENTORY_SCHEMA_VERSION = 2
+MAPPING_CONTRACT = "python-rust-javascript-typescript-source-callables-v1"
 
 
 def _digest(scope: dict, files: list[dict]) -> str:
@@ -56,12 +56,13 @@ def inventory_tree(root: Path, *, stable: bool = False,
         except (OSError, ValueError) as error:
             failures.append({"path": relative, "error": type(error).__name__})
             continue
-        files.append({"path": relative, "language": "python" if suffix == ".py" else "rust",
+        files.append({"path": relative, "language": SUFFIX_LANGUAGE[suffix],
                       "source_identity": indexed.get("source_identity"),
                       "parser": indexed.get("parser"),
                       "mapping_status": indexed["mapping_status"],
                       "adapter_coverage": indexed.get("adapter_coverage"),
                       "structural": indexed.get("structural"),
+                      "module_bindings": indexed.get("module_bindings"),
                       "declarations": indexed["functions"]})
         failures.extend({"path": relative, **failure} for failure in indexed["failures"])
         if indexed["mapping_status"] != "navigation_only":
@@ -154,8 +155,7 @@ def _complete_packet_errors(inventory: dict) -> list[str]:
         coverage = file.get("adapter_coverage")
         declarations = file.get("declarations")
         expected = parser_contract.get(suffix)
-        if (suffix not in PARSERS or file.get("language") !=
-                ("python" if suffix == ".py" else "rust") or
+        if (suffix not in PARSERS or file.get("language") != SUFFIX_LANGUAGE.get(suffix) or
                 not isinstance(identity, dict) or identity.get("relative_path") != path or
                 not isinstance(identity.get("raw_sha256"), str) or
                 len(identity["raw_sha256"]) != 64 or
@@ -185,6 +185,7 @@ def _unchanged_file_evidence_matches(prior: dict, current: dict) -> bool:
     """Identical bytes under one parser contract must yield identical mapping."""
     return (prior["adapter_coverage"] == current["adapter_coverage"]
             and prior["structural"] == current["structural"]
+            and prior["module_bindings"] == current["module_bindings"]
             and sorted(prior["declarations"], key=lambda item: item["declaration_id"])
             == sorted(current["declarations"], key=lambda item: item["declaration_id"]))
 

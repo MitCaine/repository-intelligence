@@ -7,14 +7,21 @@ import json
 import os
 from pathlib import Path
 
-from . import python_tree_index, rust_tree_index, structural
+from . import js_tree_index, python_tree_index, rust_tree_index, structural
 from .search import (display_entry, format_compact, format_tree_compact, query, rank,
                      validate_query)
 from .source import SCHEMA_VERSION, git_object_format, identify_bytes
 
 
-PARSERS = {".py": python_tree_index.index_source, ".rs": rust_tree_index.index_source}
-LANGUAGE_SUFFIX = {"python": ".py", "rust": ".rs"}
+PARSERS = {".py": python_tree_index.index_source, ".rs": rust_tree_index.index_source,
+           **{suffix: js_tree_index.index_source for suffix in
+              (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx")}}
+LANGUAGE_SUFFIX = {"python": ".py", "rust": ".rs", "javascript": ".js",
+                   "typescript": ".ts", "tsx": ".tsx"}
+SUFFIX_LANGUAGE = {suffix: ("javascript" if suffix in {".js", ".jsx", ".mjs", ".cjs"}
+                            else "typescript" if suffix == ".ts" else "tsx"
+                            if suffix == ".tsx" else "python" if suffix == ".py" else "rust")
+                   for suffix in PARSERS}
 MAX_PARSE_BYTES = 4_000_000
 PARSE_FAILURES = (OSError, ValueError, SyntaxError, UnicodeError)
 _AUTO_FORMAT = object()
@@ -57,7 +64,7 @@ def index_file(path: Path, *, root: Path | None = None,
              "failures": []}
     extension = path.suffix.lower()
     if language is not None and extension in PARSERS \
-            and extension != LANGUAGE_SUFFIX[language]:
+            and SUFFIX_LANGUAGE[extension] != language:
         return {**basic, "mapping_status": "unsupported", "parser": None,
                 "unsupported_reason": "language_extension_mismatch"}
     parser_suffix = LANGUAGE_SUFFIX[language] if language is not None else extension
@@ -186,7 +193,7 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
                            "parse_error_count": indexed["parse_error_count"]}
                           for entry in indexed["functions"])
     if not paths:
-        raise ValueError("No supported .py or .rs files found in directory")
+        raise ValueError("No supported source files found in directory")
     ranked = rank(candidates, words)
     return {"schema_version": SCHEMA_VERSION, "root": str(source), "query": terms,
             "scan_scope": {"root": str(source.resolve()),

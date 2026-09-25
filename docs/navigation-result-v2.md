@@ -42,14 +42,15 @@ question, configuration, and provider result; there is no such claim here.
 `navigation_only`, `incomplete`, `unsupported`, and `excluded` never support
 an absence claim. An `incomplete` result may still contain usable matches.
 For a direct file with an ambiguous extension, `language="python"` or
-`language="rust"` explicitly chooses a shipped adapter; without it, the file
+`language="rust"`, `"javascript"`, `"typescript"`, or `"tsx"` explicitly chooses a shipped adapter; without it, the file
 is `unsupported` with `unsupported_reason: no_language_adapter_selected`.
-A conflicting selection for a known `.py` or `.rs` extension returns
+A conflicting selection for a known supported extension returns
 `unsupported` with `unsupported_reason: language_extension_mismatch`.
 Unknown language names and directory-level language selection are rejected.
 Selecting Rust for `.h` does not imply support for C or C++ syntax.
 
-The directory command currently scans `.py` and `.rs` files. Its `scan_scope`
+The directory command currently scans `.py`, `.rs`, `.js`, `.jsx`, `.mjs`,
+`.cjs`, `.ts`, and `.tsx` files. Its `scan_scope`
 states these extensions and labels the source `working_tree_non_atomic`: files
 may change during a scan. It reports excluded hidden/generated directories,
 symlinks, nested repositories, and duplicate physical files. Other file types
@@ -62,7 +63,7 @@ silently mapped. Directory scans omit symlinks, duplicate physical files,
 hidden/generated directories, and nested repositories with reported reasons.
 
 The parser metadata names the current adapter and parser version when
-available. Ordinary Python and Rust navigation both use the pinned Tree-sitter
+available. Ordinary supported-language navigation uses the pinned Tree-sitter
 runtime and their language grammars. The standard-library Python AST adapter
 remains available directly as a reference/fallback API.
 The separate rust-analyzer route remains available as opt-in escalation.
@@ -82,9 +83,10 @@ counts and `details_truncated` disclose omissions from those arrays. Python
 declared encodings are decoded and parsed as UTF-8, with reported offsets mapped
 back to the original raw bytes. If Tree-sitter reports syntax errors, the
 shared result is `incomplete` even if navigation returned some matches. Python
-and Rust navigation use the same Tree-sitter parse as this structural evidence.
+Rust, JavaScript, and TypeScript navigation use the same Tree-sitter parse as this structural evidence.
 The adapters report promised Python function/lambda and Rust
-`function_item`/`closure_expression` nodes they cannot handle as incomplete.
+`function_item`/`closure_expression` nodes they cannot handle as incomplete;
+the JavaScript/TypeScript adapter does the same for its documented callables.
 This remains navigation evidence, not complete coverage.
 Successfully parsed supported direct-file `adapter_coverage` reports
 `promised_node_count`, `mapped_node_count`,
@@ -110,6 +112,5 @@ callable coverage. Calls remain lexical candidates from these adapters, not
 resolved relationships. The opt-in rust-analyzer route has a separate result
 shape and records its own parser metadata where available.
 
-RI #8 owns exhaustive per-language declaration coverage and RI #9 owns
-repository-wide complete inventories and candidate structural deltas. This
+The inventory API supplies repository-wide candidate structural deltas. This
 navigation result must not be used as proof that no other callable exists.

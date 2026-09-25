@@ -58,6 +58,7 @@ class InstalledPackageTests(unittest.TestCase):
                                        "repository_intelligence/rust_tree_index.py",
                                        "repository_intelligence/python_index.py",
                                        "repository_intelligence/python_tree_index.py",
+                                       "repository_intelligence/js_tree_index.py",
                                        "repository_intelligence/search.py",
                                        "repository_intelligence/source.py",
                                        "repository_intelligence/declarations.py",
@@ -72,6 +73,9 @@ class InstalledPackageTests(unittest.TestCase):
             (consumer / "src/lib.rs").write_text("pub fn calculate_total(a: i32, b: i32) -> i32 { a + b }\n")
             (consumer / "src/orders.py").write_text("def calculate_total(price):\n    return price\n")
             (consumer / "src/explicit.h").write_text("fn calculate_total() {}\n")
+            (consumer / "fixture.js").write_text("export function calculate_total(){ return 1; }\n")
+            (consumer / "fixture.ts").write_text("export const calculate_total = (x: number) => x;\n")
+            (consumer / "fixture.tsx").write_text("export const View = () => <div/>;\n")
             script = temp / "smoke.py"
             script.write_text(
                 "import json\n"
@@ -92,6 +96,9 @@ class InstalledPackageTests(unittest.TestCase):
                 "inventory = inventory_tree(Path('src'), stable=True)\n"
                 "assert inventory['status'] == 'complete' and len(inventory['files']) == 2\n"
                 "assert compare_inventories(inventory, inventory)['status'] == 'comparable_candidate_delta'\n"
+                "assert query_path(Path('fixture.js'), 'calculate total')['matches'][0]['name'] == 'calculate_total'\n"
+                "assert query_path(Path('fixture.ts'), 'calculate total')['matches'][0]['name'] == 'calculate_total'\n"
+                "assert query_path(Path('fixture.tsx'), 'view')['matches'][0]['name'] == 'View'\n"
                 "print(json.dumps(sorted(item['path'] for item in result['matches'])))\n")
             consumer_environment = {**environment, "PATH": str(install / "bin")}
             result = run(installed_python, "-I", script, cwd=consumer, env=consumer_environment)

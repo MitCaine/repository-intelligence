@@ -38,12 +38,25 @@ make a result incomplete, even when valid neighboring declarations are mapped.
 These are commitments over the grammar's recognized node kinds, not proof that
 every possible language construct or generated macro expansion was inventoried.
 
+For pinned JavaScript and TypeScript grammars, `.js`, `.jsx`, `.mjs`, `.cjs`,
+`.ts`, and `.tsx` promise every body-bearing `function_declaration`,
+`generator_function_declaration`, `function_expression`, `generator_function`,
+`arrow_function`, and `method_definition` node. This includes nested and
+anonymous functions, class/object methods, constructors, and accessors.
+Anonymous functions get source-position-based structural IDs; overload and
+interface/abstract signatures without bodies are separately counted as
+bodyless, not implementations. Source ranges are exact UTF-8 byte ranges.
+`module_bindings` reports syntactic imports/exports only; call candidates are
+lexical, not resolved. `ERROR`, `MISSING`, and unhandled promised nodes make
+the result incomplete.
+
 Pinned package versions in `pyproject.toml` are `tree-sitter==0.25.0`,
-`tree-sitter-python==0.25.0`, and `tree-sitter-rust==0.24.2`. Results record
+`tree-sitter-python==0.25.0`, `tree-sitter-rust==0.24.2`,
+`tree-sitter-javascript==0.25.0`, and `tree-sitter-typescript==0.23.2`. Results record
 actual installed distribution versions, grammar ABI, and adapter version 1.
 Changing a grammar pin requires reviewing that grammar's upstream generated
 `node-types.json` for changed declaration nodes/fields, then running the
-Python/Rust fixtures and installed-wheel check before adoption. The wheel
+language fixtures and installed-wheel check before adoption. The wheel
 distributions do not ship `node-types.json`; this is an upgrade review step,
 not a runtime registry.
 
@@ -74,8 +87,7 @@ not AST-based declaration discovery or a resolved call graph. RI's current
 Python modules match the AST reference for call text and search tokens; that
 fixture does not promise identical presentation for every possible source.
 
-Explicit language selection is available for ambiguous direct files, but only
-Python and Rust adapters are shipped. The pinned upstream node types have been
+Explicit language selection is available for ambiguous direct files. The pinned upstream node types have been
 checked with the documented maintainer command; future grammar upgrades must
 repeat that review and fixtures. Broader consumer-project parity may still find
 unhandled syntax. This contract is not proof of exhaustive Python or Rust
