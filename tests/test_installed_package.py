@@ -62,7 +62,8 @@ class InstalledPackageTests(unittest.TestCase):
                                        "repository_intelligence/source.py",
                                        "repository_intelligence/declarations.py",
                                        "repository_intelligence/structural.py",
-                                       "repository_intelligence/locator.py"})
+                                       "repository_intelligence/locator.py",
+                                       "repository_intelligence/inventory.py"})
             run(sys.executable, "-m", "venv", install, env=environment)
             installed_python = install / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
             run(installed_python, "-m", "pip", "install", "--no-index",
@@ -76,6 +77,7 @@ class InstalledPackageTests(unittest.TestCase):
                 "import json\n"
                 "from pathlib import Path\n"
                 "from repository_intelligence.locator import query_path\n"
+                "from repository_intelligence.inventory import inventory_tree, compare_inventories\n"
                 "result = query_path(Path('src'), 'calculate total')\n"
                 "assert result['structural_error_count'] == 0\n"
                 "single = query_path(Path('src/orders.py'), 'calculate total')\n"
@@ -87,6 +89,9 @@ class InstalledPackageTests(unittest.TestCase):
                 "assert ambiguous['mapping_status'] == 'unsupported'\n"
                 "selected = query_path(Path('src/explicit.h'), 'calculate total', language='rust')\n"
                 "assert selected['matches'][0]['name'] == 'calculate_total'\n"
+                "inventory = inventory_tree(Path('src'), stable=True)\n"
+                "assert inventory['status'] == 'complete' and len(inventory['files']) == 2\n"
+                "assert compare_inventories(inventory, inventory)['status'] == 'comparable_candidate_delta'\n"
                 "print(json.dumps(sorted(item['path'] for item in result['matches'])))\n")
             consumer_environment = {**environment, "PATH": str(install / "bin")}
             result = run(installed_python, "-I", script, cwd=consumer, env=consumer_environment)

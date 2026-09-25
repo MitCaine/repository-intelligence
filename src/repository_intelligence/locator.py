@@ -18,6 +18,7 @@ LANGUAGE_SUFFIX = {"python": ".py", "rust": ".rs"}
 MAX_PARSE_BYTES = 4_000_000
 PARSE_FAILURES = (OSError, ValueError, SyntaxError, UnicodeError)
 _AUTO_FORMAT = object()
+EXCLUDED_DIRECTORIES = {"target", "__pycache__", "venv"}
 
 
 def index_file(path: Path, *, root: Path | None = None,
@@ -91,6 +92,60 @@ def index_file(path: Path, *, root: Path | None = None,
             "failures": []}
 
 
+def walk_supported_paths(root: Path) -> tuple[list[Path], list[dict], list[dict], int]:
+    """Share only traversal/exclusion facts; consumers choose failure policy."""
+    paths: list[Path] = []
+    exclusions: list[dict] = []
+    failures: list[dict] = []
+    other_files = 0
+    seen_physical: set[tuple[int, int]] = set()
+    resolved_root = root.resolve()
+
+    def walk_error(error: OSError) -> None:
+        failures.append({"path": error.filename or str(root), "error": type(error).__name__})
+
+    for current, directories, filenames in os.walk(root, topdown=True, followlinks=False,
+                                                    onerror=walk_error):
+        parent = Path(current)
+        kept = []
+        for name in sorted(directories):
+            path = parent / name
+            relative = path.relative_to(root).as_posix()
+            reason = ("excluded_directory" if name.startswith(".") or name in EXCLUDED_DIRECTORIES
+                      else "symlink_directory" if path.is_symlink()
+                      else "nested_repository" if (path / ".git").exists() else None)
+            if reason is None:
+                kept.append(name)
+            else:
+                exclusions.append({"path": relative, "reason": reason})
+        directories[:] = kept
+        for name in sorted(filenames):
+            path = parent / name
+            if path.suffix.lower() not in PARSERS:
+                other_files += 1
+                continue
+            relative = path.relative_to(root).as_posix()
+            if name.startswith(".") or path.is_symlink():
+                exclusions.append({"path": relative,
+                                   "reason": "symlink_file" if path.is_symlink() else "hidden_file"})
+                continue
+            try:
+                if not path.resolve().is_relative_to(resolved_root):
+                    exclusions.append({"path": relative, "reason": "outside_root"})
+                    continue
+                stat = path.stat()
+                physical = stat.st_dev, stat.st_ino
+                if stat.st_ino and physical in seen_physical:
+                    exclusions.append({"path": relative, "reason": "duplicate_physical_file"})
+                    continue
+                if stat.st_ino:
+                    seen_physical.add(physical)
+                paths.append(path)
+            except (OSError, ValueError) as error:
+                failures.append({"path": relative, "error": type(error).__name__})
+    return paths, exclusions, failures, other_files
+
+
 def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = None,
                language: str | None = None) -> dict:
     words = validate_query(terms, limit)
@@ -105,79 +160,32 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
     if language is not None:
         raise ValueError("Explicit language applies only to a direct file query")
     candidates: list[dict] = []
-    failures: list[dict] = []
-    excluded_paths: list[dict] = []
+    paths, excluded_paths, failures, out_of_scope = walk_supported_paths(source)
     scanned = 0
     parse_errors = 0
     structural_errors = 0
-    supported = 0
-    out_of_scope = 0
     object_format = git_object_format(source)
-    seen_files: set[tuple[int, int]] = set()
-
-    def walk_error(error: OSError) -> None:
-        failures.append({"path": error.filename or str(source), "error": type(error).__name__})
-
-    for current, directories, filenames in os.walk(source, topdown=True, followlinks=False,
-                                                    onerror=walk_error):
-        parent = Path(current)
-        retained = []
-        for name in sorted(directories):
-            directory = parent / name
-            relative = directory.relative_to(source).as_posix()
-            if name.startswith(".") or name in {"target", "__pycache__", "venv"}:
-                reason = "excluded_directory"
-            elif directory.is_symlink():
-                reason = "symlink_directory"
-            elif (directory / ".git").exists():
-                reason = "nested_repository"
-            else:
-                retained.append(name)
-                continue
-            excluded_paths.append({"path": relative, "reason": reason})
-        directories[:] = retained
-        for name in sorted(filenames):
-            path = parent / name
-            if path.suffix.lower() not in PARSERS:
-                out_of_scope += 1
-                continue
-            relative = path.relative_to(source).as_posix()
-            if name.startswith(".") or path.is_symlink():
-                excluded_paths.append({"path": relative,
-                                       "reason": "symlink_file" if path.is_symlink() else "hidden_file"})
-                continue
-            try:
-                resolved = path.resolve()
-                if not resolved.is_relative_to(source.resolve()):
-                    excluded_paths.append({"path": relative, "reason": "outside_root"})
-                    continue
-                stat = path.stat()
-                physical = (stat.st_dev, stat.st_ino)
-                if stat.st_ino and physical in seen_files:
-                    excluded_paths.append({"path": relative, "reason": "duplicate_physical_file"})
-                    continue
-                if stat.st_ino:
-                    seen_files.add(physical)
-                supported += 1
-                indexed = index_file(path, root=source, object_format=object_format)
-            except (OSError, ValueError) as error:
-                failures.append({"path": str(path), "error": type(error).__name__})
-                continue
-            if indexed["failures"]:
-                failures.extend({"path": str(path), "source_identity": indexed["source_identity"],
-                                 **failure} for failure in indexed["failures"])
-                continue
-            scanned += 1
-            parse_errors += indexed["parse_error_count"]
-            structural_errors += (indexed["structural"]["error_count"]
-                                  + indexed["structural"]["missing_count"])
-            candidates.extend({**entry, "path": str(path),
-                               "raw_sha256": indexed["raw_sha256"],
-                               "git_blob_sha1": indexed["git_blob_sha1"],
-                               "source_identity": indexed["source_identity"],
-                               "parse_error_count": indexed["parse_error_count"]}
-                              for entry in indexed["functions"])
-    if supported == 0:
+    for path in paths:
+        try:
+            indexed = index_file(path, root=source, object_format=object_format)
+        except (OSError, ValueError) as error:
+            failures.append({"path": str(path), "error": type(error).__name__})
+            continue
+        if indexed["failures"]:
+            failures.extend({"path": str(path), "source_identity": indexed["source_identity"],
+                             **failure} for failure in indexed["failures"])
+            continue
+        scanned += 1
+        parse_errors += indexed["parse_error_count"]
+        structural_errors += (indexed["structural"]["error_count"]
+                              + indexed["structural"]["missing_count"])
+        candidates.extend({**entry, "path": str(path),
+                           "raw_sha256": indexed["raw_sha256"],
+                           "git_blob_sha1": indexed["git_blob_sha1"],
+                           "source_identity": indexed["source_identity"],
+                           "parse_error_count": indexed["parse_error_count"]}
+                          for entry in indexed["functions"])
+    if not paths:
         raise ValueError("No supported .py or .rs files found in directory")
     ranked = rank(candidates, words)
     return {"schema_version": SCHEMA_VERSION, "root": str(source), "query": terms,
