@@ -10,7 +10,7 @@ The 32,000,000-byte acquisition limit and 4,000,000-byte parser limit belong to 
 
 ## Open audit follow-ups
 
-The stateful-encoding AST fallback and contradictory comparison packets found in the September 2026 audit are corrected with exact-byte and changed-candidate regressions. The additional C++/JavaScript identity variants in [issue #68](https://github.com/MitCaine/repository-intelligence/issues/68) are corrected with parser-integrated tests in adapter version 7. Optional-versus-required Rust I/O behavior remains tracked in [issue #69](https://github.com/MitCaine/repository-intelligence/issues/69). Until its controlled-I/O regressions pass, treat affected native observations as potentially incomplete; inspect source and the full changed-file list.
+The stateful-encoding AST fallback and contradictory comparison packets found in the September 2026 audit are corrected with exact-byte and changed-candidate regressions. The additional C++/JavaScript identity variants in [issue #68](https://github.com/MitCaine/repository-intelligence/issues/68) are corrected with parser-integrated tests in adapter version 7. The optional-versus-required Rust I/O failures in [issue #69](https://github.com/MitCaine/repository-intelligence/issues/69) are corrected with controlled failure tests; native analysis remains opt-in and non-atomic. Inspect source and the full changed-file list when making task decisions.
 
 ## Corrected follow-up findings
 
