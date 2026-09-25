@@ -7,10 +7,22 @@ import unittest
 from pathlib import Path
 
 from repository_intelligence.locator import index_file, query_path
-from repository_intelligence.search import format_tree_compact
+from repository_intelligence.search import format_tree_compact, tokens
 
 
 class LocatorTests(unittest.TestCase):
+    def test_unicode_identifier_is_searchable_by_name_parts(self):
+        self.assertEqual(tokens("caféRésumé"), ["café", "résumé"])
+        self.assertEqual(tokens("ΔοκιμήΚώδικα"), ["δοκιμή", "κώδικα"])
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "names.py"
+            path.write_text("def caféRésumé():\n    return 1\n"
+                            "def ΔοκιμήΚώδικα():\n    return 2\n")
+            self.assertEqual(query_path(path, "café résumé")["matches"][0]["name"],
+                             "caféRésumé")
+            self.assertEqual(query_path(path, "δοκιμή κώδικα")["matches"][0]["name"],
+                             "ΔοκιμήΚώδικα")
+
     def test_python_file_symbols_and_source_hash(self):
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "orders.py"
