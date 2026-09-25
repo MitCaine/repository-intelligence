@@ -60,6 +60,8 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
     functions = []
     unhandled = []
     unhandled_count = 0
+    promised_count = 0
+    bodyless_count = 0
     pending = [(tree, ())]
     while pending:
         node, owners = pending.pop()
@@ -67,10 +69,11 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
         if owner is not None:
             owners = (*owners, owner)
         if node.type in {"function_item", "closure_expression"}:
+            promised_count += 1
             is_function = node.type == "function_item"
             name_node = node.child_by_field_name("name") if is_function else None
             body = node.child_by_field_name("body")
-            if body is None or (is_function and name_node is None):
+            if body is None or body.start_byte == body.end_byte or (is_function and name_node is None):
                 unhandled_count += 1
                 if len(unhandled) < 50:
                     unhandled.append({"syntax_kind": node.type,
@@ -95,11 +98,31 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     **declaration(source, kind, qualified, start, node.end_byte),
                 })
                 owners = (*owners, name)
+        elif node.type == "function_signature_item":
+            container = node.parent.parent if node.parent is not None else None
+            if container is not None and container.type in {"trait_item", "foreign_mod_item"}:
+                bodyless_count += 1
+            else:
+                promised_count += 1
+                unhandled_count += 1
+                if len(unhandled) < 50:
+                    unhandled.append({"syntax_kind": node.type,
+                                      "byte_range": {"start": node.start_byte,
+                                                     "end": node.end_byte}})
         pending.extend((child, owners) for child in reversed(node.named_children))
     assign_named_ids(functions)
+    if promised_count != len(functions) + unhandled_count:
+        raise ValueError("Rust promised callable count is not accounted for")
+    if len({(item["declaration_kind"], item["byte_range"]["start"],
+             item["byte_range"]["end"]) for item in functions}) != len(functions):
+        raise ValueError("Rust callable source range mapped more than once")
     blob = hashlib.sha1(f"blob {len(source)}\0".encode() + source).hexdigest()
     return {"path": str(path), "raw_sha256": hashlib.sha256(source).hexdigest(),
             "git_blob_sha1": blob, "function_count": len(functions),
             "parse_error_count": unhandled_count, "unhandled_declarations": unhandled,
+            "adapter_coverage": {"promised_node_count": promised_count,
+                                 "mapped_node_count": len(functions),
+                                 "unhandled_node_count": unhandled_count,
+                                 "bodyless_excluded_count": bodyless_count},
             "functions": functions,
             "relationship_kind": "lexical call candidates only; not resolved call graph"}
