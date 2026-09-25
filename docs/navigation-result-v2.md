@@ -42,7 +42,7 @@ question, configuration, and provider result; there is no such claim here.
 `navigation_only`, `incomplete`, `unsupported`, and `excluded` never support
 an absence claim. An `incomplete` result may still contain usable matches.
 For a direct file with an ambiguous extension, `language="python"` or
-`language="rust"`, `"javascript"`, `"typescript"`, `"tsx"`, or `"java"` explicitly chooses a shipped adapter; without it, the file
+`language="rust"`, `"javascript"`, `"typescript"`, `"tsx"`, `"java"`, or `"go"` explicitly chooses a shipped adapter; without it, the file
 is `unsupported` with `unsupported_reason: no_language_adapter_selected`.
 A conflicting selection for a known supported extension returns
 `unsupported` with `unsupported_reason: language_extension_mismatch`.
@@ -50,7 +50,7 @@ Unknown language names and directory-level language selection are rejected.
 Selecting Rust for `.h` does not imply support for C or C++ syntax.
 
 The directory command currently scans `.py`, `.rs`, `.js`, `.jsx`, `.mjs`,
-`.cjs`, `.ts`, `.tsx`, and `.java` files. Its `scan_scope`
+`.cjs`, `.ts`, `.tsx`, `.java`, and `.go` files. Its `scan_scope`
 states these extensions and labels the source `working_tree_non_atomic`: files
 may change during a scan. It reports excluded hidden/generated directories,
 symlinks, nested repositories, and duplicate physical files. Other file types
@@ -83,7 +83,7 @@ counts and `details_truncated` disclose omissions from those arrays. Python
 declared encodings are decoded and parsed as UTF-8, with reported offsets mapped
 back to the original raw bytes. If Tree-sitter reports syntax errors, the
 shared result is `incomplete` even if navigation returned some matches. Python
-Rust, JavaScript, TypeScript, and Java navigation use the same Tree-sitter parse as this structural evidence.
+Rust, JavaScript, TypeScript, Java, and Go navigation use the same Tree-sitter parse as this structural evidence.
 The adapters report promised Python function/lambda and Rust
 `function_item`/`closure_expression` nodes they cannot handle as incomplete;
 the JavaScript/TypeScript adapter does the same for its documented callables.

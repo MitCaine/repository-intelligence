@@ -60,10 +60,18 @@ and instance initializer blocks are deliberately not callables. Their source
 bytes still change the containing file hash, so inventory comparison reports
 the file as modified even if no callable declaration changes.
 
+For pinned Go, `.go` promises every `function_declaration`,
+`method_declaration`, and `func_literal` node, including `init`, generic
+functions, pointer/value receiver methods, and nested anonymous literals.
+The package and exact receiver syntax contribute to qualified identities;
+anonymous literals receive source-position-based IDs. Interface `method_elem`
+nodes are counted as bodyless, with their interface owner, not as executable
+functions. This is syntax coverage, not Go type/package resolution.
+
 Pinned package versions in `pyproject.toml` are `tree-sitter==0.25.0`,
 `tree-sitter-python==0.25.0`, `tree-sitter-rust==0.24.2`,
 `tree-sitter-javascript==0.25.0`, `tree-sitter-typescript==0.23.2`, and
-`tree-sitter-java==0.23.5`. Results record
+`tree-sitter-java==0.23.5`, and `tree-sitter-go==0.25.0`. Results record
 actual installed distribution versions, grammar ABI, and adapter version 1.
 Changing a grammar pin requires reviewing that grammar's upstream generated
 `node-types.json` for changed declaration nodes/fields, then running the

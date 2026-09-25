@@ -7,7 +7,7 @@ current implementation, which is narrower than that end state.
 
 A small, source-derived function locator for AI-assisted repository navigation.
 The common query interface currently supports Python, Rust, JavaScript, JSX,
-TypeScript, TSX, and Java through
+TypeScript, TSX, Java, and Go through
 Tree-sitter navigation in any local project. The Python standard-library AST
 adapter remains available directly as a reference/fallback.
 It returns compact function
@@ -29,7 +29,7 @@ preserved in Git history but is not part of the current package.
 ## Use
 
 Python 3.12 or 3.13 is required. The package pins the Tree-sitter runtime
-and Python/Rust/JavaScript/TypeScript/Java grammar wheels. Ordinary navigation uses Tree-sitter
+and Python/Rust/JavaScript/TypeScript/Java/Go grammar wheels. Ordinary navigation uses Tree-sitter
 without `rust-analyzer`. The analyzer remains available as an opt-in Rust
 source and metadata route when needed. No hosted service is needed. From this
 repository:
@@ -78,7 +78,7 @@ PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 python3.13 -m unittest discover -s test
 ```
 
 The optional installed-wheel check uses two local build-dependency wheels and
-the six pinned Tree-sitter wheels and never downloads packages:
+the seven pinned Tree-sitter wheels and never downloads packages:
 
 ```sh
 RI_SETUPTOOLS_WHEEL=/path/to/setuptools-79.0.1-py3-none-any.whl \

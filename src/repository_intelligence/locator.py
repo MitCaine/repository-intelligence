@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 
-from . import java_tree_index, js_tree_index, python_tree_index, rust_tree_index, structural
+from . import go_tree_index, java_tree_index, js_tree_index, python_tree_index, rust_tree_index, structural
 from .search import (display_entry, format_compact, format_tree_compact, query, rank,
                      validate_query)
 from .source import SCHEMA_VERSION, git_object_format, identify_bytes
@@ -15,14 +15,16 @@ from .source import SCHEMA_VERSION, git_object_format, identify_bytes
 
 PARSERS = {".py": python_tree_index.index_source, ".rs": rust_tree_index.index_source,
            ".java": java_tree_index.index_source,
+           ".go": go_tree_index.index_source,
            **{suffix: js_tree_index.index_source for suffix in
               (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx")}}
 LANGUAGE_SUFFIX = {"python": ".py", "rust": ".rs", "javascript": ".js",
-                   "typescript": ".ts", "tsx": ".tsx", "java": ".java"}
+                   "typescript": ".ts", "tsx": ".tsx", "java": ".java", "go": ".go"}
 SUFFIX_LANGUAGE = {suffix: ("javascript" if suffix in {".js", ".jsx", ".mjs", ".cjs"}
                             else "typescript" if suffix == ".ts" else "tsx"
                             if suffix == ".tsx" else "python" if suffix == ".py"
-                            else "java" if suffix == ".java" else "rust")
+                            else "java" if suffix == ".java" else "go" if suffix == ".go"
+                            else "rust")
                    for suffix in PARSERS}
 MAX_PARSE_BYTES = 4_000_000
 PARSE_FAILURES = (OSError, ValueError, SyntaxError, UnicodeError)
