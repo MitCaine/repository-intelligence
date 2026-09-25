@@ -3,15 +3,19 @@
 `repository_intelligence.inventory.inventory_tree(root, stable=False,
 logical_root=".")` scans supported Python, Rust, JavaScript, JSX, TypeScript,
 TSX, Java, Go, C#, C, and C++ source without query terms. The current inventory
-schema is version 6; older packets are incompatible with it. Ambiguous `.h`
-files are outside an automatic directory scan; direct queries require a C or
-C++ override.
+schema is version 8; older packets are incompatible with it. `.mts` and `.cts`
+use the TypeScript adapter. Ambiguous `.h` files are not guessed: pass
+`language_choices={"include/api.h": "cpp"}` (or `"c"`) for exact relative
+header paths in both directory queries and inventories. Unselected `.h` files
+are listed in `observed_unsupported_paths`.
 Every supported in-scope file appears in `files`, including files with zero
 mapped callables. Each file carries its exact `source_identity`, parser and
 adapter coverage, structural diagnostics, mapping status, and contracted
 declaration entries. Excluded hidden/generated directories, symlinks, nested
-repositories, and duplicate physical files are reported in normalized relative
-scope; other file types are counted separately. This is source-level coverage
+repositories are reported in `observed_exclusions`; two distinct relative paths
+hardlinked to the same bytes are both included. Source-like unsupported paths
+are named in `observed_unsupported_paths`; other file types are counted.
+This is source-level coverage
 for the [current callable contract](tree-sitter-baseline.md), not compiled
 program, generated macro, or semantic-call completeness.
 
@@ -19,16 +23,23 @@ The default working-tree walk is `incomplete` because it is not atomic. Pass
 `stable=True` only when the caller supplies and is responsible for stable
 materialized source bytes on that side of the comparison. RI labels this
 `caller_asserted_stable`; it does not verify commit membership or attest to
-the checkout. Read/parse/size/adapter failures and duplicate physical files
+the checkout. Read/parse/size/adapter failures
 remain incomplete even with that assertion. Explicit exclusions bound the
 logical scan scope and are not silently counted as mapped source.
 
 An inventory includes schema and mapping-contract versions, pinned parser
-contract, logical root, relative scan scope and exclusions, materialization
+contract, logical root, relative scan policy, materialization
 state, failures, and a deterministic SHA-256 `inventory_digest` over normalized
-scope plus relative file paths, byte counts, and raw-byte hashes. The digest is
+policy plus relative file paths, byte counts, and raw-byte hashes. Observed
+exclusions are separate scan evidence and do not affect compatibility or the
+digest. The digest is
 a reproducibility checksum, not a signature or source authenticity proof.
 Different absolute checkout paths can have the same logical root and digest.
+The policy includes selected header languages and caller-selected excluded
+directory names; the default excluded names include `target`, `node_modules`,
+`venv`, and `__pycache__`. A file that becomes excluded at the same relative
+path blocks comparison with `coverage_lost`, rather than looking like a normal
+source deletion.
 
 `compare_inventories(planning, candidate)` returns
 `comparable_candidate_delta` only when both sides have compatible schema,
@@ -90,3 +101,11 @@ and underlying comparison always use the full inventories. `--json` prints
 full evidence without display truncation. Exit code 0 means a complete scan or
 comparable factual delta; 2 means incomplete; 3 means incompatible. These
 codes do not signify review approval or edit authority.
+
+The CLI accepts repeatable `--header-language include/api.h=cpp` and
+`--exclude-directory generated` for either `scan` or `compare`. Pass the same
+choices to both sides of a comparison. A supported declaration delta is not a
+complete changed-file list: always inspect the full Git diff alongside RI,
+because configuration, imports, initializers, unsupported source, and other
+files can change with no mapped callable delta. RI does not reconcile Git
+changes itself.

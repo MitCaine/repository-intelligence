@@ -102,9 +102,11 @@ def format_compact(result: dict) -> str:
 def format_tree_compact(result: dict) -> str:
     scope = result.get("scan_scope", {})
     exclusions = scope.get("excluded_paths", [])
+    unsupported = scope.get("unsupported_paths", [])
     lines = [f"{result['root']} scanned={result['scanned_files']} "
              f"parse_errors={result['parse_error_count']} failures={len(result['failures'])} "
-             f"excluded={len(exclusions)} status={result.get('mapping_status', 'unknown')}",
+             f"excluded={len(exclusions)} unsupported={len(unsupported)} "
+             f"status={result.get('mapping_status', 'unknown')}",
              f"query={result['query']!r} matches={result['total_matches']} "
              f"shown={len(result['matches'])}; calls are lexical candidates, not a call graph"]
     for entry in result["matches"]:
@@ -116,4 +118,8 @@ def format_tree_compact(result: dict) -> str:
         lines.append("EXCLUDED: " + ", ".join(
             f"{item['path']} ({item['reason']})" for item in exclusions[:3])
             + (f" (+{len(exclusions) - 3} more; use --json)" if len(exclusions) > 3 else ""))
+    if unsupported:
+        lines.append("UNSUPPORTED SOURCE: " + ", ".join(
+            item["path"] for item in unsupported[:3])
+            + (f" (+{len(unsupported) - 3} more; use --json)" if len(unsupported) > 3 else ""))
     return "\n".join(lines)

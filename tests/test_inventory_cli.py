@@ -32,8 +32,8 @@ class InventoryCliTests(unittest.TestCase):
             compact = self._run(*command)
             self.assertEqual(compact.returncode, 0, compact.stderr)
             self.assertIn("comparison comparable_candidate_delta", compact.stdout)
-            self.assertIn("schema=7 navigation_schema=2", compact.stdout)
-            self.assertIn("logical_root=example extensions=.c,.cc,.cjs,.cpp,.cs,.cxx,.go,.hh,.hpp,.hxx,.java,.js,.jsx,.mjs,.py,.rs,.ts,.tsx",
+            self.assertIn("schema=8 navigation_schema=2", compact.stdout)
+            self.assertIn("logical_root=example extensions=.c,.cc,.cjs,.cpp,.cs,.cts,.cxx,.go,.hh,.hpp,.hxx,.java,.js,.jsx,.mjs,.mts,.py,.rs,.ts,.tsx",
                           compact.stdout)
             self.assertIn("files: added=1 removed=1 modified=1 unchanged=0", compact.stdout)
             self.assertIn("... 2 more files changes; use --json", compact.stdout)
@@ -43,7 +43,7 @@ class InventoryCliTests(unittest.TestCase):
             delta = json.loads(full.stdout)
             self.assertEqual(delta["status"], "comparable_candidate_delta")
             self.assertEqual(delta["planning"]["scope"]["logical_root"], "example")
-            self.assertEqual(delta["planning"]["inventory_schema_version"], 7)
+            self.assertEqual(delta["planning"]["inventory_schema_version"], 8)
             self.assertEqual(delta["planning"]["mapping_contract"],
                              delta["candidate"]["mapping_contract"])
             self.assertEqual(len(delta["file_changes"]["added"]), 1)
@@ -54,7 +54,7 @@ class InventoryCliTests(unittest.TestCase):
                              "--assert-stable-materialization", "--json")
             self.assertEqual(scan.returncode, 0, scan.stderr)
             inventory = json.loads(scan.stdout)
-            self.assertEqual(inventory["inventory_schema_version"], 7)
+            self.assertEqual(inventory["inventory_schema_version"], 8)
             self.assertEqual(inventory["scope"]["logical_root"], "example")
 
     def test_non_atomic_incomplete_and_incompatible_have_no_delta(self):
@@ -76,11 +76,11 @@ class InventoryCliTests(unittest.TestCase):
             (candidate / ".hidden").mkdir()
             scope = self._run("compare", planning, candidate,
                               "--assert-stable-materialization", "--json")
-            self.assertEqual(scope.returncode, 3)
+            self.assertEqual(scope.returncode, 0)
             result = json.loads(scope.stdout)
-            self.assertEqual(result["status"], "incompatible")
-            self.assertIn("scope", result["mismatches"])
-            self.assertIsNone(result["file_changes"])
+            self.assertEqual(result["status"], "comparable_candidate_delta")
+            self.assertNotEqual(result["planning"]["observed_exclusions"],
+                                result["candidate"]["observed_exclusions"])
 
     def test_two_materialized_ri_source_snapshots_with_real_code_edit(self):
         sources = Path(__file__).resolve().parents[1] / "src" / "repository_intelligence"

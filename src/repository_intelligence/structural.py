@@ -38,6 +38,8 @@ GRAMMARS = {
     ".mjs": ("JavaScript", "tree-sitter-javascript", tree_sitter_javascript.language),
     ".cjs": ("JavaScript", "tree-sitter-javascript", tree_sitter_javascript.language),
     ".ts": ("TypeScript", "tree-sitter-typescript", tree_sitter_typescript.language_typescript),
+    ".mts": ("TypeScript", "tree-sitter-typescript", tree_sitter_typescript.language_typescript),
+    ".cts": ("TypeScript", "tree-sitter-typescript", tree_sitter_typescript.language_typescript),
     ".tsx": ("TSX", "tree-sitter-typescript", tree_sitter_typescript.language_tsx),
     ".java": ("Java", "tree-sitter-java", tree_sitter_java.language),
     ".go": ("Go", "tree-sitter-go", tree_sitter_go.language),
@@ -161,7 +163,7 @@ def scan(suffix: str, source: bytes) -> tuple[dict, Node, bytes, _RawOffsets | N
             selected = node
             if node.type == "function_item":
                 name_node = node.child_by_field_name("name")
-        elif suffix in {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"} \
+        elif suffix in {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"} \
                 and node.type in JS_CALLABLES:
             selected = node
             name_node = node.child_by_field_name("name")
