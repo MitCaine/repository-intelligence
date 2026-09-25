@@ -42,6 +42,42 @@ class LocatorTests(unittest.TestCase):
             self.assertEqual(result["failures"][0]["error"], "SyntaxError")
             self.assertIn("INCOMPLETE", format_tree_compact(result))
             self.assertEqual(result["total_matches"], result["scanned_files"])
+            self.assertIn("git_blob_sha1", result["matches"][0])
+
+    def test_ranking_preserves_terms_beyond_display_limits(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "search.py"
+            calls = "\n".join(f"    call_{number:02d}()" for number in range(20))
+            path.write_text("def find_target():\n"
+                            f"    \"\"\"{'filler ' * 60}late_document_term\"\"\"\n"
+                            f"{calls}\n")
+            by_doc = query_path(path, "late document term")
+            by_call = query_path(path, "call 19")
+            self.assertEqual(by_doc["matches"][0]["name"], "find_target")
+            self.assertEqual(by_call["matches"][0]["name"], "find_target")
+            self.assertLessEqual(len(by_doc["matches"][0]["docs"]), 220)
+            self.assertLessEqual(len(by_call["matches"][0]["lexical_call_candidates"]), 12)
+            self.assertIn("call_19", by_call["matches"][0]["lexical_call_candidates"])
+
+    def test_python_signatures_preserve_legal_inline_multiline_and_encoding(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "signatures.py"
+            source = ("# coding: latin-1\n"
+                      "def inline(value: int) -> int: return value\n"
+                      "def wrapped(\n"
+                      "    value: dict[str, int],\n"
+                      ") -> int: return len(value)\n"
+                      "def labelled(name: str = 'café') -> str: return name\n").encode("latin-1")
+            path.write_bytes(source)
+            indexed = index_file(path)
+            signatures = {name: query_path(path, name)["matches"][0]["signature"]
+                          for name in ("inline", "wrapped", "labelled")}
+            self.assertEqual(signatures["inline"], "def inline(value: int) -> int:")
+            self.assertEqual(signatures["wrapped"],
+                             "def wrapped( value: dict[str, int], ) -> int:")
+            self.assertEqual(signatures["labelled"],
+                             "def labelled(name: str = 'café') -> str:")
+            self.assertEqual(indexed["raw_sha256"], hashlib.sha256(source).hexdigest())
 
     def test_unsupported_file_is_explicit(self):
         with tempfile.TemporaryDirectory() as raw:

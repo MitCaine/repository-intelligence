@@ -44,11 +44,29 @@ def rank(entries: list[dict], words: list[str]) -> list[dict]:
                                      entry.get("path", ""), entry["line"]))
 
 
+def display_entry(entry: dict, words: list[str]) -> dict:
+    """Bound a selected packet only after full extracted text has been ranked."""
+    calls = entry["lexical_call_candidates"]
+    wanted = set(words)
+    exact = [call for call in calls if wanted <= set(tokens(call))]
+    exact_set = set(exact)
+    partial = [call for call in calls if call not in exact_set
+               and wanted & set(tokens(call))]
+    shown_set = exact_set | set(partial)
+    remaining = [call for call in calls if call not in shown_set]
+    return {**entry,
+            "signature": compact(entry["signature"], 180),
+            "docs": compact(entry["docs"], 220),
+            "lexical_call_candidates": [compact(call, 80)
+                                        for call in (exact + partial + remaining)[:12]]}
+
+
 def query(index: dict, terms: str, limit: int = 8) -> dict:
     words = validate_query(terms, limit)
     ranked = rank(index["functions"], words)
     return {key: value for key, value in index.items() if key != "functions"} | {
-        "query": terms, "matches": ranked[:limit], "total_matches": len(ranked)}
+        "query": terms, "matches": [display_entry(entry, words) for entry in ranked[:limit]],
+        "total_matches": len(ranked)}
 
 
 def format_compact(result: dict) -> str:

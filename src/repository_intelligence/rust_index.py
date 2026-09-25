@@ -9,8 +9,9 @@ import re
 import subprocess
 from pathlib import Path
 
-from .search import (compact as _compact, format_compact, format_tree_compact,
-                     query, rank, tokens as _tokens, validate_query)
+from .search import (compact as _compact, display_entry, format_compact,
+                     format_tree_compact, query, rank, tokens as _tokens,
+                     validate_query)
 
 
 def _children(node: dict, kind: str) -> list[dict]:
@@ -55,7 +56,7 @@ def _walk(node: dict, source: bytes, owners: tuple[str, ...], output: list[dict]
                 elif child["kind"] == "CALL_EXPR":
                     paths = _children(child, "PATH_EXPR")
                     if paths:
-                        calls.add(_compact(_slice(source, paths[0]), 80))
+                        calls.add(_slice(source, paths[0]))
                 for descendant in child.get("children", []):
                     if descendant.get("type") == "Node":
                         visit_call(descendant)
@@ -67,9 +68,9 @@ def _walk(node: dict, source: bytes, owners: tuple[str, ...], output: list[dict]
                 "qualified_name": "::".join((*owners, name)),
                 "line": names[0]["start"][1] + 1,
                 "end_line": node["end"][1] + (node["end"][2] != 0),
-                "signature": _compact(source[signature_start:signature_end].decode("utf-8", "replace"), 180),
-                "docs": _compact(" ".join(docs), 220),
-                "lexical_call_candidates": sorted(calls)[:12],
+                "signature": source[signature_start:signature_end].decode("utf-8", "replace"),
+                "docs": " ".join(docs),
+                "lexical_call_candidates": sorted(calls),
             })
     for child in node.get("children", []):
         if child.get("type") == "Node":
@@ -178,7 +179,7 @@ def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-
                                "git_blob_sha1": index["git_blob_sha1"],
                                "parse_error_count": index["parse_error_count"]})
     candidates = rank(candidates, words)
-    selected = candidates[:limit]
+    selected = [display_entry(entry, words) for entry in candidates[:limit]]
     if authority_dir is not None:
         records = _authority_records(authority_dir)
         for entry in selected:

@@ -7,6 +7,12 @@ locations and source hashes without a database or maintained function
 dictionary. It does not grant edit authority, resolve a call graph, or replace
 checking the relevant source. Other languages are not yet supported.
 
+This is currently a navigation tool, **not yet a complete structural inventory**.
+Zero parse errors do not prove every declaration was mapped. Do not use an
+absence result or a before/after query difference to qualify all candidate
+changes until the explicit per-language mapping contracts and completeness
+checks are implemented.
+
 This is the reusable core extracted from the [Poker App](https://github.com/MitCaine/poker-app)
 pilot. Poker-specific authority maps, capsule rules, and consumer configuration
 belong to Poker, not this package. Earlier benchmark and security machinery is
