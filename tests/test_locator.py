@@ -62,6 +62,73 @@ class LocatorTests(unittest.TestCase):
             self.assertEqual(result["total_matches"], result["scanned_files"])
             self.assertIn("git_blob_sha1", result["matches"][0])
 
+    def test_python_declaration_ranges_include_decorators_and_anonymous_lambda(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "ranges.py"
+            source = ("# coding: latin-1\n"
+                      "@cache\n"
+                      "def café(value):\n"
+                      "    fn = lambda x: x + value\n"
+                      "    return fn(1)\n").encode("latin-1")
+            path.write_bytes(source)
+            indexed = index_file(path)
+            named = next(item for item in indexed["functions"] if item["name"] == "café")
+            anonymous = next(item for item in indexed["functions"]
+                             if item["declaration_kind"] == "lambda")
+            span = named["byte_range"]
+            self.assertEqual(source[span["start"]:span["end"]],
+                             source[source.index(b"@cache"):].rstrip(b"\n"))
+            self.assertEqual(named["declaration_sha256"],
+                             hashlib.sha256(source[span["start"]:span["end"]]).hexdigest())
+            self.assertEqual(anonymous["qualified_name"].split(".")[0], "café")
+            lambda_span = anonymous["byte_range"]
+            self.assertEqual(source[lambda_span["start"]:lambda_span["end"]],
+                             b"lambda x: x + value")
+            self.assertEqual(indexed["parser"]["adapter_version"], 2)
+            self.assertEqual(indexed["mapping_status"], "navigation_only")
+
+    def test_same_name_declarations_and_lambdas_have_distinct_byte_identities(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "duplicates.py"
+            source = (b"def repeat(): return 1\n"
+                      b"def repeat(): return 2\n"
+                      b"one = lambda: 1\n"
+                      b"two = lambda: 2\n")
+            path.write_bytes(source)
+            entries = index_file(path)["functions"]
+            self.assertEqual(len(entries), 4)
+            self.assertEqual(len({entry["declaration_id"] for entry in entries}), 4)
+            self.assertEqual(len({entry["declaration_sha256"] for entry in entries}), 4)
+            self.assertEqual([entry["declaration_kind"] for entry in entries],
+                             ["function", "function", "lambda", "lambda"])
+            named_ids = [entry["declaration_id"] for entry in entries[:2]]
+            self.assertEqual(named_ids, ["function:repeat#0", "function:repeat#1"])
+            path.write_bytes(b"unrelated = 0\n" + source)
+            shifted = index_file(path)["functions"]
+            self.assertEqual([entry["declaration_id"] for entry in shifted[:2]], named_ids)
+            self.assertNotEqual(shifted[2]["declaration_id"], entries[2]["declaration_id"])
+
+    def test_latin1_nel_in_prior_string_does_not_shift_byte_range(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "nel.py"
+            source = b'# coding: latin-1\nx = "\x85"\ndef target(): return 1\n'
+            path.write_bytes(source)
+            indexed = index_file(path)
+            entry = indexed["functions"][0]
+            expected = b"def target(): return 1"
+            span = entry["byte_range"]
+            self.assertEqual(source[span["start"]:span["end"]], expected)
+            self.assertEqual(entry["declaration_sha256"], hashlib.sha256(expected).hexdigest())
+            self.assertEqual(entry["signature"], "def target():")
+            self.assertEqual(indexed["mapping_status"], "navigation_only")
+
+    def test_utf8_bom_does_not_enter_declaration_range(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "bom.py"
+            path.write_bytes(b"\xef\xbb\xbfdef sample(): return 1\n")
+            entry = index_file(path)["functions"][0]
+            self.assertEqual(entry["byte_range"]["start"], 3)
+
     def test_directory_scope_reports_duplicate_symlink_and_nested_repo(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

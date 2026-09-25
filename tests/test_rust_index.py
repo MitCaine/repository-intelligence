@@ -53,6 +53,17 @@ class RustIndexTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             query({"functions": []}, "", 1)
 
+    def test_rust_declaration_range_includes_attached_attribute(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "attr.rs"
+            source = b"#[inline]\n/// Comment.\nfn example() { work(); }\n"
+            path.write_bytes(source)
+            entry = index_file(path)["functions"][0]
+            span = entry["byte_range"]
+            self.assertEqual(source[span["start"]:span["end"]], source.rstrip(b"\n"))
+            self.assertEqual(entry["declaration_sha256"],
+                             hashlib.sha256(source[span["start"]:span["end"]]).hexdigest())
+
     def test_ranking_sees_rust_docs_and_calls_beyond_packet_limits(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "search.rs"

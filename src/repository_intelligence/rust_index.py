@@ -9,6 +9,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from .declarations import assign_named_ids, declaration
+
 from .search import (compact as _compact, display_entry, format_compact,
                      format_tree_compact, query, rank, tokens as _tokens,
                      validate_query)
@@ -71,6 +73,8 @@ def _walk(node: dict, source: bytes, owners: tuple[str, ...], output: list[dict]
                 "signature": source[signature_start:signature_end].decode("utf-8", "replace"),
                 "docs": " ".join(docs),
                 "lexical_call_candidates": sorted(calls),
+                **declaration(source, "function", "::".join((*owners, name)),
+                              node["start"][0], node["end"][0]),
             })
     for child in node.get("children", []):
         if child.get("type") == "Node":
@@ -90,6 +94,7 @@ def index_source(path: Path, source: bytes, *, analyzer: str = "rust-analyzer") 
     tree = json.loads(parsed.stdout)
     functions: list[dict] = []
     _walk(tree, source, (), functions)
+    assign_named_ids(functions)
     def error_count(node: dict) -> int:
         return (node["kind"] == "ERROR") + sum(error_count(child) for child in node.get("children", [])
                                                 if child.get("type") == "Node")
