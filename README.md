@@ -59,7 +59,7 @@ The raw SHA-256 identifies
 bytes read, not a verified Git checkout. Lexical call candidates are not
 resolved relationships.
 
-The shared command's [versioned result contract](docs/navigation-result-v4.md)
+The shared command's [versioned result contract](docs/navigation-result-v5.md)
 explains source identity, incomplete results, and directory scope. It is for
 navigation, not candidate-change qualification.
 
@@ -81,10 +81,11 @@ compact or full JSON output for controller inspection.
 The public locator is the normal navigation interface. Its shared scan seam
 selects files, records exclusions/failures, reads exact bytes, and invokes the
 explicit adapter registry; navigation ranks the resulting callables while
-inventory records and compares them. The 4 MB limit bounds parser input, not
-file identity acquisition: RI still reads an oversized file to report its
-exact byte hash and an incomplete mapping. A pre-read size skip would discard
-that identity and is not part of this seam. The Rust-only
+inventory records and compares them. The 4 MB limit bounds parser input;
+regular files up to 32 MB can still receive exact byte identity and an
+incomplete mapping when too large to parse. RI rejects non-regular files
+before reading and stops reads above 32 MB, reporting an incomplete packet
+without byte identity. The Rust-only
 `rust_index` command remains an opt-in native parsing route with its existing
 distinct unversioned directory result (`legacy_rust_query`). RI does not
 interpret project-specific authority Markdown; callers can combine RI's

@@ -3,13 +3,13 @@
 `repository_intelligence.inventory.inventory_tree(root, stable=False,
 logical_root=".")` scans supported Python, Rust, JavaScript, JSX, TypeScript,
 TSX, Java, Go, C#, C, and C++ source without query terms. The current inventory
-schema is version 10; older packets are incompatible with it. `.mts` and `.cts`
+schema is version 11; older packets are incompatible with it. `.mts` and `.cts`
 use the TypeScript adapter. Ambiguous `.h` files are not guessed: pass
 `language_choices={"include/api.h": "cpp"}` (or `"c"`) for exact relative
 header paths in both directory queries and inventories. Unselected `.h` files
 are listed in `observed_unsupported_paths`.
-Mapping contract v3 carries the JavaScript/TypeScript binding alias and direct
-export semantics documented in [navigation result v4](navigation-result-v4.md).
+Mapping contract v4 carries the corrected declaration identity, source-range,
+and classification semantics documented in [navigation result v5](navigation-result-v5.md).
 Every supported in-scope file appears in `files`, including files with zero
 mapped callables. Each file carries its exact `source_identity`, parser and
 adapter coverage, structural diagnostics, mapping status, and contracted

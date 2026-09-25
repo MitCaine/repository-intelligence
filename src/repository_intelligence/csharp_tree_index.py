@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .declarations import assign_named_ids, declaration, finalize_coverage
+from .declarations import assign_named_ids, declaration, finalize_coverage, syntax_token_key
 from .source import utf8_display_column
 
 
@@ -40,17 +40,19 @@ def _owner(node, source: bytes) -> str | None:
         return _text(source, name) if name is not None else None
     if node.type == "indexer_declaration":
         parameters = node.child_by_field_name("parameters")
-        types = ",".join(_parameter_identity(parameter, source)
+        types = ",".join(_text(source, parameter.child_by_field_name("type"))
+                         if parameter.child_by_field_name("type") is not None
+                         else _text(source, parameter)
                          for parameter in parameters.named_children) if parameters else ""
         return f"this[{types}]"
     return None
 
 
 def _parameter_identity(parameter, source: bytes) -> str:
-    type_node = parameter.child_by_field_name("type")
-    if type_node is None:
-        return _text(source, parameter)
-    return "".join(source[parameter.start_byte:type_node.end_byte].decode("utf-8").split())
+    name = parameter.child_by_field_name("name")
+    default = parameter.child_by_field_name("default_value")
+    return syntax_token_key(parameter, source,
+                            omit=tuple(node for node in (name, default) if node is not None))
 
 
 def _calls(body, source: bytes) -> list[str]:
@@ -80,8 +82,10 @@ def _name_kind(node, source: bytes) -> tuple[str, str, bool]:
         return f"operator {_text(source, symbol) if symbol is not None else '?'}", "operator", False
     if kind == "conversion_operator_declaration":
         target = node.child_by_field_name("type")
-        header = source[node.start_byte:(target.end_byte if target is not None else node.end_byte)]
-        label = "explicit" if b"explicit" in header else "implicit"
+        label = next((child.type for child in node.children
+                      if child.type in {"explicit", "implicit"}), None)
+        if label is None:
+            raise ValueError("Conversion operator has no explicit/implicit keyword")
         return f"{label} operator {_text(source, target) if target is not None else '?'}", "conversion", False
     name = _text(source, name_node) if name_node is not None else "<unnamed>"
     if kind == "constructor_declaration":

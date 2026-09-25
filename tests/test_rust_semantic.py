@@ -3,6 +3,7 @@
 import hashlib
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,6 +14,34 @@ from repository_intelligence.rust_semantic import resolve_definition
 
 
 class RustSemanticTests(unittest.TestCase):
+    def test_provider_send_obeys_deadline_when_pipe_stalls(self):
+        script = """\
+import os, time
+from types import SimpleNamespace
+from repository_intelligence.rust_semantic import _RustAnalyzer
+read_end, write_end = os.pipe()
+os.set_blocking(write_end, False)
+try:
+    while True:
+        os.write(write_end, b'x' * 4096)
+except BlockingIOError:
+    pass
+os.set_blocking(write_end, True)
+client = _RustAnalyzer.__new__(_RustAnalyzer)
+client.proc = SimpleNamespace(stdin=os.fdopen(write_end, 'wb', buffering=0))
+client.deadline = time.monotonic() + 0.05
+try:
+    client.send({'payload': 'test'})
+except TimeoutError:
+    print('deadline_observed')
+finally:
+    os.close(read_end)
+"""
+        completed = subprocess.run([sys.executable, "-c", script],
+                                   capture_output=True, text=True, timeout=1)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout.strip(), "deadline_observed")
+
     @unittest.skipUnless(shutil.which("rust-analyzer") and shutil.which("rustc"),
                          "rust-analyzer and rustc required for optional semantic proof")
     def test_reference_definition_is_source_and_configuration_bound(self):

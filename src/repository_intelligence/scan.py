@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path
 
 from . import structural
@@ -22,6 +23,7 @@ SUFFIX_LANGUAGE = {suffix: ("javascript" if suffix in {".js", ".jsx", ".mjs", ".
                                                      ".hxx"} else "rust")
                    for suffix in PARSERS}
 MAX_PARSE_BYTES = 4_000_000
+MAX_SOURCE_BYTES = 32_000_000
 PARSE_FAILURES = (OSError, ValueError, SyntaxError, UnicodeError)
 _AUTO_FORMAT = object()
 EXCLUDED_DIRECTORIES = {"target", "__pycache__", "venv", "node_modules"}
@@ -77,7 +79,27 @@ def index_file(path: Path, *, root: Path | None = None,
     if object_format is _AUTO_FORMAT:
         object_format = git_object_format(root)
     try:
-        source = path.read_bytes()
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0)
+                             | getattr(os, "O_NOFOLLOW", 0))
+        with os.fdopen(descriptor, "rb") as stream:
+            source_stat = os.fstat(stream.fileno())
+            if not stat.S_ISREG(source_stat.st_mode):
+                raise ValueError("NonRegularFile")
+            if source_stat.st_size > MAX_SOURCE_BYTES:
+                raise ValueError("SourceReadLimitExceeded")
+            source = stream.read(MAX_SOURCE_BYTES + 1)
+            if len(source) > MAX_SOURCE_BYTES:
+                raise ValueError("SourceReadLimitExceeded")
+    except ValueError as error:
+        failure = {"error": str(error)}
+        if str(error) == "SourceReadLimitExceeded":
+            failure["limit_bytes"] = MAX_SOURCE_BYTES
+        return {"schema_version": SCHEMA_VERSION, "path": str(path),
+                "source_identity": None, "raw_sha256": None, "function_count": 0,
+                "parse_error_count": 0, "functions": [], "parser": None,
+                "relationship_kind": "lexical call candidates only; not resolved call graph",
+                "mapping_status": "incomplete",
+                "failures": [failure]}
     except OSError as error:
         return {"schema_version": SCHEMA_VERSION, "path": str(path),
                 "source_identity": None, "raw_sha256": None, "function_count": 0,
@@ -178,6 +200,9 @@ def walk_supported_paths(root: Path, *, language_choices: dict[str, str] | None 
             try:
                 if not path.resolve().is_relative_to(resolved_root):
                     exclusions.append({"path": relative, "reason": "outside_root"})
+                    continue
+                if not stat.S_ISREG(path.stat().st_mode):
+                    failures.append({"path": relative, "error": "NonRegularFile"})
                     continue
                 paths.append(path)
             except (OSError, ValueError) as error:

@@ -10,6 +10,22 @@ from repository_intelligence.inventory import compare_inventories, inventory_tre
 
 
 class CSharpTreeIndexTests(unittest.TestCase):
+    def test_conversion_keyword_not_attribute_text_controls_identity(self):
+        source = (b"class C { [Obsolete(\"explicit\")] "
+                  b"public static implicit operator int(C x) => 1; }")
+        entry = self._index(source)["functions"][0]
+        self.assertEqual(entry["name"], "implicit operator int")
+        self.assertEqual(entry["declaration_kind"], "conversion")
+
+    def test_modifier_and_type_token_boundaries_do_not_collide(self):
+        source = (b"class refint {} class C {"
+                  b" int F(ref int x) { return 1; }"
+                  b" int F(refint x) { return 2; } }")
+        entries = [entry for entry in self._index(source)["functions"] if entry["name"] == "F"]
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(len({entry["declaration_id"] for entry in entries}), 2)
+        self.assertFalse(any(entry["identity_ambiguous"] for entry in entries))
+
     def test_file_scoped_namespace_owns_members(self):
         result = self._index(b"namespace Example; class C { void Run(){} }\n")
         self.assertEqual({item["qualified_name"] for item in result["functions"]},

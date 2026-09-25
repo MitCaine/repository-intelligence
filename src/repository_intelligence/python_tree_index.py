@@ -27,7 +27,7 @@ def _calls(node, parse_bytes: bytes) -> list[str]:
                     # Match the legacy AST candidate spelling; Tree-sitter still
                     # owns declaration discovery and all source coordinates.
                     candidate = ast.unparse(ast.parse(f"({expression})", mode="eval").body)
-                except SyntaxError:
+                except (SyntaxError, RecursionError):
                     candidate = expression
                 candidates.add(candidate)
         pending.extend(current.named_children)

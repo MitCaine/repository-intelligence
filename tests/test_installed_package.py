@@ -139,7 +139,7 @@ class InstalledPackageTests(unittest.TestCase):
                 "    parser = query_path(Path(path), term)['structural']['parser']\n"
                 "    assert parser['runtime_version'] == expected_versions['tree-sitter']\n"
                 "    assert parser['grammar_version'] == expected_versions[distribution]\n"
-                "    assert parser['adapter_version'] == 3\n"
+                "    assert parser['adapter_version'] == 4\n"
                 "polyglot = inventory_tree(Path('.'), stable=True)\n"
                 "assert polyglot['status'] == 'complete'\n"
                 "assert {f['path'] for f in polyglot['files']} == "

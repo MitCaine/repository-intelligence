@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import string
 import sys
 from pathlib import Path
 
@@ -17,8 +18,8 @@ from .source import SCHEMA_VERSION, git_object_format
 from .structural import ScanSetup
 
 
-INVENTORY_SCHEMA_VERSION = 10
-MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v3"
+INVENTORY_SCHEMA_VERSION = 11
+MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v4"
 
 
 def _digest(scope: dict, files: list[dict]) -> str:
@@ -188,6 +189,23 @@ def _complete_packet_errors(inventory: dict) -> list[str]:
         if (len(ids) != len(declarations) or not all(isinstance(item, str) for item in ids)
                 or len(ids) != len(set(ids))):
             errors.append(f"duplicate_or_missing_declaration_id:{path}")
+        byte_count = identity["byte_count"]
+        for item in declarations:
+            if not isinstance(item, dict):
+                errors.append(f"invalid_declaration_packet:{path}")
+                break
+            span = item.get("byte_range")
+            digest = item.get("declaration_sha256")
+            if (not isinstance(item.get("declaration_id"), str)
+                    or not item["declaration_id"]
+                    or not isinstance(item.get("declaration_kind"), str)
+                    or not isinstance(digest, str) or len(digest) != 64
+                    or any(char not in string.hexdigits for char in digest)
+                    or not isinstance(span, dict)
+                    or type(span.get("start")) is not int or type(span.get("end")) is not int
+                    or not 0 <= span["start"] < span["end"] <= byte_count):
+                errors.append(f"invalid_declaration_packet:{path}")
+                break
     return errors
 
 

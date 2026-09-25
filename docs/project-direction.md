@@ -6,7 +6,7 @@ binds observations to the exact bytes read, and returns compact evidence.
 It does not decide task scope, edit permission, test sufficiency, or whether a
 candidate should be accepted.
 
-This document records the intended end state. The [result contract](navigation-result-v4.md)
+This document records the intended end state. The [result contract](navigation-result-v5.md)
 describes what the current implementation actually returns; the two must not
 be confused. In particular, today's `navigation_only` result is **not** a
 complete inventory or a candidate-change qualification.

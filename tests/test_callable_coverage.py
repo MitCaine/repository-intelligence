@@ -18,6 +18,10 @@ class CallableCoverageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "mapped more than once"):
             finalize_coverage([entry, entry], promised=2, unhandled=0,
                               bodyless_excluded=0)
+        other_kind = {**entry, "declaration_kind": "method"}
+        with self.assertRaisesRegex(ValueError, "mapped more than once"):
+            finalize_coverage([entry, other_kind], promised=2, unhandled=0,
+                              bodyless_excluded=0)
 
     def _index(self, filename: str, source: bytes) -> dict:
         with tempfile.TemporaryDirectory() as raw:

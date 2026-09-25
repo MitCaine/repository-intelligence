@@ -19,7 +19,7 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
     words = validate_query(terms, limit)
     if source.is_symlink():
         return query(index_file(source, root=root, language=language), terms, limit)
-    if source.is_file():
+    if source.is_file() or (source.exists() and not source.is_dir()):
         return query(index_file(source, root=root, language=language), terms, limit)
     if not source.is_dir():
         raise ValueError("Source must be an existing file or directory")

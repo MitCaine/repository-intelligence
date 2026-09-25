@@ -8,8 +8,9 @@ to UTF-8 for Tree-sitter.
 from __future__ import annotations
 
 import io
+import codecs
 import tokenize
-from bisect import bisect_right
+from array import array
 from importlib.metadata import version
 
 from tree_sitter import Language, Node, Parser
@@ -23,11 +24,10 @@ import tree_sitter_c_sharp
 import tree_sitter_c
 import tree_sitter_cpp
 
-from .source import physical_lines
 from .adapters import PARSERS
 
 
-ADAPTER_VERSION = 3
+ADAPTER_VERSION = 4
 MAX_DECLARATION_DETAILS = 100
 MAX_DIAGNOSTIC_DETAILS = 50
 GRAMMARS = {
@@ -57,25 +57,30 @@ GRAMMARS = {
 
 class _RawOffsets:
     def __init__(self, source: bytes, decoded: str, encoding: str) -> None:
-        self.source = source
-        self.encoding = encoding
-        self.codec = "utf-8" if encoding == "utf-8-sig" else encoding
-        self.utf8 = decoded.encode("utf-8")
-        self.utf8_starts = [0]
-        self.raw_starts = [0]
-        for line in physical_lines(self.utf8):
-            self.utf8_starts.append(self.utf8_starts[-1] + len(line))
-        for line in physical_lines(source):
-            self.raw_starts.append(self.raw_starts[-1] + len(line))
-        if len(self.utf8_starts) != len(self.raw_starts):
-            raise ValueError("Transcoded Python line structure differs from raw source")
+        decoder = codecs.getincrementaldecoder(encoding)(errors="strict")
+        bom = 3 if encoding == "utf-8-sig" and source.startswith(codecs.BOM_UTF8) else 0
+        self.positions = array("I", [bom])
+        pieces = []
+
+        def record(output: str, raw_end: int) -> None:
+            if len(output) > 1:
+                raise ValueError("Python encoding emitted multiple characters at one byte boundary")
+            if output:
+                pieces.append(output)
+                width = len(output.encode("utf-8"))
+                self.positions.extend([0] * (width - 1))
+                self.positions.append(raw_end)
+
+        for raw_end, byte in enumerate(source, 1):
+            record(decoder.decode(bytes((byte,)), final=False), raw_end)
+        record(decoder.decode(b"", final=True), len(source))
+        if "".join(pieces) != decoded:
+            raise ValueError("Python encoding could not be mapped to raw byte boundaries")
 
     def raw(self, offset: int) -> int:
-        line = min(bisect_right(self.utf8_starts, offset) - 1,
-                   len(self.raw_starts) - 2)
-        prefix = self.utf8[self.utf8_starts[line]:offset].decode("utf-8")
-        bom = 3 if line == 0 and self.encoding == "utf-8-sig" else 0
-        return self.raw_starts[line] + bom + len(prefix.encode(self.codec))
+        if not 0 <= offset < len(self.positions) or (offset and not self.positions[offset]):
+            raise ValueError("Parser position is not a decoded character boundary")
+        return self.positions[offset]
 
 
 def python_input(source: bytes) -> tuple[bytes, str, _RawOffsets | None]:
