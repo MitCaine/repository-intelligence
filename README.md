@@ -6,7 +6,8 @@ and what RI deliberately does not own. The capabilities below describe the
 current implementation, which is narrower than that end state.
 
 A small, source-derived function locator for AI-assisted repository navigation.
-The common query interface currently supports Python and Rust through
+The common query interface currently supports Python, Rust, JavaScript, JSX,
+TypeScript, and TSX through
 Tree-sitter navigation in any local project. The Python standard-library AST
 adapter remains available directly as a reference/fallback.
 It returns compact function
@@ -28,7 +29,7 @@ preserved in Git history but is not part of the current package.
 ## Use
 
 Python 3.12 or 3.13 is required. The package pins the Tree-sitter runtime
-and Python/Rust grammar wheels. Ordinary Python and Rust navigation use Tree-sitter
+and Python/Rust/JavaScript/TypeScript grammar wheels. Ordinary navigation uses Tree-sitter
 without `rust-analyzer`. The analyzer remains available as an opt-in Rust
 source and metadata route when needed. No hosted service is needed. From this
 repository:
@@ -42,9 +43,9 @@ Pass one file instead of a directory to narrow the scan. Add `--json` for
 structured output. For a direct file, `--root /path/to/project` confines
 identity to that root; a path outside it or a symlink is reported as excluded
 without reading bytes. An ambiguous direct file (for example, `snippet.h`)
-stays `unsupported` unless `--language python` or `--language rust` explicitly
+stays `unsupported` unless an explicit shipped `--language` is selected
 selects a shipped adapter. This selects a parser, not a C or C++ adapter;
-conflicting selections for known `.py`/`.rs` extensions are rejected. An
+conflicting selections for known extensions are rejected. An
 unsupported file still returns its byte identity, marked `unsupported`.
 Directory results report files that could not be indexed and
 explicit scan exclusions. A directory scan covers supported files only, so no
@@ -77,7 +78,7 @@ PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 python3.13 -m unittest discover -s test
 ```
 
 The optional installed-wheel check uses two local build-dependency wheels and
-the three pinned Tree-sitter wheels and never downloads packages:
+the five pinned Tree-sitter wheels and never downloads packages:
 
 ```sh
 RI_SETUPTOOLS_WHEEL=/path/to/setuptools-79.0.1-py3-none-any.whl \
@@ -93,4 +94,4 @@ navigation trials and their measurement limits. The
 research modules are not included.
 
 The [Tree-sitter baseline note](docs/tree-sitter-baseline.md) records pinned
-versions, current parity evidence, and the remaining #8 adoption work.
+versions, current coverage contracts, and fixture evidence.

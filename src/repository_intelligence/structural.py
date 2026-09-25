@@ -1,6 +1,6 @@
 """Pinned Tree-sitter syntax evidence alongside the existing navigation adapters.
 
-This is a two-language seam, not a completeness inventory. The source of truth
+This is a small language seam, not a completeness inventory. The source of truth
 for returned byte spans is always the raw input, even when Python is transcoded
 to UTF-8 for Tree-sitter.
 """
@@ -16,6 +16,8 @@ from importlib.metadata import version
 from tree_sitter import Language, Node, Parser
 import tree_sitter_python
 import tree_sitter_rust
+import tree_sitter_javascript
+import tree_sitter_typescript
 
 from .source import physical_lines
 
@@ -26,7 +28,17 @@ MAX_DIAGNOSTIC_DETAILS = 50
 GRAMMARS = {
     ".py": ("Python", "tree-sitter-python", tree_sitter_python),
     ".rs": ("Rust", "tree-sitter-rust", tree_sitter_rust),
+    ".js": ("JavaScript", "tree-sitter-javascript", tree_sitter_javascript.language),
+    ".jsx": ("JavaScript", "tree-sitter-javascript", tree_sitter_javascript.language),
+    ".mjs": ("JavaScript", "tree-sitter-javascript", tree_sitter_javascript.language),
+    ".cjs": ("JavaScript", "tree-sitter-javascript", tree_sitter_javascript.language),
+    ".ts": ("TypeScript", "tree-sitter-typescript", tree_sitter_typescript.language_typescript),
+    ".tsx": ("TSX", "tree-sitter-typescript", tree_sitter_typescript.language_tsx),
 }
+
+JS_CALLABLES = {"function_declaration", "generator_function_declaration",
+                "function_expression", "generator_function", "arrow_function",
+                "method_definition"}
 
 
 class _RawOffsets:
@@ -93,8 +105,8 @@ def _rust_start(node, source: bytes) -> int:
 
 def scan(suffix: str, source: bytes) -> tuple[dict, Node, bytes, _RawOffsets | None]:
     """Return evidence, syntax tree, and decoded input for a language adapter."""
-    grammar_name, distribution, module = GRAMMARS[suffix]
-    language = Language(module.language())
+    grammar_name, distribution, provider = GRAMMARS[suffix]
+    language = Language(provider.language() if suffix in {".py", ".rs"} else provider())
     parse_bytes, encoding, offsets = (python_input(source) if suffix == ".py"
                                       else (source, "utf-8", None))
     root = Parser(language).parse(parse_bytes).root_node
@@ -138,11 +150,16 @@ def scan(suffix: str, source: bytes) -> tuple[dict, Node, bytes, _RawOffsets | N
             selected = node
             if node.type == "function_item":
                 name_node = node.child_by_field_name("name")
+        elif suffix in {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"} \
+                and node.type in JS_CALLABLES:
+            selected = node
+            name_node = node.child_by_field_name("name")
         if selected is not None:
             declaration_count += 1
             if len(declarations) < MAX_DECLARATION_DETAILS:
                 kind = ("lambda" if suffix == ".py" and selected.type == "lambda"
-                        else "closure" if selected.type == "closure_expression" else "function")
+                        else "closure" if selected.type == "closure_expression"
+                        else "arrow" if selected.type == "arrow_function" else "function")
                 start = raw(_rust_start(node, source) if suffix == ".rs"
                             and kind == "function" else node.start_byte)
                 end = raw(node.end_byte)

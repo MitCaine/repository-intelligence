@@ -1,7 +1,9 @@
 # Structural inventory and candidate delta v1
 
 `repository_intelligence.inventory.inventory_tree(root, stable=False,
-logical_root=".")` scans supported `.py` and `.rs` source without query terms.
+logical_root=".")` scans supported Python, Rust, JavaScript, JSX, TypeScript,
+and TSX source without query terms. The current inventory schema is version 2;
+version 1 packets are incompatible with it.
 Every supported in-scope file appears in `files`, including files with zero
 mapped callables. Each file carries its exact `source_identity`, parser and
 adapter coverage, structural diagnostics, mapping status, and contracted
