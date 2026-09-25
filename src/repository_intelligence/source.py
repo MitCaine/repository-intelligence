@@ -11,6 +11,11 @@ from pathlib import Path
 SCHEMA_VERSION = 2
 
 
+def legacy_git_blob_sha1(source: bytes) -> str:
+    """Compatibility field for parsed results; not checkout attestation."""
+    return hashlib.sha1(f"blob {len(source)}\0".encode() + source).hexdigest()
+
+
 def physical_lines(value: bytes | str) -> list[bytes] | list[str]:
     """Split only CR/LF physical lines, never Unicode separators inside text."""
     pattern = rb"\r\n|\r|\n" if isinstance(value, bytes) else r"\r\n|\r|\n"

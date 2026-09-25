@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 
 from .declarations import assign_named_ids, declaration, finalize_coverage
@@ -177,9 +176,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
         pending.extend((child, owners) for child in reversed(node.named_children))
     assign_named_ids(functions)
     coverage = finalize_coverage(functions, promised, unhandled_count, len(bodyless))
-    blob = hashlib.sha1(f"blob {len(source)}\0".encode() + source).hexdigest()
-    return {"path": str(path), "raw_sha256": hashlib.sha256(source).hexdigest(),
-            "git_blob_sha1": blob, "function_count": len(functions),
+    return {"path": str(path), "function_count": len(functions),
             "parse_error_count": unhandled_count, "unhandled_declarations": unhandled,
             "bodyless_declarations": bodyless, "adapter_coverage": coverage,
             "preprocessing": preprocess, "functions": functions,

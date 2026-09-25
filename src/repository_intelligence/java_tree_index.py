@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 
-from .declarations import assign_named_ids, declaration, finalize_coverage
+from .declarations import assign_named_ids, declaration, finalize_coverage, nearby_comment
 from .source import utf8_display_column
 
 
@@ -100,7 +99,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                         "column": utf8_display_column(source, node.start_byte),
                         "end_line": node.end_point.row + (node.end_point.column != 0),
                         "signature": source[node.start_byte:body.start_byte].decode("utf-8"),
-                        "docs": "", "lexical_call_candidates": _calls(body, source),
+                        "docs": nearby_comment(node, source), "lexical_call_candidates": _calls(body, source),
                         "syntax_kind": node.type, "anonymous": is_lambda,
                         "identity_signature": identity_signature,
                         **declaration(source, kind, qualified, node.start_byte, node.end_byte),
@@ -109,9 +108,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
         pending.extend((child, owners) for child in reversed(node.named_children))
     assign_named_ids(functions)
     coverage = finalize_coverage(functions, promised, unhandled_count, len(bodyless))
-    blob = hashlib.sha1(f"blob {len(source)}\0".encode() + source).hexdigest()
-    return {"path": str(path), "raw_sha256": hashlib.sha256(source).hexdigest(),
-            "git_blob_sha1": blob, "function_count": len(functions),
+    return {"path": str(path), "function_count": len(functions),
             "parse_error_count": unhandled_count, "unhandled_declarations": unhandled,
             "bodyless_declarations": bodyless, "adapter_coverage": coverage,
             "functions": functions,

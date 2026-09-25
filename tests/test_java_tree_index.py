@@ -6,10 +6,18 @@ import unittest
 from pathlib import Path
 
 from repository_intelligence.inventory import compare_inventories, inventory_tree
-from repository_intelligence.locator import index_file
+from repository_intelligence.locator import index_file, query_path
 
 
 class JavaTreeIndexTests(unittest.TestCase):
+    def test_nearby_javadoc_terms_find_opaque_method_name(self):
+        source = b"class C { /** Reconcile overdue invoices. */\n void run(){} }\n"
+        result = self._index(source)
+        self.assertIn("overdue invoices", result["functions"][0]["docs"])
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "Fixture.java"
+            path.write_bytes(source)
+            self.assertEqual(query_path(path, "overdue invoices")["matches"][0]["name"], "run")
     def _index(self, source: bytes) -> dict:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "Fixture.java"

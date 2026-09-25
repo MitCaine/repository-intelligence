@@ -5,6 +5,19 @@ from __future__ import annotations
 import hashlib
 
 
+def nearby_comment(node, source: bytes) -> str:
+    """Small syntactic search hint from a directly preceding ordinary comment."""
+    prior = node.prev_named_sibling
+    if prior is None or prior.type not in {"comment", "line_comment", "block_comment"}:
+        return ""
+    gap = source[prior.end_byte:node.start_byte]
+    if gap.strip() or gap.count(b"\n") > 1:
+        return ""
+    comment = source[prior.start_byte:prior.end_byte].decode("utf-8", "replace")
+    lines = [line.strip(" /*\t\r\n") for line in comment.splitlines()]
+    return " ".join(line for line in lines if line)
+
+
 def declaration(source: bytes, kind: str, qualified_name: str,
                 start: int, end: int) -> dict:
     """Describe one source unit; offsets are half-open in the supplied raw bytes."""

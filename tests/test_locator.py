@@ -15,6 +15,34 @@ from repository_intelligence.source import SCHEMA_VERSION, identify_bytes
 
 
 class LocatorTests(unittest.TestCase):
+    def test_common_identity_and_legacy_blob_field(self):
+        source = b"fn process() {}\n"
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "sample.rs"
+            path.write_bytes(source)
+            indexed = index_file(path, object_format="sha256")
+            self.assertEqual(indexed["raw_sha256"], hashlib.sha256(source).hexdigest())
+            self.assertEqual(indexed["source_identity"]["raw_sha256"], indexed["raw_sha256"])
+            self.assertEqual(indexed["source_identity"]["git_blob"]["algorithm"], "sha256")
+            self.assertEqual(indexed["git_blob_sha1"], hashlib.sha1(
+                f"blob {len(source)}\0".encode() + source).hexdigest())
+
+    def test_cross_language_expected_slices_do_not_depend_on_probe_counts(self):
+        cases = [
+            (".js", b"// invoice close\nfunction process(){}\n", "process", b"function process(){}"),
+            (".java", b"class C { /** invoice close */ void process(){} }\n",
+             "C.process", b"void process(){}"),
+            (".go", b"package main\nfunc process() {}\n", "main.process", b"func process() {}"),
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            for position, (suffix, source, qualified, expected_slice) in enumerate(cases):
+                path = Path(raw) / f"sample{position}{suffix}"
+                path.write_bytes(source)
+                result = index_file(path)
+                self.assertEqual([entry["qualified_name"] for entry in result["functions"]],
+                                 [qualified])
+                span = result["functions"][0]["byte_range"]
+                self.assertEqual(source[span["start"]:span["end"]], expected_slice)
     def test_unicode_identifier_is_searchable_by_name_parts(self):
         self.assertEqual(tokens("caféRésumé"), ["café", "résumé"])
         self.assertEqual(tokens("ΔοκιμήΚώδικα"), ["δοκιμή", "κώδικα"])
@@ -82,6 +110,36 @@ class LocatorTests(unittest.TestCase):
             self.assertIn("INCOMPLETE", format_tree_compact(result))
             self.assertEqual(result["total_matches"], 2)
             self.assertIn("git_blob_sha1", result["matches"][0])
+
+    def test_directory_file_metadata_matches_direct_result_and_raw_cpp_limit(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            path = root / "work.cpp"
+            path.write_bytes(b"#if FEATURE\nint process(){return 1;}\n#endif\n")
+            direct = query_path(path, "process")
+            directory = query_path(root, "process")
+            self.assertEqual(directory["total_matches"], 1)
+            self.assertEqual(directory["matches"][0]["path"], str(path))
+            record = directory["files"][str(path)]
+            for key in ("parser", "structural", "preprocessing", "source_identity",
+                        "adapter_coverage", "mapping_status", "parse_error_count"):
+                self.assertEqual(record[key], direct[key])
+            self.assertIn("C/C++ RAW SOURCE", format_tree_compact(directory))
+
+    def test_directory_retains_metadata_for_failed_source(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            bad = root / "bad.js"
+            bad.write_bytes(b"\xff")
+            direct = query_path(bad, "process")
+            directory = query_path(root, "process")
+            record = directory["files"][str(bad)]
+            self.assertEqual(record["source_identity"], direct["source_identity"])
+            self.assertEqual(record["mapping_status"], "incomplete")
+            self.assertEqual(record["parser"], direct["parser"])
+            self.assertEqual(record["structural"], direct["structural"])
+            self.assertEqual(directory["scanned_files"], 0)
+            self.assertEqual(len(directory["failures"]), 1)
 
     def test_python_declaration_ranges_include_decorators_and_anonymous_lambda(self):
         with tempfile.TemporaryDirectory() as raw:

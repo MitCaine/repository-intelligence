@@ -112,6 +112,8 @@ def format_tree_compact(result: dict) -> str:
     for entry in result["matches"]:
         lines.append(f"{entry['path']}:{entry['line']}-{entry['end_line']} "
                      f"{entry['qualified_name']} sha256={entry['raw_sha256']}")
+    if any(record.get("preprocessing") for record in result.get("files", {}).values()):
+        lines.append("C/C++ RAW SOURCE: preprocessing is unexpanded; no effective-program claim")
     if result.get("mapping_status") == "incomplete" or result["failures"] or result["parse_error_count"]:
         lines.append("INCOMPLETE: some source could not be parsed; no absence claim is valid")
     if exclusions:
