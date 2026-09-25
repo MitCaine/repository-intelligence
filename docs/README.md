@@ -1,6 +1,6 @@
 # RI documentation
 
-These guides describe the current implementation. The contracts are navigation v5, inventory schema 11, mapping contract v5, and adapter version 5. Follow the [known limitations](known-limitations.md) alongside the intended callable contract; a passing counter is not proof that an adapter has no logic defect.
+These guides describe the current implementation. The contracts are navigation v5, inventory schema 11, mapping contract v6, and adapter version 6. Follow the [known limitations](known-limitations.md) alongside the intended callable contract; a passing counter is not proof that an adapter has no logic defect.
 
 ## Using RI
 

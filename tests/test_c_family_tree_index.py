@@ -10,6 +10,41 @@ from repository_intelligence.locator import index_file
 
 
 class CFamilyTests(unittest.TestCase):
+    def test_cpp_variadic_overloads_are_not_ambiguous(self):
+        source = b"int F(int x) {return 1;} int F(int x, ...) {return 2;}"
+        entries = self._index(".cpp", source)["functions"]
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(len({entry["identity_signature"] for entry in entries}), 2)
+        self.assertFalse(any(entry["identity_ambiguous"] for entry in entries))
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "f.cpp").write_bytes(source)
+            (right / "f.cpp").write_bytes(b"// unrelated\n" + source)
+            changes = compare_inventories(inventory_tree(left, stable=True),
+                                          inventory_tree(right, stable=True))["declaration_changes"]
+            self.assertEqual(tuple(len(changes[key]) for key in
+                                   ("added", "removed", "modified", "unchanged")),
+                             (0, 0, 0, 2))
+
+    def test_parenthesized_c_declarator_is_mapped(self):
+        source = b"int (F)(int x) {return x;}"
+        result = self._index(".c", source)
+        self.assertEqual(result["mapping_status"], "navigation_only")
+        self.assertEqual([entry["name"] for entry in result["functions"]], ["F"])
+
+    def test_function_pointer_declarators_and_callback_rename(self):
+        source = (b"int (*Factory(void))(int) { return 0; }\n"
+                  b"void Use(int (*callback)(int)) {}\n")
+        result = self._index(".c", source)
+        self.assertEqual(result["mapping_status"], "navigation_only")
+        self.assertEqual({entry["name"] for entry in result["functions"]},
+                         {"Factory", "Use"})
+        renamed = self._index(".c", source.replace(b"callback", b"handler"))
+        use = next(entry for entry in result["functions"] if entry["name"] == "Use")
+        use_renamed = next(entry for entry in renamed["functions"] if entry["name"] == "Use")
+        self.assertEqual(use["declaration_id"], use_renamed["declaration_id"])
+
     def test_deleted_member_does_not_hide_default_argument_lambda(self):
         source = b"struct C { void f(int x = [](){return 1;}()) = delete; };"
         result = self._index(".cpp", source)

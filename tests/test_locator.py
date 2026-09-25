@@ -163,7 +163,7 @@ class LocatorTests(unittest.TestCase):
             lambda_span = anonymous["byte_range"]
             self.assertEqual(source[lambda_span["start"]:lambda_span["end"]],
                              b"lambda x: x + value")
-            self.assertEqual(indexed["parser"]["adapter_version"], 5)
+            self.assertEqual(indexed["parser"]["adapter_version"], 6)
             self.assertEqual(indexed["mapping_status"], "navigation_only")
 
     def test_same_name_declarations_and_lambdas_have_distinct_byte_identities(self):

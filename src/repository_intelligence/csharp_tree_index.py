@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from .declarations import assign_named_ids, declaration, finalize_coverage, syntax_token_key
@@ -41,18 +42,33 @@ def _owner(node, source: bytes) -> str | None:
     if node.type == "indexer_declaration":
         parameters = node.child_by_field_name("parameters")
         types = ",".join(_text(source, parameter.child_by_field_name("type"))
-                         if parameter.child_by_field_name("type") is not None
-                         else _text(source, parameter)
-                         for parameter in parameters.named_children) if parameters else ""
+                         for parameter in parameters.named_children
+                         if parameter.type == "parameter"
+                         and parameter.child_by_field_name("type") is not None) if parameters else ""
         return f"this[{types}]"
     return None
 
 
 def _parameter_identity(parameter, source: bytes) -> str:
     name = parameter.child_by_field_name("name")
-    default = parameter.child_by_field_name("default_value")
+    equals = next((i for i, child in enumerate(parameter.children)
+                   if child.type == "="), None)
+    default = parameter.children[equals:] if equals is not None else ()
     return syntax_token_key(parameter, source,
-                            omit=tuple(node for node in (name, default) if node is not None))
+                            omit=tuple(node for node in (name, *default) if node is not None))
+
+
+def _parameter_identities(parameters, source: bytes) -> list[str]:
+    identities = []
+    for child in parameters.children:
+        if child.type == "parameter":
+            identities.append(_parameter_identity(child, source))
+        elif child.type == "params":
+            type_node = parameters.child_by_field_name("type")
+            if type_node is not None:
+                identities.append(json.dumps(["params", *json.loads(syntax_token_key(type_node, source))],
+                                             ensure_ascii=False, separators=(",", ":")))
+    return identities
 
 
 def _calls(body, source: bytes) -> list[str]:
@@ -145,9 +161,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     parameters = node.child_by_field_name("parameters")
                     identity_signature = None
                     if parameters is not None and not anonymous:
-                        identity_signature = ",".join(_parameter_identity(parameter, source)
-                                                      for parameter in parameters.named_children
-                                                      if parameter.type == "parameter")
+                        identity_signature = ",".join(_parameter_identities(parameters, source))
                         type_parameters = next((child for child in node.named_children
                                                 if child.type == "type_parameter_list"), None)
                         if type_parameters is not None:
