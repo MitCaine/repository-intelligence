@@ -82,6 +82,14 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 else:
                     name = (_text(source, name_node) if name_node is not None
                             else f"<lambda@{node.start_byte}>")
+                    parameters = node.child_by_field_name("parameters")
+                    identity_signature = None
+                    if parameters is not None and not is_lambda:
+                        identity_signature = ",".join(
+                            _text(source, parameter.child_by_field_name("type"))
+                            if parameter.child_by_field_name("type") is not None
+                            else _text(source, parameter)
+                            for parameter in parameters.named_children)
                     qualified = ".".join((*owners, name))
                     kind = ("lambda" if is_lambda else
                             "constructor" if node.type.endswith("constructor_declaration") else
@@ -94,6 +102,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                         "signature": source[node.start_byte:body.start_byte].decode("utf-8"),
                         "docs": "", "lexical_call_candidates": _calls(body, source),
                         "syntax_kind": node.type, "anonymous": is_lambda,
+                        "identity_signature": identity_signature,
                         **declaration(source, kind, qualified, node.start_byte, node.end_byte),
                     })
                     owners = (*owners, name)

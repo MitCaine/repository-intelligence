@@ -62,7 +62,11 @@ class StructuralTests(unittest.TestCase):
             (b"/*! module docs */\nfn f() {}\n", b"fn f() {}"),
             (b"/// function docs\nfn f() {}\n", b"/// function docs\nfn f() {}"),
             (b"/** function docs */\nfn f() {}\n", b"/** function docs */\nfn f() {}"),
-            (b"/// separated docs\n\nfn f() {}\n", b"fn f() {}"),
+            (b"/// separated docs\n\nfn f() {}\n", b"/// separated docs\n\nfn f() {}"),
+            (b"#[allow(dead_code)]\n\n// ordinary\nfn f() {}\n",
+             b"#[allow(dead_code)]\n\n// ordinary\nfn f() {}"),
+            (b"#[inline]\n#[allow(dead_code)]\n\n/// documented\nfn f() {}\n",
+             b"#[inline]\n#[allow(dead_code)]\n\n/// documented\nfn f() {}"),
         ]
         for source, expected in cases:
             with self.subTest(source=source):
@@ -71,6 +75,15 @@ class StructuralTests(unittest.TestCase):
                 self.assertEqual(source[span["start"]:span["end"]], expected)
                 self.assertEqual(entry["declaration_sha256"],
                                  hashlib.sha256(expected).hexdigest())
+
+    def test_rust_attribute_edit_changes_declaration_hash_across_gap(self):
+        before = b"#[allow(dead_code)]\n\n// explanation\nfn f() {}\n"
+        after = before.replace(b"allow", b"deny")
+        previous = probe(".rs", before)["declarations"][0]
+        current = probe(".rs", after)["declarations"][0]
+        self.assertEqual(before[previous["byte_range"]["start"]:
+                                previous["byte_range"]["end"]], before[:-1])
+        self.assertNotEqual(previous["declaration_sha256"], current["declaration_sha256"])
 
     def test_declared_latin1_positions_still_bind_raw_bytes(self):
         source = b'# coding: latin-1\nx = "\x85"\ndef target(): return "caf\xe9"\n'

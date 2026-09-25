@@ -18,13 +18,23 @@ def declaration(source: bytes, kind: str, qualified_name: str,
 
 def assign_named_ids(entries: list[dict]) -> None:
     """Distinguish duplicate names without tying named identity to byte position."""
-    ordinals: dict[tuple[str, str], int] = {}
+    counts: dict[tuple[str, str, str | None], int] = {}
     for entry in entries:
         if entry["declaration_kind"] in {"lambda", "closure"} or entry.get("anonymous"):
             continue
-        key = (entry["declaration_kind"], entry["qualified_name"])
+        key = (entry["declaration_kind"], entry["qualified_name"],
+               entry.get("identity_signature"))
+        counts[key] = counts.get(key, 0) + 1
+    ordinals: dict[tuple[str, str, str | None], int] = {}
+    for entry in entries:
+        if entry["declaration_kind"] in {"lambda", "closure"} or entry.get("anonymous"):
+            continue
+        key = (entry["declaration_kind"], entry["qualified_name"],
+               entry.get("identity_signature"))
+        entry["identity_ambiguous"] = counts[key] > 1
         ordinal = ordinals.get(key, 0)
-        entry["declaration_id"] = f"{key[0]}:{key[1]}#{ordinal}"
+        discriminator = f"({key[2]})" if key[2] is not None else ""
+        entry["declaration_id"] = f"{key[0]}:{key[1]}{discriminator}#{ordinal}"
         ordinals[key] = ordinal + 1
 
 

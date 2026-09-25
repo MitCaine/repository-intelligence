@@ -53,6 +53,10 @@ modified, including attached syntax in the hashed range. Moves/renames that
 cannot be identified deterministically are add-plus-remove. Anonymous
 lambda/closure IDs contain start offsets, so inserting bytes before one can
 likewise appear as add-plus-remove rather than a modification.
+Repeated named declarations with the same syntactic identity carry
+`identity_ambiguous`; in a changed file, these are conservatively reported as
+removed and added even when their positional IDs coincide. Java, C#, and C++
+overloads use syntactic parameters, not resolved compiler symbols, for identity.
 
 Example from two separately materialized source roots:
 

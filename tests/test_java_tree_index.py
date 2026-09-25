@@ -79,6 +79,51 @@ class JavaTreeIndexTests(unittest.TestCase):
         self.assertGreater(result["structural"]["error_count"] +
                            result["structural"]["missing_count"], 0)
 
+    def test_overload_identity_survives_insert_remove_reorder_and_signature_edit(self):
+        base = b"class C { int f(int x){return 1;} int f(String x){return 2;} }\n"
+        variants = [
+            (b"class C { int f(boolean x){return 0;} int f(int x){return 1;} int f(String x){return 2;} }\n",
+             (1, 0, 0, 2)),
+            (b"class C { int f(String x){return 2;} int f(int x){return 1;} }\n",
+             (0, 0, 0, 2)),
+            (b"class C { int f(String x){return 2;} }\n", (0, 1, 0, 1)),
+            (b"class C { int f(long x){return 1;} int f(String x){return 2;} }\n",
+             (1, 1, 0, 1)),
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "C.java").write_bytes(base)
+            for candidate, expected in variants:
+                (right / "C.java").write_bytes(candidate)
+                delta = compare_inventories(inventory_tree(left, stable=True),
+                                            inventory_tree(right, stable=True))
+                self.assertEqual(delta["status"], "comparable_candidate_delta")
+                changes = delta["declaration_changes"]
+                self.assertEqual(tuple(len(changes[k]) for k in
+                                       ("added", "removed", "modified", "unchanged")), expected)
+                for item in changes["unchanged"]:
+                    self.assertEqual(item["planning"]["signature"], item["candidate"]["signature"])
+
+    def test_identical_syntactic_signatures_are_explicitly_ambiguous(self):
+        source = b"class C { int f(int x){return 1;} int f(int y){return 2;} }\n"
+        entries = [item for item in self._index(source)["functions"]
+                   if item["qualified_name"] == "C.f"]
+        self.assertEqual(len(entries), 2)
+        self.assertTrue(all(item["identity_ambiguous"] for item in entries))
+        changed = b"class C { int f(int y){return 2;} int f(int x){return 1;} }\n"
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "C.java").write_bytes(source)
+            (right / "C.java").write_bytes(changed)
+            delta = compare_inventories(inventory_tree(left, stable=True),
+                                        inventory_tree(right, stable=True))
+            changes = delta["declaration_changes"]
+            self.assertEqual((len(changes["added"]), len(changes["removed"]),
+                              len(changes["modified"]), len(changes["unchanged"])),
+                             (2, 2, 0, 0))
+
 
 if __name__ == "__main__":
     unittest.main()

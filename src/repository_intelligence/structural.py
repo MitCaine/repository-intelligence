@@ -89,7 +89,7 @@ def python_input(source: bytes) -> tuple[bytes, str, _RawOffsets | None]:
 
 
 def rust_attachments(node, source: bytes) -> list:
-    """Return immediately attached outer attributes/doc comments, in source order."""
+    """Return Rust outer attributes/docs, including intervening trivia."""
     start = node.start_byte
     prior = node.prev_named_sibling
     attached_nodes = []
@@ -100,15 +100,11 @@ def rust_attachments(node, source: bytes) -> list:
                         and snippet.startswith(b"///") and not snippet.startswith(b"////"))
                     or (prior.type == "block_comment"
                         and snippet.startswith(b"/**") and not snippet.startswith(b"/***")))
-        if not attached:
+        if not attached and prior.type not in {"line_comment", "block_comment"}:
             break
-        gap = source[prior.end_byte:start]
-        breaks = (gap.replace(b"\r\n", b"\n").replace(b"\r", b"\n").count(b"\n")
-                  + int(snippet.endswith((b"\n", b"\r"))))
-        if gap.strip() or breaks > 1:
-            break
-        start = prior.start_byte
-        attached_nodes.append(prior)
+        if attached:
+            start = prior.start_byte
+            attached_nodes.append(prior)
         prior = prior.prev_named_sibling
     return list(reversed(attached_nodes))
 

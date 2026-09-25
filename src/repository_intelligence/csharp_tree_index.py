@@ -94,8 +94,14 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
     promised = 0
     unhandled_count = 0
     pending = [(tree, ())]
+    file_namespace = next((node for node in tree.named_children
+                           if node.type == "file_scoped_namespace_declaration"), None)
+    file_namespace_name = (_owner(file_namespace, source)
+                           if file_namespace is not None else None)
     while pending:
         node, owners = pending.pop()
+        if node.parent == tree and node is not file_namespace and file_namespace_name is not None:
+            owners = (file_namespace_name,)
         owner = _owner(node, source)
         if owner is not None:
             owners = (*owners, owner)
@@ -122,6 +128,16 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 else:
                     name, kind, anonymous = _name_kind(node, source)
                     qualified = ".".join((*owners, name))
+                    parameters = node.child_by_field_name("parameters")
+                    identity_signature = None
+                    if parameters is not None and not anonymous:
+                        identity_signature = ",".join(
+                            "".join(source[parameter.start_byte:
+                                           parameter.child_by_field_name("type").end_byte]
+                                    .decode("utf-8").split())
+                            if parameter.child_by_field_name("type") is not None
+                            else _text(source, parameter)
+                            for parameter in parameters.named_children)
                     functions.append({
                         "name": name, "qualified_name": qualified,
                         "line": node.start_point.row + 1,
@@ -130,6 +146,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                         "signature": source[node.start_byte:body.start_byte].decode("utf-8"),
                         "docs": "", "lexical_call_candidates": _calls(body, source),
                         "syntax_kind": node.type, "anonymous": anonymous,
+                        "identity_signature": identity_signature,
                         **declaration(source, kind, qualified, node.start_byte, node.end_byte),
                     })
                     if node.type in {"method_declaration", "constructor_declaration",

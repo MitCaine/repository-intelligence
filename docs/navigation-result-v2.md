@@ -100,9 +100,13 @@ unhandled promised nodes make the mapping incomplete. See
 `docs/tree-sitter-baseline.md` for the exact syntax families and policy.
 
 Parsed callable entries include a `declaration_id` synthesized from kind and
-qualified name. Named functions also carry a source-order ordinal among
-same-kind, same-qualified-name declarations, so unrelated preceding edits do
-not change their ID; inserting another duplicate may change those ordinals.
+qualified name. Java, C#, and C++ overloads also include a syntactic parameter
+discriminator (including C++ pointer/reference shape and C# parameter modifiers),
+without compiler type resolution. Named functions carry a
+source-order ordinal only among identical kind/name/discriminator groups.
+Those groups are marked `identity_ambiguous` when repeated; a changed file's
+ambiguous entries are conservatively reported as removed and added rather than
+silently paired by position.
 Anonymous lambda IDs include their starting byte offset, which can change
 when preceding source moves. Entries also include a half-open `byte_range` in the
 exact `source_identity` bytes; and `declaration_sha256` over that range.

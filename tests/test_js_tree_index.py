@@ -10,6 +10,20 @@ from repository_intelligence.locator import index_file, query_path
 
 
 class JavaScriptTypeScriptTests(unittest.TestCase):
+    def test_nested_owners_and_static_accessors(self):
+        source = (b"class C { first(){ function helper(){} } second(){ function helper(){} }\n"
+                  b"static get value(){return 1} static set value(v){} }\n"
+                  b"const left = () => { function helper(){} };\n"
+                  b"const right = () => { function helper(){} };\n")
+        result = self._index(".ts", source)
+        by_name = {(entry["qualified_name"], entry["declaration_kind"])
+                   for entry in result["functions"]}
+        self.assertIn(("C.first.helper", "function"), by_name)
+        self.assertIn(("C.second.helper", "function"), by_name)
+        self.assertIn(("left.helper", "function"), by_name)
+        self.assertIn(("right.helper", "function"), by_name)
+        self.assertIn(("C.value", "getter"), by_name)
+        self.assertIn(("C.value", "setter"), by_name)
     def _index(self, suffix: str, source: bytes) -> dict:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / f"fixture{suffix}"
@@ -153,7 +167,7 @@ class JavaScriptTypeScriptTests(unittest.TestCase):
             (c / "main.ts").write_text("export function total(){ return 2; }\n")
             self.assertEqual(query_path(c / "main.ts", "total")["matches"][0]["name"], "total")
             before, after = inventory_tree(p, stable=True), inventory_tree(c, stable=True)
-            self.assertEqual(before["inventory_schema_version"], 6)
+            self.assertEqual(before["inventory_schema_version"], 7)
             self.assertEqual(before["scope"]["extensions"],
                              [".c", ".cc", ".cjs", ".cpp", ".cs", ".cxx", ".go", ".hh", ".hpp", ".hxx", ".java", ".js", ".jsx", ".mjs", ".py", ".rs", ".ts", ".tsx"])
             delta = compare_inventories(before, after)
