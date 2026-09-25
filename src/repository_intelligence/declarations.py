@@ -3,6 +3,22 @@
 from __future__ import annotations
 
 import hashlib
+import json
+
+
+def syntax_token_key(node, source: bytes, *, omit: tuple = ()) -> str:
+    """A source-syntax key that preserves token boundaries but ignores trivia."""
+    tokens = []
+    pending = [node]
+    while pending:
+        current = pending.pop()
+        if any(current == skipped for skipped in omit) or "comment" in current.type:
+            continue
+        if current.children:
+            pending.extend(reversed(current.children))
+        else:
+            tokens.append(source[current.start_byte:current.end_byte].decode("utf-8"))
+    return json.dumps(tokens, ensure_ascii=False, separators=(",", ":"))
 
 
 def nearby_comment(node, source: bytes) -> str:
@@ -56,8 +72,8 @@ def finalize_coverage(entries: list[dict], promised: int, unhandled: int,
     """Check one-to-one source mapping and report the adapter's bounded promise."""
     if promised != len(entries) + unhandled:
         raise ValueError("Promised callable count is not accounted for")
-    ranges = {(item["declaration_kind"], item["byte_range"]["start"],
-               item["byte_range"]["end"]) for item in entries}
+    ranges = {(item["byte_range"]["start"], item["byte_range"]["end"])
+              for item in entries}
     if len(ranges) != len(entries):
         raise ValueError("Callable source range mapped more than once")
     return {"promised_node_count": promised, "mapped_node_count": len(entries),

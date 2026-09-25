@@ -35,16 +35,37 @@ def _name_from_assignment(node, source: bytes) -> str | None:
 def _export_kind(node, source: bytes) -> str | None:
     ancestor = node.parent
     while ancestor is not None and ancestor.type != "program":
-        if ancestor.type in CALLABLES:
-            return None  # An enclosing callable's export does not export its nested callable.
+        if ancestor.type in CALLABLES | {"class_body", "class_declaration", "class",
+                                           "abstract_class_declaration", "call_expression",
+                                           "new_expression", "arguments", "object", "pair",
+                                           "array", "member_expression", "subscript_expression"}:
+            return None  # This callable is contained in, rather than directly bound by, the export.
         if ancestor.type == "assignment_expression":
             target = ancestor.child_by_field_name("left")
-            if target is not None and _text(source, target).startswith(("module.exports", "exports.")):
+            if target is not None and _is_commonjs_target(target, source):
                 return "commonjs"
         if ancestor.type == "export_statement":
             return "default" if any(child.type == "default" for child in ancestor.children) else "named"
         ancestor = ancestor.parent
     return None
+
+
+def _is_commonjs_target(target, source: bytes) -> bool:
+    parts = []
+    current = target
+    while current.type == "member_expression":
+        member = current.child_by_field_name("property")
+        if member is None:
+            return False
+        parts.append(_text(source, member))
+        current = current.child_by_field_name("object")
+        if current is None:
+            return False
+    if current.type != "identifier":
+        return False
+    parts.append(_text(source, current))
+    parts.reverse()
+    return parts[:2] == ["module", "exports"] or (len(parts) > 1 and parts[0] == "exports")
 
 
 def _calls(node, source: bytes) -> list[str]:
@@ -89,7 +110,7 @@ def _module_bindings(tree, source: bytes) -> dict:
             assignment = next((child for child in node.named_children
                                if child.type == "assignment_expression"), None)
             target = assignment.child_by_field_name("left") if assignment is not None else None
-            if target is not None and _text(source, target).startswith(("module.exports", "exports.")):
+            if target is not None and _is_commonjs_target(target, source):
                 exports.append({"kind": "commonjs",
                                 "source": None, "owner": None,
                                 "byte_range": {"start": node.start_byte, "end": node.end_byte}})
@@ -148,7 +169,9 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 method_tokens = tuple(child.type for child in node.children
                                       if name_node is not None and child.end_byte <= name_node.start_byte)
                 kind = ("arrow" if node.type == "arrow_function" else
-                        "constructor" if node.type == "method_definition" and name == "constructor" else
+                        "constructor" if node.type == "method_definition" and name == "constructor"
+                        and node.parent is not None and node.parent.type == "class_body"
+                        and "static" not in method_tokens else
                         "getter" if "get" in method_tokens else
                         "setter" if "set" in method_tokens else
                         "method" if node.type == "method_definition" else "function")

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .declarations import assign_named_ids, declaration, finalize_coverage
+from .declarations import assign_named_ids, declaration, finalize_coverage, syntax_token_key
 from .source import utf8_display_column
 
 
@@ -15,6 +15,12 @@ def _text(source: bytes, node) -> str:
 def _name(node, source: bytes) -> str | None:
     if node is None:
         return None
+    if node.type == "qualified_identifier":
+        scope = node.child_by_field_name("scope")
+        terminal = node.child_by_field_name("name")
+        if terminal is not None and terminal.type == "operator_cast":
+            return ((_text(source, scope).replace("::", ".") + ".") if scope else "") + \
+                (_name(terminal, source) or "")
     if node.type == "operator_cast":
         target = node.child_by_field_name("type")
         return "operator " + _text(source, target) if target is not None else None
@@ -29,22 +35,14 @@ def _name(node, source: bytes) -> str | None:
 
 def _parameter_identity(parameter, source: bytes) -> str:
     """Keep C/C++ declarator shape but omit the parameter's local name."""
-    type_node = parameter.child_by_field_name("type")
     declarator = parameter.child_by_field_name("declarator")
-    if type_node is None:
-        return _text(source, parameter)
-    prefix = source[parameter.start_byte:declarator.start_byte] if declarator else source[
-        parameter.start_byte:parameter.end_byte]
-    if declarator is None:
-        return "".join(prefix.decode("utf-8").split())
     leaf = declarator
-    while leaf.child_by_field_name("declarator") is not None:
+    while leaf is not None and leaf.child_by_field_name("declarator") is not None:
         leaf = leaf.child_by_field_name("declarator")
-    shape = ((source[declarator.start_byte:leaf.start_byte]
-              + source[leaf.end_byte:declarator.end_byte])
-             if leaf.type in {"identifier", "field_identifier"} else
-             source[declarator.start_byte:declarator.end_byte])
-    return "".join((prefix + shape).decode("utf-8").split())
+    local_name = leaf if leaf is not None and leaf.type in {"identifier", "field_identifier"} else None
+    default = parameter.child_by_field_name("default_value")
+    return syntax_token_key(parameter, source,
+                            omit=tuple(node for node in (local_name, default) if node is not None))
 
 
 def _calls(body, source: bytes) -> list[str]:
@@ -121,8 +119,18 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 bodyless.append({"syntax_kind": "function_declarator",
                                  "byte_range": {"start": node.start_byte, "end": node.end_byte}})
         elif node.type in {"function_definition", "lambda_expression"}:
-            promised += 1
             body = node.child_by_field_name("body")
+            if node.type == "function_definition" and body is None:
+                body = next((child for child in node.named_children
+                             if child.type == "try_statement"), None)
+                if body is None and any(child.type in {"default_method_clause",
+                                                       "delete_method_clause"}
+                                        for child in node.named_children):
+                    bodyless.append({"syntax_kind": node.type,
+                                     "byte_range": {"start": node.start_byte,
+                                                    "end": node.end_byte}})
+                    continue
+            promised += 1
             declarator = node.child_by_field_name("declarator")
             anonymous = node.type == "lambda_expression"
             name = f"<lambda@{node.start_byte}>" if anonymous else _name(declarator, source)
@@ -133,19 +141,17 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                                       "byte_range": {"start": node.start_byte,
                                                      "end": node.end_byte}})
             else:
-                parent = node.parent
-                start = (parent.start_byte if parent is not None
-                         and parent.type in {"template_declaration", "friend_declaration"}
-                         else node.start_byte)
-                friend = parent is not None and parent.type == "friend_declaration"
+                start = node.start_byte
+                friend = False
+                wrapper = node.parent
+                while wrapper is not None and wrapper.type in {
+                        "template_declaration", "friend_declaration"}:
+                    start = wrapper.start_byte
+                    friend |= wrapper.type == "friend_declaration"
+                    wrapper = wrapper.parent
                 visible_owners = (tuple(part for part in owners
                                         if part[0] == "namespace_definition") if friend else owners)
                 qualified = ".".join((*[part[1] for part in visible_owners], name))
-                operator_node = declarator
-                while operator_node is not None and operator_node.type != "operator_cast":
-                    if operator_node.type == "operator_name":
-                        break
-                    operator_node = operator_node.child_by_field_name("declarator")
                 terminal = declarator
                 while terminal is not None and terminal.type not in {
                         "qualified_identifier", "operator_name", "operator_cast",
@@ -160,8 +166,8 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                                      if terminal_scope is not None else
                                      next((part[1] for part in reversed(owners)
                                            if part[0] in {"class_specifier", "struct_specifier"}), None))
-                kind = ("lambda" if anonymous else "conversion" if operator_node is not None
-                        and operator_node.type == "operator_cast" else
+                kind = ("lambda" if anonymous else
+                        "conversion" if terminal is not None and terminal.type == "operator_cast" else
                         "operator" if terminal is not None and terminal.type == "operator_name" else
                         "destructor" if terminal is not None and terminal.type == "destructor_name" else
                         "constructor" if node.child_by_field_name("type") is None

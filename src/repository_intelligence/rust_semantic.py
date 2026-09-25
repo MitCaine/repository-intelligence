@@ -65,8 +65,18 @@ class _RustAnalyzer:
     def send(self, message: dict) -> None:
         data = json.dumps(message, separators=(",", ":")).encode()
         assert self.proc.stdin is not None
-        self.proc.stdin.write(f"Content-Length: {len(data)}\r\n\r\n".encode() + data)
-        self.proc.stdin.flush()
+        descriptor = self.proc.stdin.fileno()
+        os.set_blocking(descriptor, False)
+        payload = memoryview(f"Content-Length: {len(data)}\r\n\r\n".encode() + data)
+        while payload:
+            remaining = self.deadline - time.monotonic()
+            if remaining <= 0 or not select.select([], [descriptor], [], remaining)[1]:
+                raise TimeoutError("rust-analyzer input remained blocked past the deadline")
+            try:
+                written = os.write(descriptor, payload)
+            except BlockingIOError:
+                continue
+            payload = payload[written:]
 
     def receive(self) -> dict:
         assert self.proc.stdout is not None

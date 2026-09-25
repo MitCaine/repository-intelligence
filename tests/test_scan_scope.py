@@ -2,15 +2,42 @@
 
 import tempfile
 import unittest
+import os
 from pathlib import Path
 from unittest.mock import patch
 
-from repository_intelligence import locator
+from repository_intelligence import locator, scan
 from repository_intelligence.inventory import compare_inventories, inventory_tree
-from repository_intelligence.locator import query_path
+from repository_intelligence.locator import index_file, query_path
 
 
 class ScanScopeTests(unittest.TestCase):
+    def test_source_read_bound_is_distinct_from_parser_bound(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "long.py"
+            path.write_bytes(b"def source(): return 123\n")
+            with patch.object(scan, "MAX_SOURCE_BYTES", 16):
+                result = index_file(path)
+            self.assertEqual(result["mapping_status"], "incomplete")
+            self.assertIsNone(result["source_identity"])
+            self.assertEqual(result["failures"],
+                             [{"error": "SourceReadLimitExceeded", "limit_bytes": 16}])
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "FIFO creation requires POSIX")
+    def test_supported_suffix_fifo_is_disclosed_without_reading(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            fifo = root / "input.py"
+            os.mkfifo(fifo)
+            paths, _, failures, _, _ = locator.walk_supported_paths(root)
+            self.assertEqual(paths, [])
+            self.assertEqual(failures[0]["error"], "NonRegularFile")
+            direct = index_file(fifo)
+            self.assertEqual(direct["mapping_status"], "incomplete")
+            self.assertEqual(direct["failures"][0]["error"], "NonRegularFile")
+            self.assertEqual(query_path(fifo, "input")["mapping_status"], "incomplete")
+            self.assertEqual(query_path(root, "input")["mapping_status"], "incomplete")
+
     def test_directory_traversal_failure_without_sources_is_a_partial_packet(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

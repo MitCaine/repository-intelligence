@@ -10,6 +10,24 @@ from repository_intelligence.locator import index_file, query_path
 
 
 class JavaTreeIndexTests(unittest.TestCase):
+    def test_varargs_local_name_is_not_declaration_identity(self):
+        before = b"class C { void f(String... args) {} }"
+        after = b"class C { void f(String... values) {} }"
+        left = self._index(before)["functions"][0]
+        right = self._index(after)["functions"][0]
+        self.assertEqual(left["declaration_id"], right["declaration_id"])
+        self.assertNotEqual(left["declaration_sha256"], right["declaration_sha256"])
+
+    def test_local_class_members_in_overloads_have_distinct_owner_identity(self):
+        source = (b"class C {"
+                  b" void f(int x) { class Local { void g() {} } }"
+                  b" void f(String x) { class Local { void g() {} } }"
+                  b" }")
+        entries = [entry for entry in self._index(source)["functions"] if entry["name"] == "g"]
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(len({entry["declaration_id"] for entry in entries}), 2)
+        self.assertFalse(any(entry["identity_ambiguous"] for entry in entries))
+
     def test_array_declarator_dimensions_distinguish_overloads(self):
         before = b"class C { int f(int x){return 1;} int f(int x[]){return 2;} }\n"
         indexed = self._index(before)

@@ -169,6 +169,52 @@ class InventoryTests(unittest.TestCase):
             self.assertIsNone(delta["file_changes"])
             self.assertIsNone(delta["declaration_changes"])
 
+    def test_changed_file_packets_with_invalid_declarations_are_incompatible(self):
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "one.py").write_text("def one(): return 1\n")
+            (right / "one.py").write_text("def one(): return 2\n")
+            planning = inventory_tree(left, stable=True)
+            candidate = inventory_tree(right, stable=True)
+            self.assertEqual(compare_inventories(planning, candidate)["status"],
+                             "comparable_candidate_delta")
+            for label, mutate in {
+                "null_hash": lambda item: item.__setitem__("declaration_sha256", None),
+                "missing_hash": lambda item: item.pop("declaration_sha256"),
+                "zero_width": lambda item: item["byte_range"].__setitem__(
+                    "end", item["byte_range"]["start"]),
+                "reversed": lambda item: item["byte_range"].__setitem__("start", 999),
+                "out_of_bounds": lambda item: item["byte_range"].__setitem__("end", 999),
+            }.items():
+                with self.subTest(case=label):
+                    invalid = copy.deepcopy(candidate)
+                    mutate(invalid["files"][0]["declarations"][0])
+                    result = compare_inventories(planning, invalid)
+                    self.assertEqual(result["status"], "incompatible")
+                    self.assertIsNone(result["declaration_changes"])
+
+    def test_mixed_language_changed_source_and_stable_identity_delta(self):
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            for root, value, bound, parameter in ((left, b"123", b"1", b"args"),
+                                                  (right, b"456", b"2", b"values")):
+                (root / "f.py").write_bytes(
+                    b"# coding: iso2022_jp\ndef f(): return \x1b(B" + value + b"\n")
+                (root / "c.cpp").write_bytes(
+                    b"struct C { template<class T> requires(sizeof(T)>" + bound + b")\n"
+                    b"friend int choose(C, T) { return 1; } };\n")
+                (root / "J.java").write_bytes(
+                    b"class J { void f(String... " + parameter + b") {} }\n")
+            delta = compare_inventories(inventory_tree(left, stable=True),
+                                        inventory_tree(right, stable=True))
+            self.assertEqual(delta["status"], "comparable_candidate_delta")
+            self.assertEqual({entry["path"] for entry in delta["declaration_changes"]["modified"]},
+                             {"f.py", "c.cpp", "J.java"})
+            self.assertEqual(delta["declaration_changes"]["added"], [])
+            self.assertEqual(delta["declaration_changes"]["removed"], [])
+
     def test_anonymous_movement_is_reported_as_add_and_remove(self):
         with tempfile.TemporaryDirectory() as raw:
             left, right = (Path(raw) / name for name in ("left", "right"))

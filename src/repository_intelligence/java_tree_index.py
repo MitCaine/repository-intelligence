@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .declarations import assign_named_ids, declaration, finalize_coverage, nearby_comment
+from .declarations import (assign_named_ids, declaration, finalize_coverage,
+                           nearby_comment, syntax_token_key)
 from .source import utf8_display_column
 
 
@@ -16,6 +17,14 @@ OWNERS = {"class_declaration", "interface_declaration", "record_declaration",
 
 def _text(source: bytes, node) -> str:
     return source[node.start_byte:node.end_byte].decode("utf-8", "replace")
+
+
+def _parameter_identity(parameter, source: bytes) -> str:
+    name = parameter.child_by_field_name("name")
+    if name is None and parameter.type == "spread_parameter":
+        name = next((child for child in parameter.named_children
+                     if child.type == "variable_declarator"), None)
+    return syntax_token_key(parameter, source, omit=(name,) if name is not None else ())
 
 
 def _calls(body, source: bytes) -> list[str]:
@@ -45,9 +54,9 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
     bodyless = []
     promised = 0
     unhandled_count = 0
-    pending = [(tree, ())]
+    pending = [(tree, (), ())]
     while pending:
-        node, owners = pending.pop()
+        node, owners, owner_identities = pending.pop()
         if node.type in OWNERS:
             name_node = node.child_by_field_name("name")
             if name_node is not None:
@@ -84,13 +93,11 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     parameters = node.child_by_field_name("parameters")
                     identity_signature = None
                     if parameters is not None and not is_lambda:
-                        identity_signature = ",".join(
-                            (_text(source, parameter.child_by_field_name("type"))
-                             + "".join(_text(source, child) for child in parameter.named_children
-                                       if child.type == "dimensions"))
-                            if parameter.child_by_field_name("type") is not None
-                            else _text(source, parameter)
-                            for parameter in parameters.named_children)
+                        identity_signature = ",".join(_parameter_identity(parameter, source)
+                                                      for parameter in parameters.named_children)
+                    own_signature = identity_signature
+                    if owner_identities:
+                        identity_signature = "/".join(owner_identities) + ":" + (own_signature or "")
                     qualified = ".".join((*owners, name))
                     kind = ("lambda" if is_lambda else
                             "constructor" if node.type.endswith("constructor_declaration") else
@@ -107,7 +114,11 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                         **declaration(source, kind, qualified, node.start_byte, node.end_byte),
                     })
                     owners = (*owners, name)
-        pending.extend((child, owners) for child in reversed(node.named_children))
+                    if not is_lambda:
+                        owner_identities = (*owner_identities,
+                                            f"{name}({own_signature or ''})")
+        pending.extend((child, owners, owner_identities)
+                       for child in reversed(node.named_children))
     assign_named_ids(functions)
     coverage = finalize_coverage(functions, promised, unhandled_count, len(bodyless))
     return {"path": str(path), "function_count": len(functions),

@@ -10,6 +10,30 @@ from repository_intelligence.locator import index_file, query_path
 
 
 class JavaScriptTypeScriptTests(unittest.TestCase):
+    def test_export_is_direct_and_commonjs_target_is_exact(self):
+        source = (b"export class C { run() {} }\n"
+                  b"export const n = register(() => 1);\n"
+                  b"module.exportsBackup = function backup() {};\n"
+                  b"module.exports = function direct() {};\n")
+        indexed = self._index(".js", source)
+        by_name = {entry["name"]: entry for entry in indexed["functions"]}
+        self.assertIsNone(by_name["run"]["export_kind"])
+        callback = next(entry for entry in indexed["functions"]
+                        if entry["syntax_kind"] == "arrow_function")
+        self.assertIsNone(callback["export_kind"])
+        self.assertIsNone(by_name["backup"]["export_kind"])
+        self.assertEqual(by_name["direct"]["export_kind"], "commonjs")
+        self.assertEqual([item["kind"] for item in indexed["module_bindings"]["exports"]],
+                         ["named", "named", "commonjs"])
+
+    def test_constructor_kind_requires_nonstatic_class_member(self):
+        source = (b"const obj = { constructor() {} };\n"
+                  b"class C { static constructor() {} constructor() {} }\n")
+        entries = [entry for entry in self._index(".js", source)["functions"]
+                   if entry["name"] == "constructor"]
+        self.assertEqual([entry["declaration_kind"] for entry in entries],
+                         ["method", "method", "constructor"])
+
     def test_named_expression_keeps_external_binding_searchable_once(self):
         for suffix in (".js", ".ts"):
             with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as raw:
@@ -209,7 +233,7 @@ class JavaScriptTypeScriptTests(unittest.TestCase):
             (c / "main.ts").write_text("export function total(){ return 2; }\n")
             self.assertEqual(query_path(c / "main.ts", "total")["matches"][0]["name"], "total")
             before, after = inventory_tree(p, stable=True), inventory_tree(c, stable=True)
-            self.assertEqual(before["inventory_schema_version"], 10)
+            self.assertEqual(before["inventory_schema_version"], 11)
             self.assertEqual(before["scope"]["extensions"],
                              [".c", ".cc", ".cjs", ".cpp", ".cs", ".cts", ".cxx", ".go", ".hh", ".hpp", ".hxx", ".java", ".js", ".jsx", ".mjs", ".mts", ".py", ".rs", ".ts", ".tsx"])
             delta = compare_inventories(before, after)

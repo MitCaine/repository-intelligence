@@ -10,6 +10,42 @@ from repository_intelligence.python_index import index_source as ast_index_sourc
 
 
 class PythonTreeNavigationTests(unittest.TestCase):
+    def test_deep_valid_call_keeps_raw_target_when_unparse_recurses(self):
+        target = "root" + ".part" * 400
+        source = f"def f(): return {target}()\n".encode()
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "deep.py"
+            path.write_bytes(source)
+            result = index_file(path)
+        self.assertEqual(result["mapping_status"], "navigation_only")
+        self.assertEqual(result["functions"][0]["lexical_call_candidates"], [target])
+
+    def test_stateful_encoding_range_includes_changed_return_value(self):
+        prefix = b"# coding: iso2022_jp\ndef f(): return \x1b(B"
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "stateful.py"
+            declarations = []
+            for value in (b"123", b"456"):
+                source = prefix + value + b"\n"
+                path.write_bytes(source)
+                result = index_file(path)
+                self.assertEqual(result["mapping_status"], "navigation_only")
+                entry = result["functions"][0]
+                span = entry["byte_range"]
+                self.assertEqual(source[span["start"]:span["end"]],
+                                 b"def f(): return \x1b(B" + value)
+                declarations.append(entry)
+            self.assertNotEqual(declarations[0]["declaration_sha256"],
+                                declarations[1]["declaration_sha256"])
+
+    def test_bom_only_python_source_is_valid_empty_file(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "empty.py"
+            path.write_bytes(b"\xef\xbb\xbf")
+            result = index_file(path)
+            self.assertEqual(result["mapping_status"], "navigation_only")
+            self.assertEqual(result["function_count"], 0)
+
     def test_async_decorated_nested_method_lambda_and_latin1_parity(self):
         source = ("# coding: latin-1\n"
                   "@cache\n"

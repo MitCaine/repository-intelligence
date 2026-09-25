@@ -10,6 +10,71 @@ from repository_intelligence.locator import index_file
 
 
 class CFamilyTests(unittest.TestCase):
+    def test_constructor_try_body_and_intentionally_bodyless_members(self):
+        source = (b"struct C { C(); C(const C&) = delete; C(C&&) = default; };\n"
+                  b"C::C() try {} catch(...) {}\n")
+        indexed = self._index(".cpp", source)
+        self.assertEqual(indexed["mapping_status"], "navigation_only")
+        self.assertEqual(indexed["adapter_coverage"]["unhandled_node_count"], 0)
+        self.assertGreaterEqual(indexed["adapter_coverage"]["bodyless_excluded_count"], 2)
+        self.assertEqual([(entry["qualified_name"], entry["declaration_kind"])
+                          for entry in indexed["functions"]], [("C.C", "constructor")])
+        entry = indexed["functions"][0]
+        self.assertEqual(source[entry["byte_range"]["start"]:entry["byte_range"]["end"]],
+                         b"C::C() try {} catch(...) {}")
+
+    def test_pure_virtual_declaration_is_explicitly_bodyless(self):
+        result = self._index(".cpp", b"struct I { virtual int f() = 0; };\n")
+        self.assertEqual(result["mapping_status"], "navigation_only")
+        self.assertEqual(result["function_count"], 0)
+        self.assertGreaterEqual(result["adapter_coverage"]["bodyless_excluded_count"], 1)
+
+    def test_qualified_conversion_uses_terminal_declarator(self):
+        source = b"struct C { operator int(); }; C::operator int() { return 1; }\n"
+        entries = self._index(".cpp", source)["functions"]
+        self.assertEqual([(entry["qualified_name"], entry["declaration_kind"])
+                          for entry in entries], [("C.operator int", "conversion")])
+
+    def test_type_token_boundaries_do_not_create_false_ambiguity(self):
+        source = (b"using unsignedint = double;\n"
+                  b"int choose(unsigned int x) { return 1; }\n"
+                  b"int choose(unsignedint x) { return 2; }\n")
+        entries = self._index(".cpp", source)["functions"]
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(len({entry["declaration_id"] for entry in entries}), 2)
+        self.assertFalse(any(entry["identity_ambiguous"] for entry in entries))
+        after = (b"// unrelated\nusing unsignedint = double;\n"
+                 b"int choose(unsignedint renamed) { return 2; }\n"
+                 b"int choose(unsigned /* trivia */ int other) { return 1; }\n")
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "f.cpp").write_bytes(source)
+            (right / "f.cpp").write_bytes(after)
+            delta = compare_inventories(inventory_tree(left, stable=True),
+                                        inventory_tree(right, stable=True))
+            self.assertEqual(delta["status"], "comparable_candidate_delta")
+            self.assertEqual(len(delta["declaration_changes"]["added"]), 0)
+            self.assertEqual(len(delta["declaration_changes"]["removed"]), 0)
+            self.assertEqual(len(delta["declaration_changes"]["modified"]), 2)
+
+    def test_template_friend_range_includes_constraint(self):
+        prefix = b"struct C {\n"
+        suffix = b"\n};\n"
+        hashes = []
+        for bound in (b"1", b"2"):
+            declaration = (b"template<class T> requires(sizeof(T)>" + bound + b")\n"
+                           b"friend int choose(C, T) { return 1; }")
+            source = prefix + declaration + suffix
+            indexed = self._index(".cpp", source)
+            self.assertEqual(indexed["mapping_status"], "navigation_only")
+            self.assertEqual(indexed["function_count"], 1)
+            entry = indexed["functions"][0]
+            span = entry["byte_range"]
+            self.assertEqual(source[span["start"]:span["end"]], declaration)
+            hashes.append(entry["declaration_sha256"])
+        self.assertNotEqual(hashes[0], hashes[1])
+
     def test_member_qualifiers_distinguish_overloads(self):
         before = b"struct C { int f() & {return 1;} int f() const & {return 2;} };\n"
         indexed = self._index(".cpp", before)

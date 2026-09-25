@@ -1,4 +1,4 @@
-# Navigation result v4
+# Navigation result v4 (historical; superseded by [v5](navigation-result-v5.md))
 
 The shared `index_file` and `query_path` APIs return `schema_version: 4`.
 Version 4 retains the [v3 source identity, scan scope, parser, and coverage

@@ -8,7 +8,7 @@ preserved as an opt-in escalation for richer source/metadata questions. No
 exhaustive language coverage is claimed.
 The syntax probe owns parser metadata and `ERROR`/`MISSING` diagnostics only.
 Each language adapter alone owns callable selection, promised/unhandled counts,
-names, kinds, ownership, and source slices. Version 3 structural declaration
+names, kinds, ownership, and source slices. Version 4 structural declaration
 details are a bounded presentation of adapter entries, not a second independent
 classifier. Fixed expected-source fixtures, not agreement between two counters,
 test the mapping promise.
@@ -24,6 +24,9 @@ twice. Classes and decorators themselves are containers or attachments, not
 callables. Python has no bodyless declaration in this contract. An absent or
 zero-width function/lambda body, missing name, or missing function-header colon
 is adapter-unhandled, not a successful map.
+Declared encodings are decoded into Tree-sitter input with raw-byte positions
+mapped from the actual decoder output. Ambiguous character boundaries make the
+file incomplete rather than assigning an approximate declaration slice.
 
 For the pinned Rust grammar, the adapter promises every `function_item` and
 `closure_expression` node exposed by Tree-sitter, including top-level, nested,
@@ -49,7 +52,10 @@ For pinned JavaScript and TypeScript grammars, `.js`, `.jsx`, `.mjs`, `.cjs`,
 `.ts`, and `.tsx` promise every body-bearing `function_declaration`,
 `generator_function_declaration`, `function_expression`, `generator_function`,
 `arrow_function`, and `method_definition` node. This includes nested and
-anonymous functions, class/object methods, constructors, and accessors.
+anonymous functions, class/object methods, true non-static class constructors,
+and accessors. Object methods and static methods named `constructor` remain
+ordinary methods. Callable export labels describe direct syntactic bindings,
+not nested methods or callbacks.
 Anonymous functions get source-position-based structural IDs; overload and
 interface/abstract signatures without bodies are separately counted as
 bodyless, not implementations. Source ranges are exact UTF-8 byte ranges.
@@ -70,6 +76,9 @@ bytes still change the containing file hash, so inventory comparison reports
 the file as modified even if no callable declaration changes.
 Syntactic overload identity includes array dimensions attached to a formal
 parameter's variable declarator, not just its base type.
+Varargs local parameter names do not contribute to identity. Members in local
+classes inside overloaded methods retain display ownership but include the
+enclosing overload discriminator in their internal identity.
 
 For pinned Go, `.go` promises body-bearing `function_declaration`,
 `method_declaration`, and `func_literal` nodes, including `init`, generic
@@ -93,18 +102,24 @@ C# syntactic identity includes method generic arity; explicit indexer accessor
 owners include indexer parameter types, and nested local callables inherit an
 enclosing method discriminator. `ref` and `out` alone are not treated as valid
 distinct overloads.
+Parameter keys preserve token boundaries, and conversion labels come from the
+actual `implicit` or `explicit` token rather than annotation/comment text.
 
 For pinned C/C++, the source-level contract promises every Tree-sitter
-`function_definition`, plus C++ `lambda_expression`; declarations/prototypes
-without bodies are recorded separately. C/C++ `.h` queries require an explicit
+body-bearing `function_definition`, plus C++ `lambda_expression`;
+declarations/prototypes and intentionally defaulted/deleted definitions without
+ordinary bodies are recorded separately. Constructor function-try-blocks count
+as body-bearing implementations. C/C++ `.h` queries require an explicit
 `c` or `cpp` language choice, including per-path choices in directory scans;
 RI does not guess. `.c` uses C;
-`.cc`, `.cpp`, `.cxx`, `.hh`, `.hpp`, and `.hxx` use C++. Templates and friend
-wrappers are included in declaration byte ranges, and namespace/class owners
+`.cc`, `.cpp`, `.cxx`, `.hh`, `.hpp`, and `.hxx` use C++. Attached chains of
+template and friend wrappers are included in declaration byte ranges; container
+class/namespace bytes are not. Namespace/class owners
 locate C++ members. `preprocessing` reports directives in unexpanded raw text.
 Member cv/ref qualifiers distinguish syntactic overload identities, while
 out-of-class constructor, destructor, and operator kinds use their terminal
-declarator nodes.
+declarator nodes. Parameter keys preserve syntax-token boundaries and omit
+local parameter names; they do not resolve compiler types.
 Conditional branches, macros that generate declarations, includes, and build
 flags mean this is **not** a claim about the effective compiled program. Ask
 Clang with the actual flags/includes when effective declarations are needed;
