@@ -62,3 +62,23 @@ delta = compare_inventories(planning, candidate)
 if delta["status"] == "comparable_candidate_delta":
     print(delta["file_changes"], delta["declaration_changes"])
 ```
+
+The installed package also exposes a controller-facing command. From a
+directory where the two roots are separately materialized:
+
+```sh
+python3.13 -m repository_intelligence.inventory scan /snapshots/planning \
+  --logical-root repository-intelligence --assert-stable-materialization --json
+python3.13 -m repository_intelligence.inventory compare \
+  /snapshots/planning /snapshots/candidate \
+  --logical-root repository-intelligence --assert-stable-materialization --limit 8
+```
+
+Without `--assert-stable-materialization`, the command labels both source
+walks non-atomic and emits no comparable delta. The flag is a caller assertion
+for both roots, **not** RI verification; a warning appears on stderr. Compact
+output bounds displayed file/change lines with `--limit` (1–20), but counts
+and underlying comparison always use the full inventories. `--json` prints
+full evidence without display truncation. Exit code 0 means a complete scan or
+comparable factual delta; 2 means incomplete; 3 means incompatible. These
+codes do not signify review approval or edit authority.

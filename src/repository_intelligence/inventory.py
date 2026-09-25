@@ -6,8 +6,10 @@ Neither an inventory digest nor a comparable delta attests to a Git checkout.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
+import sys
 from pathlib import Path
 
 from .locator import PARSERS, index_file, walk_supported_paths
@@ -115,6 +117,10 @@ def _changes(planning: dict, candidate: dict, key: str) -> dict:
 
 def _summary(inventory: dict) -> dict:
     return {"root": inventory.get("root"), "status": inventory.get("status"),
+            "inventory_schema_version": inventory.get("inventory_schema_version"),
+            "navigation_schema_version": inventory.get("navigation_schema_version"),
+            "mapping_contract": inventory.get("mapping_contract"),
+            "parser_contract": inventory.get("parser_contract"),
             "materialization": inventory.get("materialization"),
             "incomplete_reasons": inventory.get("incomplete_reasons"),
             "digest": inventory.get("inventory_digest"), "scope": inventory.get("scope"),
@@ -233,3 +239,107 @@ def compare_inventories(planning: dict, candidate: dict) -> dict:
     return {**basic, "status": "comparable_candidate_delta", "mismatches": [],
             "file_changes": file_changes, "declaration_changes": declaration_changes,
             "meaning": "factual structural candidates; no edit authority or checkout attestation"}
+
+
+def format_inventory_compact(inventory: dict, *, limit: int = 8) -> str:
+    """Bound display only; the inventory and its digest still cover all files."""
+    files = inventory["files"]
+    declarations = sum(len(file["declarations"]) for file in files)
+    scope = inventory["scope"]
+    lines = [f"inventory {inventory['status']} files={len(files)} declarations={declarations} "
+             f"digest={inventory['inventory_digest']}",
+             f"schema={inventory['inventory_schema_version']} contract={inventory['mapping_contract']} "
+             f"logical_root={scope['logical_root']} materialization={inventory['materialization']}",
+             f"excluded={len(scope['excluded_paths'])} failures={len(inventory['failures'])} "
+             f"other_types={inventory['other_file_types_skipped']}"]
+    lines.extend(f"  {file['path']} {file['mapping_status']} "
+                 f"sha256={file['source_identity']['raw_sha256'] if file['source_identity'] else 'unread'} "
+                 f"declarations={len(file['declarations'])}" for file in files[:limit])
+    if len(files) > limit:
+        lines.append(f"  ... {len(files) - limit} more files; use --json")
+    return "\n".join(lines)
+
+
+def format_delta_compact(delta: dict, *, limit: int = 8) -> str:
+    """Bound display of file and declaration changes without changing counts."""
+    lines = [f"comparison {delta['status']}",
+             f"schema={delta['planning']['inventory_schema_version']} "
+             f"navigation_schema={delta['planning']['navigation_schema_version']} "
+             f"contract={delta['planning']['mapping_contract']}",
+             f"planning={delta['planning']['root']} status={delta['planning']['status']} "
+             f"digest={delta['planning']['digest']}",
+             f"candidate={delta['candidate']['root']} status={delta['candidate']['status']} "
+             f"digest={delta['candidate']['digest']}",
+             f"logical_root={delta['planning']['scope']['logical_root']} "
+             f"extensions={','.join(delta['planning']['scope']['extensions'])} "
+             f"excluded={len(delta['planning']['scope']['excluded_paths'])} "
+             f"mismatches={len(delta['mismatches'])}"]
+    if delta["mismatches"]:
+        lines.extend(f"  mismatch: {reason}" for reason in delta["mismatches"][:limit])
+        if len(delta["mismatches"]) > limit:
+            lines.append(f"  ... {len(delta['mismatches']) - limit} more mismatches; use --json")
+    for side in ("planning", "candidate"):
+        summary = delta[side]
+        if summary["incomplete_reasons"] or summary["failures"]:
+            lines.append(f"{side} incomplete_reasons={summary['incomplete_reasons']} "
+                         f"failures={len(summary['failures'])}")
+    if delta["file_changes"] is None:
+        lines.append("No structural delta emitted; use --json for full evidence")
+        return "\n".join(lines)
+    for label, changes in (("files", delta["file_changes"]),
+                           ("declarations", delta["declaration_changes"])):
+        counts = " ".join(f"{kind}={len(changes[kind])}"
+                          for kind in ("added", "removed", "modified", "unchanged"))
+        lines.append(f"{label}: {counts}")
+        selected = [(kind, item) for kind in ("added", "removed", "modified")
+                    for item in changes[kind]]
+        lines.extend(f"  {kind}: {item['path']}"
+                     + (f" {item['declaration_id']}" if label == "declarations" else "")
+                     for kind, item in selected[:limit])
+        if len(selected) > limit:
+            lines.append(f"  ... {len(selected) - limit} more {label} changes; use --json")
+    return "\n".join(lines)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    subcommands = parser.add_subparsers(dest="command", required=True)
+    scan = subcommands.add_parser("scan", help="inventory one source root")
+    scan.add_argument("root", type=Path)
+    compare = subcommands.add_parser("compare", help="compare planning and candidate roots")
+    compare.add_argument("planning", type=Path)
+    compare.add_argument("candidate", type=Path)
+    for command in (scan, compare):
+        command.add_argument("--logical-root", default=".")
+        command.add_argument("--assert-stable-materialization", action="store_true",
+                             help="caller asserts supplied source roots remain stable for this scan")
+        command.add_argument("--json", action="store_true", help="print full unbounded evidence")
+        command.add_argument("--limit", type=int, default=8,
+                             help="maximum displayed file/change lines per category (1-20)")
+    args = parser.parse_args(argv)
+    if not 1 <= args.limit <= 20:
+        parser.error("--limit must be from 1 to 20")
+    if args.assert_stable_materialization:
+        print("WARNING: stability is asserted by the caller; RI does not attest source snapshots",
+              file=sys.stderr)
+    if args.command == "scan":
+        result = inventory_tree(args.root, stable=args.assert_stable_materialization,
+                                logical_root=args.logical_root)
+        output = json.dumps(result, indent=2) if args.json else format_inventory_compact(
+            result, limit=args.limit)
+        status = result["status"]
+    else:
+        planning = inventory_tree(args.planning, stable=args.assert_stable_materialization,
+                                  logical_root=args.logical_root)
+        candidate = inventory_tree(args.candidate, stable=args.assert_stable_materialization,
+                                   logical_root=args.logical_root)
+        result = compare_inventories(planning, candidate)
+        output = json.dumps(result, indent=2) if args.json else format_delta_compact(
+            result, limit=args.limit)
+        status = result["status"]
+    print(output)
+    return 0 if status in {"complete", "comparable_candidate_delta"} else 3 if status == "incompatible" else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
