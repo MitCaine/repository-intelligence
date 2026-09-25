@@ -102,6 +102,17 @@ full evidence without display truncation. Exit code 0 means a complete scan or
 comparable factual delta; 2 means incomplete; 3 means incompatible. These
 codes do not signify review approval or edit authority.
 
+For machine consumers that need a smaller comparison packet,
+`compare --compact-json` projects the same completed comparison into shared per-file
+metadata, file-path change lists, counts for every declaration category, and
+changed-declaration references with hashes and ranges. Unchanged declaration
+records are omitted from that projection, not from the comparison itself.
+Use `--json` when full declaration evidence is needed; the compact projection
+does not change qualification, ranking, or the underlying inventory digest.
+Parser and pinned-version setup is reused only during one directory
+navigation or inventory invocation. RI does not keep a persistent source cache;
+each invocation reads and parses current files again.
+
 The CLI accepts repeatable `--header-language include/api.h=cpp` and
 `--exclude-directory generated` for either `scan` or `compare`. Pass the same
 choices to both sides of a comparison. A supported declaration delta is not a

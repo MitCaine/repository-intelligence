@@ -14,7 +14,7 @@ from pathlib import Path
 
 from .locator import PARSERS, SUFFIX_LANGUAGE, index_file, parse_language_choices, walk_supported_paths
 from .source import SCHEMA_VERSION, git_object_format
-from .structural import probe
+from .structural import ScanSetup
 
 
 INVENTORY_SCHEMA_VERSION = 8
@@ -41,7 +41,8 @@ def inventory_tree(root: Path, *, stable: bool = False,
     if not logical_root or logical_root.startswith("/") or ".." in Path(logical_root).parts:
         raise ValueError("Logical root must be a nonempty relative identifier")
     root = root.resolve()
-    parser_contract = {suffix: probe(suffix, b"")["parser"] for suffix in sorted(PARSERS)}
+    scan_setup = ScanSetup()
+    parser_contract = {suffix: scan_setup.get(suffix)[1] for suffix in sorted(PARSERS)}
     object_format = git_object_format(root)
     files: list[dict] = []
     paths, exclusions, failures, other_files, unsupported = walk_supported_paths(
@@ -52,7 +53,7 @@ def inventory_tree(root: Path, *, stable: bool = False,
         try:
             choice = (language_choices or {}).get(relative)
             indexed = index_file(path, root=root, object_format=object_format,
-                                 language=choice)
+                                 language=choice, scan_setup=scan_setup)
         except (OSError, ValueError) as error:
             failures.append({"path": relative, "error": type(error).__name__})
             continue
@@ -267,6 +268,45 @@ def compare_inventories(planning: dict, candidate: dict) -> dict:
             "meaning": "factual structural candidates; no edit authority or checkout attestation"}
 
 
+def compact_delta(delta: dict) -> dict:
+    """Project a completed comparison without repeating full declaration records."""
+    sides = {}
+    file_metadata = {}
+    for side in ("planning", "candidate"):
+        summary = delta[side]
+        sides[side] = {key: value for key, value in summary.items() if key != "files"}
+        file_metadata[side] = {
+            item["path"]: {"source_identity": item["source_identity"],
+                           "mapping_status": item["mapping_status"],
+                           "adapter_coverage": item["adapter_coverage"]}
+            for item in summary["files"]}
+    projected = {"projection": "compact_delta_v1", "status": delta["status"],
+                 "mismatches": delta["mismatches"], "planning": sides["planning"],
+                 "candidate": sides["candidate"], "file_metadata": file_metadata,
+                 "meaning": delta.get("meaning")}
+    if delta["file_changes"] is None:
+        return {**projected, "file_changes": None, "declaration_counts": None,
+                "declaration_changes": None}
+    file_changes = {kind: [item["path"] for item in changes]
+                    for kind, changes in delta["file_changes"].items()}
+    declaration_counts = {kind: len(changes)
+                          for kind, changes in delta["declaration_changes"].items()}
+    declaration_changes = {}
+    for kind in ("added", "removed", "modified"):
+        declaration_changes[kind] = []
+        for item in delta["declaration_changes"][kind]:
+            reference = {"path": item["path"], "declaration_id": item["declaration_id"]}
+            for side in ("planning", "candidate"):
+                entry = item[side]
+                reference[side] = ({"declaration_sha256": entry["declaration_sha256"],
+                                    "byte_range": entry["byte_range"]}
+                                   if entry is not None else None)
+            declaration_changes[kind].append(reference)
+    return {**projected, "file_changes": file_changes,
+            "declaration_counts": declaration_counts,
+            "declaration_changes": declaration_changes}
+
+
 def format_inventory_compact(inventory: dict, *, limit: int = 8) -> str:
     """Bound display only; the inventory and its digest still cover all files."""
     files = inventory["files"]
@@ -343,9 +383,13 @@ def main(argv: list[str] | None = None) -> int:
         command.add_argument("--exclude-directory", action="append", default=[], metavar="NAME")
         command.add_argument("--assert-stable-materialization", action="store_true",
                              help="caller asserts supplied source roots remain stable for this scan")
-        command.add_argument("--json", action="store_true", help="print full unbounded evidence")
         command.add_argument("--limit", type=int, default=8,
                              help="maximum displayed file/change lines per category (1-20)")
+    scan.add_argument("--json", action="store_true", help="print full unbounded evidence")
+    output_choice = compare.add_mutually_exclusive_group()
+    output_choice.add_argument("--json", action="store_true", help="print full unbounded evidence")
+    output_choice.add_argument("--compact-json", action="store_true",
+                               help="print normalized changed facts and file metadata")
     args = parser.parse_args(argv)
     if not 1 <= args.limit <= 20:
         parser.error("--limit must be from 1 to 20")
@@ -369,8 +413,9 @@ def main(argv: list[str] | None = None) -> int:
                                    logical_root=args.logical_root, language_choices=choices,
                                    excluded_directories=excluded_directories)
         result = compare_inventories(planning, candidate)
-        output = json.dumps(result, indent=2) if args.json else format_delta_compact(
-            result, limit=args.limit)
+        output = (json.dumps(result, indent=2) if args.json else
+                  json.dumps(compact_delta(result), indent=2) if args.compact_json else
+                  format_delta_compact(result, limit=args.limit))
         status = result["status"]
     print(output)
     return 0 if status in {"complete", "comparable_candidate_delta"} else 3 if status == "incompatible" else 2
