@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import subprocess
 from pathlib import Path
 
@@ -113,66 +112,9 @@ def index_source(path: Path, source: bytes, *, analyzer: str = "rust-analyzer") 
             "relationship_kind": "lexical call candidates only; not resolved call graph"}
 
 
-def _authority_records(directory: Path) -> dict[str, list[dict]]:
-    """Read existing authored anchors; they remain claims to confirm in source."""
-    if not directory.is_dir():
-        raise ValueError("Authority directory must be an existing directory")
-    records: dict[str, list[dict]] = {}
-    for document in sorted(directory.glob("*.md")):
-        heading = ""
-        fields: dict[str, str] = {}
-
-        def finish() -> None:
-            for token in re.findall(r"`([^`]+)`", fields.get("Anchors", "")):
-                anchor = re.fullmatch(r"(.+?\.rs)(?:::(.*))?", token)
-                if anchor is None:
-                    continue
-                symbols = anchor.group(2) or ""
-                names = [part.strip() for part in symbols.strip("{}").split(",") if part.strip()]
-                records.setdefault(anchor.group(1), []).append({
-                    "authority": f"{document} ({heading})",
-                    "contract": fields.get("Contract", ""),
-                    "origin": fields.get("Origin / mutation", ""),
-                    "must_not": fields.get("Must not", ""),
-                    "symbols": names,
-                })
-
-        for line in [*document.read_text().splitlines(), "### END"]:
-            if line.startswith("### "):
-                finish()
-                heading = line[4:].strip()
-                fields = {}
-            elif heading and ": " in line:
-                key, value = line.split(": ", 1)
-                if key in {"Contract", "Origin / mutation", "Must not", "Anchors"}:
-                    fields[key] = value
-    return records
-
-
-def _guidance_for(entry: dict, root: Path, records: dict[str, list[dict]]) -> list[dict]:
-    path = Path(entry["path"]).resolve().relative_to(root.resolve()).as_posix()
-    qualified = entry["qualified_name"]
-    identifiers = set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", qualified))
-    matched = []
-    for record in records.get(path, []):
-        symbols = record["symbols"]
-        if not symbols:
-            rank = 0
-        elif any(qualified.endswith(symbol) for symbol in symbols if "::" in symbol):
-            rank = 2
-        elif any(symbol in identifiers for symbol in symbols if "::" not in symbol):
-            rank = 1
-        else:
-            continue
-        matched.append((rank, record))
-    matched.sort(key=lambda item: (-item[0], item[1]["authority"]))
-    return [{key: value for key, value in record.items() if key != "symbols"}
-            for _, record in matched]
-
-
-def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-analyzer",
-               authority_dir: Path | None = None) -> dict:
-    """Legacy Rust-only navigation; not the shared locator's v1 result contract."""
+def query_tree(root: Path, terms: str, limit: int = 8, *,
+               analyzer: str = "rust-analyzer") -> dict:
+    """Legacy Rust-only navigation; not the shared locator's v2 result contract."""
     words = validate_query(terms, limit)
     if not root.is_dir():
         raise ValueError("Rust query root must be an existing directory")
@@ -196,12 +138,6 @@ def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-
                                "parse_error_count": index["parse_error_count"]})
     candidates = rank(candidates, words)
     selected = [display_entry(entry, words) for entry in candidates[:limit]]
-    if authority_dir is not None:
-        records = _authority_records(authority_dir)
-        for entry in selected:
-            guidance = _guidance_for(entry, root, records)
-            entry["guidance_candidate_count"] = len(guidance)
-            entry["guidance_candidates"] = guidance[:2]
     return {"result_kind": "legacy_rust_query", "root": str(root), "query": terms,
             "scanned_files": scanned,
             "parse_error_count": parse_errors, "failures": failures,
@@ -213,12 +149,10 @@ def main() -> None:
     parser.add_argument("source", type=Path)
     parser.add_argument("--query", required=True)
     parser.add_argument("--limit", type=int, default=8)
-    parser.add_argument("--authority-dir", type=Path,
-                        help="optional authored Markdown anchor directory for candidate guidance")
     parser.add_argument("--json", action="store_true", help="emit structured JSON instead of compact text")
     args = parser.parse_args()
     if args.source.is_dir():
-        result = query_tree(args.source, args.query, args.limit, authority_dir=args.authority_dir)
+        result = query_tree(args.source, args.query, args.limit)
         print(json.dumps(result, indent=2) if args.json else format_tree_compact(result))
     else:
         result = query(index_file(args.source), args.query, args.limit)

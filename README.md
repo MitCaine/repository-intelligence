@@ -44,11 +44,11 @@ The shared command's [versioned result contract](docs/navigation-result-v2.md)
 explains source identity, incomplete results, and directory scope. It is for
 navigation, not candidate-change qualification.
 
-The earlier Rust-only command remains available as a separate legacy interface,
-`python3.13 -m repository_intelligence.rust_index`. Its optional
-`--authority-dir` consumes Poker-style authored Markdown anchors as *candidate*
-guidance. That output is not the shared versioned result. Guidance is never
-needed to use source-derived lookup.
+The earlier Rust-only command remains available as a separate legacy navigation
+interface, `python3.13 -m repository_intelligence.rust_index`. Its output is
+not the shared versioned result. RI does not interpret project-specific
+authority Markdown; callers can combine RI's source locations with their own
+documents when needed.
 
 ## Verify
 

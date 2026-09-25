@@ -6,7 +6,7 @@ bounded matches; `root` is optional for direct files and defaults to the file's
 parent. The shared file and directory results return `schema_version: 2`.
 Consumers must check that version before interpreting fields. The older
 `rust_index.query_tree` result instead says `result_kind: legacy_rust_query`;
-it has different traversal and optional Poker-style Markdown guidance, and is
+it has different traversal and is
 **not** this versioned result. New consumers use the shared locator.
 Version 2 retains the navigation fields from interim version 1 but adds the
 `excluded` status and display `column`; consumers accepting only version 1
