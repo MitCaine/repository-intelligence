@@ -5,32 +5,19 @@ from __future__ import annotations
 import ast
 import hashlib
 import io
-import re
 import tokenize
 from pathlib import Path
 
 from .declarations import declaration
 from .declarations import assign_named_ids
-
-
-def _physical_lines(value: bytes | str) -> list[bytes] | list[str]:
-    """Split only Python physical newlines, not Unicode line separators in strings."""
-    pattern = rb"\r\n|\r|\n" if isinstance(value, bytes) else r"\r\n|\r|\n"
-    lines = []
-    start = 0
-    for match in re.finditer(pattern, value):
-        lines.append(value[start:match.end()])
-        start = match.end()
-    if start < len(value):
-        lines.append(value[start:])
-    return lines
+from .source import physical_lines
 
 
 def _signatures(source: bytes) -> dict[tuple[int, str], str]:
     """Locate Python headers with tokenizer coordinates, including inline bodies."""
     encoding, _ = tokenize.detect_encoding(io.BytesIO(source).readline)
     text = source.decode(encoding)
-    lines = _physical_lines(text)
+    lines = physical_lines(text)
     starts = [0]
     for line in lines:
         starts.append(starts[-1] + len(line))
@@ -76,7 +63,7 @@ def index_source(path: Path, source: bytes) -> dict:
     signatures = _signatures(source)
     functions: list[dict] = []
     encoding, _ = tokenize.detect_encoding(io.BytesIO(source).readline)
-    raw_lines = _physical_lines(source)
+    raw_lines = physical_lines(source)
     codec = "utf-8" if encoding == "utf-8-sig" else encoding
     text_lines = [line.decode(encoding if index == 0 else codec)
                   for index, line in enumerate(raw_lines)]

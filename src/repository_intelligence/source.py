@@ -3,11 +3,25 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import subprocess
 from pathlib import Path
 
 
 SCHEMA_VERSION = 2
+
+
+def physical_lines(value: bytes | str) -> list[bytes] | list[str]:
+    """Split only CR/LF physical lines, never Unicode separators inside text."""
+    pattern = rb"\r\n|\r|\n" if isinstance(value, bytes) else r"\r\n|\r|\n"
+    lines = []
+    start = 0
+    for match in re.finditer(pattern, value):
+        lines.append(value[start:match.end()])
+        start = match.end()
+    if start < len(value):
+        lines.append(value[start:])
+    return lines
 
 
 def git_object_format(root: Path) -> str | None:

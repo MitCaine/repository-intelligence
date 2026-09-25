@@ -27,9 +27,11 @@ class InstalledPackageTests(unittest.TestCase):
         required = os.environ.get("RI_REQUIRE_STANDALONE") == "1"
         names = ("RI_SETUPTOOLS_WHEEL", "RI_WHEEL_WHEEL")
         wheels = [Path(os.environ[name]).resolve() for name in names if os.environ.get(name)]
+        grammar_wheels = Path(os.environ.get("RI_TREE_SITTER_WHEELHOUSE", ""))
         analyzer = shutil.which(os.environ.get("RI_RUST_ANALYZER", "rust-analyzer"))
-        if len(wheels) != 2 or not all(path.is_file() for path in wheels) or analyzer is None:
-            message = "offline setuptools/wheel files and rust-analyzer are required"
+        if (len(wheels) != 2 or not all(path.is_file() for path in wheels)
+                or not grammar_wheels.is_dir() or analyzer is None):
+            message = "offline build and Tree-sitter wheels plus rust-analyzer are required"
             if required:
                 self.fail(message)
             self.skipTest(message)
@@ -59,11 +61,12 @@ class InstalledPackageTests(unittest.TestCase):
                                        "repository_intelligence/search.py",
                                        "repository_intelligence/source.py",
                                        "repository_intelligence/declarations.py",
+                                       "repository_intelligence/structural.py",
                                        "repository_intelligence/locator.py"})
             run(sys.executable, "-m", "venv", install, env=environment)
             installed_python = install / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-            run(installed_python, "-m", "pip", "install", "--no-index", "--no-deps",
-                built[0], env=environment)
+            run(installed_python, "-m", "pip", "install", "--no-index",
+                "--find-links", grammar_wheels, built[0], env=environment)
             (consumer / "src").mkdir(parents=True)
             (consumer / "src/lib.rs").write_text("pub fn calculate_total(a: i32, b: i32) -> i32 { a + b }\n")
             (consumer / "src/orders.py").write_text("def calculate_total(price):\n    return price\n")
@@ -73,6 +76,9 @@ class InstalledPackageTests(unittest.TestCase):
                 "from pathlib import Path\n"
                 "from repository_intelligence.locator import query_path\n"
                 "result = query_path(Path('src'), 'calculate total')\n"
+                "assert result['structural_error_count'] == 0\n"
+                "single = query_path(Path('src/orders.py'), 'calculate total')\n"
+                "assert single['structural']['parser']['runtime_version'] == '0.25.0'\n"
                 "print(json.dumps(sorted(item['path'] for item in result['matches'])))\n")
             environment["PATH"] = str(Path(analyzer).parent) + os.pathsep + environment.get("PATH", "")
             result = run(installed_python, "-I", script, cwd=consumer, env=environment)

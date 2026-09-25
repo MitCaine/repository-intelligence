@@ -20,9 +20,11 @@ preserved in Git history but is not part of the current package.
 
 ## Use
 
-Python 3.12 or 3.13 is required. A local `rust-analyzer` executable is also
-required when scanning Rust; Python source needs no external parser. No hosted
-service or Python runtime dependency is needed. From this repository:
+Python 3.12 or 3.13 is required. The package now pins the Tree-sitter runtime
+and Python/Rust grammar wheels for structural syntax evidence. The current
+Rust navigation adapter still needs a local `rust-analyzer`; removing that
+requirement awaits #8 parity work. No hosted service is needed. From this
+repository:
 
 ```sh
 PYTHONPATH=src python3.13 -m repository_intelligence.locator \
@@ -57,11 +59,12 @@ PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 python3.13 -m unittest discover -s test
 ```
 
 The optional installed-wheel check uses two local build-dependency wheels and
-never downloads packages:
+the three pinned Tree-sitter wheels and never downloads packages:
 
 ```sh
 RI_SETUPTOOLS_WHEEL=/path/to/setuptools-79.0.1-py3-none-any.whl \
 RI_WHEEL_WHEEL=/path/to/wheel-0.47.0-py3-none-any.whl \
+RI_TREE_SITTER_WHEELHOUSE=/path/to/pinned-tree-sitter-wheels \
 RI_REQUIRE_STANDALONE=1 PYTHONDONTWRITEBYTECODE=1 \
 python3.13 -m unittest discover -s tests -p test_installed_package.py
 ```
@@ -70,3 +73,6 @@ The [pilot report](docs/rust-function-locator-pilot.md) records earlier Poker
 navigation trials and their measurement limits. The
 [extraction decision](docs/standalone-core-seam.md) explains why the earlier
 research modules are not included.
+
+The [Tree-sitter baseline note](docs/tree-sitter-baseline.md) records pinned
+versions, current parity evidence, and the remaining #8 adoption work.

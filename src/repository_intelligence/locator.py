@@ -10,7 +10,7 @@ import platform
 import subprocess
 from pathlib import Path
 
-from . import python_index, rust_index
+from . import python_index, rust_index, structural
 from .search import (display_entry, format_compact, format_tree_compact, query, rank,
                      validate_query)
 from .source import SCHEMA_VERSION, git_object_format, identify_bytes
@@ -82,13 +82,22 @@ def index_file(path: Path, *, root: Path | None = None,
         return {**basic, "mapping_status": "incomplete", "parser": parser_info,
                 "failures": [{"error": "SourceLimitExceeded", "limit_bytes": MAX_PARSE_BYTES}]}
     try:
+        syntax = structural.probe(path.suffix.lower(), source)
+    except (OSError, ValueError, UnicodeError, ImportError, SyntaxError, LookupError) as error:
+        return {**basic, "mapping_status": "incomplete", "parser": parser_info,
+                "structural": None,
+                "failures": [{"error": type(error).__name__, "stage": "tree_sitter"}]}
+    try:
         indexed = parser(path, source)
     except PARSE_FAILURES as error:
         return {**basic, "mapping_status": "incomplete", "parser": parser_info,
+                "structural": syntax,
                 "failures": [{"error": type(error).__name__}]}
     return {**indexed, "schema_version": SCHEMA_VERSION, "source_identity": identity,
-            "parser": parser_info,
-            "mapping_status": "incomplete" if indexed["parse_error_count"] else "navigation_only",
+            "parser": parser_info, "structural": syntax,
+            "mapping_status": ("incomplete" if indexed["parse_error_count"]
+                               or syntax["error_count"] or syntax["missing_count"]
+                               else "navigation_only"),
             "failures": []}
 
 
@@ -107,6 +116,7 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
     excluded_paths: list[dict] = []
     scanned = 0
     parse_errors = 0
+    structural_errors = 0
     supported = 0
     out_of_scope = 0
     object_format = git_object_format(source)
@@ -166,6 +176,8 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
                 continue
             scanned += 1
             parse_errors += indexed["parse_error_count"]
+            structural_errors += (indexed["structural"]["error_count"]
+                                  + indexed["structural"]["missing_count"])
             candidates.extend({**entry, "path": str(path),
                                "raw_sha256": indexed["raw_sha256"],
                                "git_blob_sha1": indexed["git_blob_sha1"],
@@ -181,9 +193,11 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
                            "source_kind": "working_tree_non_atomic",
                            "excluded_paths": excluded_paths,
                            "other_file_types_skipped": out_of_scope},
-            "mapping_status": "incomplete" if failures or parse_errors else "navigation_only",
+            "mapping_status": ("incomplete" if failures or parse_errors or structural_errors
+                               else "navigation_only"),
             "scanned_files": scanned,
-            "parse_error_count": parse_errors, "failures": failures,
+            "parse_error_count": parse_errors, "structural_error_count": structural_errors,
+            "failures": failures,
             "total_matches": len(ranked),
             "matches": [display_entry(entry, words) for entry in ranked[:limit]]}
 
