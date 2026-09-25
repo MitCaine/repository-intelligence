@@ -17,8 +17,8 @@ from .source import SCHEMA_VERSION, git_object_format
 from .structural import probe
 
 
-INVENTORY_SCHEMA_VERSION = 5
-MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-source-callables-v1"
+INVENTORY_SCHEMA_VERSION = 6
+MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v1"
 
 
 def _digest(scope: dict, files: list[dict]) -> str:
@@ -63,6 +63,7 @@ def inventory_tree(root: Path, *, stable: bool = False,
                       "adapter_coverage": indexed.get("adapter_coverage"),
                       "structural": indexed.get("structural"),
                       "module_bindings": indexed.get("module_bindings"),
+                      "preprocessing": indexed.get("preprocessing"),
                       "declarations": indexed["functions"]})
         failures.extend({"path": relative, **failure} for failure in indexed["failures"])
         if indexed["mapping_status"] != "navigation_only":
@@ -186,6 +187,7 @@ def _unchanged_file_evidence_matches(prior: dict, current: dict) -> bool:
     return (prior["adapter_coverage"] == current["adapter_coverage"]
             and prior["structural"] == current["structural"]
             and prior["module_bindings"] == current["module_bindings"]
+            and prior["preprocessing"] == current["preprocessing"]
             and sorted(prior["declarations"], key=lambda item: item["declaration_id"])
             == sorted(current["declarations"], key=lambda item: item["declaration_id"]))
 

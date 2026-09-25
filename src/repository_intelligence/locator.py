@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 
-from . import csharp_tree_index, go_tree_index, java_tree_index, js_tree_index, python_tree_index, rust_tree_index, structural
+from . import c_family_tree_index, csharp_tree_index, go_tree_index, java_tree_index, js_tree_index, python_tree_index, rust_tree_index, structural
 from .search import (display_entry, format_compact, format_tree_compact, query, rank,
                      validate_query)
 from .source import SCHEMA_VERSION, git_object_format, identify_bytes
@@ -17,16 +17,20 @@ PARSERS = {".py": python_tree_index.index_source, ".rs": rust_tree_index.index_s
            ".java": java_tree_index.index_source,
            ".go": go_tree_index.index_source,
            ".cs": csharp_tree_index.index_source,
+           **{suffix: c_family_tree_index.index_source for suffix in
+              (".c", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".hxx")},
            **{suffix: js_tree_index.index_source for suffix in
               (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx")}}
 LANGUAGE_SUFFIX = {"python": ".py", "rust": ".rs", "javascript": ".js",
                    "typescript": ".ts", "tsx": ".tsx", "java": ".java", "go": ".go",
-                   "csharp": ".cs"}
+                   "csharp": ".cs", "c": ".c", "cpp": ".cpp"}
 SUFFIX_LANGUAGE = {suffix: ("javascript" if suffix in {".js", ".jsx", ".mjs", ".cjs"}
                             else "typescript" if suffix == ".ts" else "tsx"
                             if suffix == ".tsx" else "python" if suffix == ".py"
                             else "java" if suffix == ".java" else "go" if suffix == ".go"
-                            else "csharp" if suffix == ".cs" else "rust")
+                            else "csharp" if suffix == ".cs" else "c" if suffix == ".c"
+                            else "cpp" if suffix in {".cc", ".cpp", ".cxx", ".hpp", ".hh",
+                                                     ".hxx"} else "rust")
                    for suffix in PARSERS}
 MAX_PARSE_BYTES = 4_000_000
 PARSE_FAILURES = (OSError, ValueError, SyntaxError, UnicodeError)

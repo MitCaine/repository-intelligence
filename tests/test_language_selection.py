@@ -37,7 +37,7 @@ class LanguageSelectionTests(unittest.TestCase):
             self.assertEqual(conflict["unsupported_reason"], "language_extension_mismatch")
             self.assertNotIn("adapter_coverage", conflict)
             with self.assertRaisesRegex(ValueError, "Unsupported language"):
-                index_file(path, language="c")
+                index_file(path, language="swift")
             with self.assertRaisesRegex(ValueError, "direct file"):
                 query_path(Path(raw), "example", language="python")
 

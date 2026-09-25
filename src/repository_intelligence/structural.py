@@ -21,6 +21,8 @@ import tree_sitter_typescript
 import tree_sitter_java
 import tree_sitter_go
 import tree_sitter_c_sharp
+import tree_sitter_c
+import tree_sitter_cpp
 
 from .source import physical_lines
 
@@ -40,6 +42,13 @@ GRAMMARS = {
     ".java": ("Java", "tree-sitter-java", tree_sitter_java.language),
     ".go": ("Go", "tree-sitter-go", tree_sitter_go.language),
     ".cs": ("CSharp", "tree-sitter-c-sharp", tree_sitter_c_sharp.language),
+    ".c": ("C", "tree-sitter-c", tree_sitter_c.language),
+    ".cc": ("C++", "tree-sitter-cpp", tree_sitter_cpp.language),
+    ".cpp": ("C++", "tree-sitter-cpp", tree_sitter_cpp.language),
+    ".cxx": ("C++", "tree-sitter-cpp", tree_sitter_cpp.language),
+    ".hpp": ("C++", "tree-sitter-cpp", tree_sitter_cpp.language),
+    ".hh": ("C++", "tree-sitter-cpp", tree_sitter_cpp.language),
+    ".hxx": ("C++", "tree-sitter-cpp", tree_sitter_cpp.language),
 }
 
 JS_CALLABLES = {"function_declaration", "generator_function_declaration",
@@ -185,6 +194,10 @@ def scan(suffix: str, source: bytes) -> tuple[dict, Node, bytes, _RawOffsets | N
                       node.child_by_field_name("value").type == "arrow_expression_clause")):
             selected = node
             name_node = node.child_by_field_name("name")
+        elif suffix in {".c", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".hxx"} \
+                and node.type in {"function_definition", "lambda_expression"}:
+            selected = node
+            name_node = None
         if selected is not None:
             declaration_count += 1
             if len(declarations) < MAX_DECLARATION_DETAILS:
@@ -192,8 +205,13 @@ def scan(suffix: str, source: bytes) -> tuple[dict, Node, bytes, _RawOffsets | N
                                                        "anonymous_method_expression"}
                         else "closure" if selected.type == "closure_expression"
                         else "arrow" if selected.type == "arrow_function" else "function")
+                start_node = (node.parent if suffix in {".c", ".cc", ".cpp", ".cxx",
+                                                        ".hpp", ".hh", ".hxx"}
+                              and node.parent is not None
+                              and node.parent.type in {"template_declaration", "friend_declaration"}
+                              else node)
                 start = raw(_rust_start(node, source) if suffix == ".rs"
-                            and kind == "function" else node.start_byte)
+                            and kind == "function" else start_node.start_byte)
                 end = raw(node.end_byte)
                 name = (parse_bytes[name_node.start_byte:name_node.end_byte].decode("utf-8")
                         if name_node is not None else None)

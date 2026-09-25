@@ -7,7 +7,7 @@ current implementation, which is narrower than that end state.
 
 A small, source-derived function locator for AI-assisted repository navigation.
 The common query interface currently supports Python, Rust, JavaScript, JSX,
-TypeScript, TSX, Java, Go, and C# through
+TypeScript, TSX, Java, Go, C#, C, and C++ through
 Tree-sitter navigation in any local project. The Python standard-library AST
 adapter remains available directly as a reference/fallback.
 It returns compact function
@@ -15,11 +15,11 @@ locations and source hashes without a database or maintained function
 dictionary. It does not grant edit authority, resolve a call graph, or replace
 checking the relevant source. Other languages are not yet supported.
 
-This is currently a navigation tool, **not yet a complete structural inventory**.
-Zero parse errors do not prove every declaration was mapped. Do not use an
-absence result or a before/after query difference to qualify all candidate
-changes until the explicit per-language mapping contracts and completeness
-checks are implemented.
+Direct queries are navigation-only; a zero-match result is not an absence
+proof. The separate inventory command checks the documented source-level
+callable contract for supported files and compares stable materializations
+supplied by the caller. Neither result proves semantic resolution or, for
+C/C++, which declarations a configured build will compile.
 
 This is the reusable core extracted from the [Poker App](https://github.com/MitCaine/poker-app)
 pilot. Poker-specific authority maps, capsule rules, and consumer configuration
@@ -29,7 +29,7 @@ preserved in Git history but is not part of the current package.
 ## Use
 
 Python 3.12 or 3.13 is required. The package pins the Tree-sitter runtime
-and Python/Rust/JavaScript/TypeScript/Java/Go/C# grammar wheels. Ordinary navigation uses Tree-sitter
+and pinned language grammar wheels. Ordinary navigation uses Tree-sitter
 without `rust-analyzer`. The analyzer remains available as an opt-in Rust
 source and metadata route when needed. No hosted service is needed. From this
 repository:
@@ -43,10 +43,11 @@ Pass one file instead of a directory to narrow the scan. Add `--json` for
 structured output. For a direct file, `--root /path/to/project` confines
 identity to that root; a path outside it or a symlink is reported as excluded
 without reading bytes. An ambiguous direct file (for example, `snippet.h`)
-stays `unsupported` unless an explicit shipped `--language` is selected
-selects a shipped adapter. This selects a parser, not a C or C++ adapter;
-conflicting selections for known extensions are rejected. An
-unsupported file still returns its byte identity, marked `unsupported`.
+stays `unsupported` unless an explicit shipped `--language` selects its parser.
+Conflicting selections for known extensions are rejected. `.h` is deliberately
+ambiguous: choose `--language c` or `--language cpp` for a C/C++ header; a
+directory scan does not guess its language. An unsupported file still returns
+its byte identity, marked `unsupported`.
 Directory results report files that could not be indexed and
 explicit scan exclusions. A directory scan covers supported files only, so no
 result is **not** proof that an unsupported language has no relevant function.
@@ -78,7 +79,7 @@ PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 python3.13 -m unittest discover -s test
 ```
 
 The optional installed-wheel check uses two local build-dependency wheels and
-the eight pinned Tree-sitter wheels and never downloads packages:
+the ten pinned Tree-sitter wheels and never downloads packages:
 
 ```sh
 RI_SETUPTOOLS_WHEEL=/path/to/setuptools-79.0.1-py3-none-any.whl \
