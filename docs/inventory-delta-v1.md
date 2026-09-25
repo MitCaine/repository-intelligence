@@ -8,7 +8,7 @@ use the TypeScript adapter. Ambiguous `.h` files are not guessed: pass
 `language_choices={"include/api.h": "cpp"}` (or `"c"`) for exact relative
 header paths in both directory queries and inventories. Unselected `.h` files
 are listed in `observed_unsupported_paths`.
-Mapping contract v6 carries the corrected declaration identity, source-range,
+Mapping contract v7 carries the corrected declaration identity, source-range,
 and classification semantics documented in [navigation result v5](navigation-result-v5.md).
 Every supported in-scope file appears in `files`, including files with zero
 mapped callables. Each file carries its exact `source_identity`, parser and

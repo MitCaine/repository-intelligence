@@ -26,7 +26,7 @@ from .adapters import PARSERS
 from .source import RawOffsets
 
 
-ADAPTER_VERSION = 6
+ADAPTER_VERSION = 7
 MAX_DECLARATION_DETAILS = 100
 MAX_DIAGNOSTIC_DETAILS = 50
 GRAMMARS = {

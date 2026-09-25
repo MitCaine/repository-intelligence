@@ -10,6 +10,26 @@ from repository_intelligence.locator import index_file, query_path
 
 
 class JavaScriptTypeScriptTests(unittest.TestCase):
+    def test_static_and_instance_methods_have_distinct_identity(self):
+        source = b"class C { run() {return 1;} static run() {return 2;} }"
+        for suffix in (".js", ".ts"):
+            with self.subTest(suffix=suffix):
+                entries = [entry for entry in self._index(suffix, source)["functions"]
+                           if entry["name"] == "run"]
+                self.assertEqual(len(entries), 2)
+                self.assertFalse(any(entry["identity_ambiguous"] for entry in entries))
+                self.assertEqual(len({entry["declaration_id"] for entry in entries}), 2)
+                with tempfile.TemporaryDirectory() as raw:
+                    left, right = Path(raw) / "left", Path(raw) / "right"
+                    left.mkdir(); right.mkdir()
+                    (left / f"f{suffix}").write_bytes(source)
+                    (right / f"f{suffix}").write_bytes(b"// unrelated\n" + source)
+                    changes = compare_inventories(inventory_tree(left, stable=True),
+                                                  inventory_tree(right, stable=True))["declaration_changes"]
+                    self.assertEqual(tuple(len(changes[key]) for key in
+                                           ("added", "removed", "modified", "unchanged")),
+                                     (0, 0, 0, 2))
+
     def test_class_field_arrow_binding_in_js_and_ts(self):
         source = b"class Worker { reconcileInvoices = () => 1; }"
         for suffix in (".js", ".ts"):

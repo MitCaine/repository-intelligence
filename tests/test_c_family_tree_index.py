@@ -10,6 +10,52 @@ from repository_intelligence.locator import index_file
 
 
 class CFamilyTests(unittest.TestCase):
+    def test_default_presence_does_not_rename_cpp_function(self):
+        sources = [b"int F(int x) {return x;}",
+                   b"int F(int x = 1) {return x;}",
+                   b"int F(int x = 2) {return x;}"]
+        entries = [self._index(".cpp", source)["functions"][0] for source in sources]
+        self.assertEqual(len({entry["declaration_id"] for entry in entries}), 1)
+        self.assertEqual(len({entry["declaration_sha256"] for entry in entries}), 3)
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "f.cpp").write_bytes(sources[0])
+            (right / "f.cpp").write_bytes(sources[1])
+            changes = compare_inventories(inventory_tree(left, stable=True),
+                                          inventory_tree(right, stable=True))["declaration_changes"]
+            self.assertEqual(tuple(len(changes[key]) for key in
+                                   ("added", "removed", "modified")), (0, 0, 1))
+
+    def test_namespace_qualified_special_members_keep_kind(self):
+        source = (b"namespace N { struct C { C(); ~C(); }; }\n"
+                  b"N::C::C() {}\nN::C::~C() {}\n")
+        entries = self._index(".cpp", source)["functions"]
+        self.assertEqual([(entry["qualified_name"], entry["declaration_kind"])
+                          for entry in entries],
+                         [("N.C.C", "constructor"), ("N.C.~C", "destructor")])
+
+    def test_template_qualified_constructor_keeps_kind(self):
+        source = (b"template<typename T> struct C { C(); };\n"
+                  b"template<typename T> C<T>::C() {}\n")
+        entries = self._index(".cpp", source)["functions"]
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["declaration_kind"], "constructor")
+
+    def test_free_explicit_specialization_is_not_constructor(self):
+        source = (b"template<typename T> int F(T x) {return 1;}\n"
+                  b"template<> int F<int>(int x) {return 2;}\n")
+        entries = self._index(".cpp", source)["functions"]
+        self.assertEqual(len(entries), 2)
+        self.assertEqual([entry["declaration_kind"] for entry in entries],
+                         ["function", "function"])
+
+    def test_function_returning_pointer_uses_own_parameter_list(self):
+        source = b"int (*Factory(void))(int) { return 0; }"
+        entry = self._index(".c", source)["functions"][0]
+        self.assertEqual(entry["name"], "Factory")
+        self.assertEqual(entry["identity_signature"], '["void"]')
+
     def test_cpp_variadic_overloads_are_not_ambiguous(self):
         source = b"int F(int x) {return 1;} int F(int x, ...) {return 2;}"
         entries = self._index(".cpp", source)["functions"]

@@ -19,7 +19,7 @@ from .structural import ScanSetup
 
 
 INVENTORY_SCHEMA_VERSION = 11
-MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v6"
+MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v7"
 
 
 def _digest(scope: dict, files: list[dict]) -> str:

@@ -169,6 +169,11 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                                         for child in type_parameters.named_children)
                             identity_signature = (f"arity={arity}|"
                                                   + identity_signature)
+                        interface = next((child for child in node.named_children
+                                          if child.type == "explicit_interface_specifier"), None)
+                        if interface is not None:
+                            identity_signature = ("interface=" + syntax_token_key(interface, source)
+                                                  + "|" + identity_signature)
                     own_signature = identity_signature
                     if owner_identities:
                         identity_signature = "/".join(owner_identities) + ":" + (own_signature or "")

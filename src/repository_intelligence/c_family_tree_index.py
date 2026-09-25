@@ -16,6 +16,8 @@ def _declarator_child(node):
     if node is None:
         return None
     child = node.child_by_field_name("declarator")
+    if child is None and node.type == "template_function":
+        child = node.child_by_field_name("name")
     if child is None and node.type in {"reference_declarator", "parenthesized_declarator",
                                        "attributed_declarator"}:
         child = next((part for part in node.named_children
@@ -54,8 +56,19 @@ def _parameter_identity(parameter, source: bytes) -> str:
         leaf = _declarator_child(leaf)
     local_name = leaf if leaf is not None and leaf.type in {"identifier", "field_identifier"} else None
     default = parameter.child_by_field_name("default_value")
+    equals = next((child for child in parameter.children if child.type == "="), None)
     return syntax_token_key(parameter, source,
-                            omit=tuple(node for node in (local_name, default) if node is not None))
+                            omit=tuple(node for node in (local_name, equals, default) if node is not None))
+
+
+def _declared_function_declarator(node):
+    """Choose the function attached to the declared name, not a returned function type."""
+    selected = None
+    while node is not None:
+        if node.type == "function_declarator":
+            selected = node
+        node = _declarator_child(node)
+    return selected
 
 
 def _calls(body, source: bytes) -> list[str]:
@@ -171,15 +184,14 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                         "qualified_identifier", "operator_name", "operator_cast",
                         "destructor_name", "identifier", "field_identifier"}:
                     terminal = _declarator_child(terminal)
-                terminal_scope = (terminal.child_by_field_name("scope")
-                                  if terminal is not None and terminal.type == "qualified_identifier"
-                                  else None)
-                if terminal is not None and terminal.type == "qualified_identifier":
+                while terminal is not None and terminal.type == "qualified_identifier":
                     terminal = terminal.child_by_field_name("name")
-                constructor_owner = (_text(source, terminal_scope).split("::")[-1]
-                                     if terminal_scope is not None else
+                constructor_owner = (name.rsplit(".", 2)[-2]
+                                     if "." in name else
                                      next((part[1] for part in reversed(owners)
                                            if part[0] in {"class_specifier", "struct_specifier"}), None))
+                if constructor_owner is not None:
+                    constructor_owner = constructor_owner.split("<", 1)[0]
                 kind = ("lambda" if anonymous else
                         "conversion" if terminal is not None and terminal.type == "operator_cast" else
                         "operator" if terminal is not None and terminal.type == "operator_name" else
@@ -188,9 +200,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                         and terminal is not None and terminal.type in {"identifier", "field_identifier"}
                         and constructor_owner == _text(source, terminal) else
                         "friend_function" if friend else "function")
-                parameter_node = declarator
-                while parameter_node is not None and parameter_node.type != "function_declarator":
-                    parameter_node = _declarator_child(parameter_node)
+                parameter_node = _declared_function_declarator(declarator)
                 parameters = (parameter_node.child_by_field_name("parameters")
                               if parameter_node is not None else None)
                 identity_signature = None
