@@ -55,8 +55,9 @@ silently mapped. Directory scans omit symlinks, duplicate physical files,
 hidden/generated directories, and nested repositories with reported reasons.
 
 The parser metadata names the current adapter and parser version when
-available. Python navigation still uses the running interpreter's AST parser;
-ordinary Rust navigation uses the pinned Tree-sitter runtime and Rust grammar.
+available. Ordinary Python and Rust navigation both use the pinned Tree-sitter
+runtime and their language grammars. The standard-library Python AST adapter
+remains available directly as a reference/fallback API.
 The separate rust-analyzer route remains available as opt-in escalation.
 `parser.name` identifies the provider of the
 `lexical_call_candidates`; these are syntactic observations, not resolved
@@ -74,10 +75,10 @@ counts and `details_truncated` disclose omissions from those arrays. Python
 declared encodings are decoded and parsed as UTF-8, with reported offsets mapped
 back to the original raw bytes. If Tree-sitter reports syntax errors, the
 shared result is `incomplete` even if navigation returned some matches. Python
-navigation still comes from its standard-library adapter; Rust navigation now
-uses the same Tree-sitter parse as this structural evidence. The Rust adapter
-also reports promised `function_item`/`closure_expression` nodes it cannot
-handle as incomplete. This remains navigation evidence, not complete coverage.
+and Rust navigation use the same Tree-sitter parse as this structural evidence.
+The adapters report promised Python function/lambda and Rust
+`function_item`/`closure_expression` nodes they cannot handle as incomplete.
+This remains navigation evidence, not complete coverage.
 
 Parsed callable entries include a `declaration_id` synthesized from kind and
 qualified name. Named functions also carry a source-order ordinal among
@@ -89,13 +90,12 @@ exact `source_identity` bytes; and `declaration_sha256` over that range.
 Display `line`/`column` (one-based Unicode-character navigation coordinates)
 and `end_line` are not identities. Python
 function ranges include attached decorators and the complete function body;
-Rust function ranges come from the analyzer's `FN` node, including attached
+Rust function ranges come from Tree-sitter `function_item` nodes, including attached
 attributes and doc comments. A declaration hash changes with behavior-affecting
 source in that range, but does not attest to a checkout or imply exhaustive
 callable coverage. Calls remain lexical candidates from these adapters, not
-resolved relationships. Rust analyzer version is recorded when available;
-its grammar version is not separately exposed, so that field is null rather
-than guessed.
+resolved relationships. The opt-in rust-analyzer route has a separate result
+shape and records its own parser metadata where available.
 
 RI #8 owns exhaustive per-language declaration coverage and RI #9 owns
 repository-wide complete inventories and candidate structural deltas. This

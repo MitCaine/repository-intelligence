@@ -5,16 +5,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import platform
 from pathlib import Path
 
-from . import python_index, rust_tree_index, structural
+from . import python_tree_index, rust_tree_index, structural
 from .search import (display_entry, format_compact, format_tree_compact, query, rank,
                      validate_query)
 from .source import SCHEMA_VERSION, git_object_format, identify_bytes
 
 
-PARSERS = {".py": python_index.index_source, ".rs": rust_tree_index.index_source}
+PARSERS = {".py": python_tree_index.index_source, ".rs": rust_tree_index.index_source}
 MAX_PARSE_BYTES = 4_000_000
 PARSE_FAILURES = (OSError, ValueError, SyntaxError, UnicodeError)
 _AUTO_FORMAT = object()
@@ -63,17 +62,10 @@ def index_file(path: Path, *, root: Path | None = None,
         return {**basic, "mapping_status": "incomplete", "parser": None,
                 "structural": None,
                 "failures": [{"error": type(error).__name__, "stage": "tree_sitter"}]}
-    if path.suffix.lower() == ".py":
-        parser_info = {"name": "python.ast", "version": platform.python_version(),
-                       "adapter_version": 2, "runtime": "CPython",
-                       "runtime_version": platform.python_version(),
-                       "grammar": "Python", "grammar_version": platform.python_version()}
-    else:
-        parser_info = {**syntax["parser"], "version": syntax["parser"]["runtime_version"],
-                       "runtime": "tree-sitter"}
+    parser_info = {**syntax["parser"], "version": syntax["parser"]["runtime_version"],
+                   "runtime": "tree-sitter"}
     try:
-        indexed = (parser(path, source, tree=tree) if path.suffix.lower() == ".rs"
-                   else parser(path, source))
+        indexed = parser(path, source, tree=tree)
     except PARSE_FAILURES as error:
         return {**basic, "mapping_status": "incomplete", "parser": parser_info,
                 "structural": syntax,

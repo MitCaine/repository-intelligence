@@ -52,7 +52,8 @@ class _RawOffsets:
         return self.raw_starts[line] + bom + len(prefix.encode(self.codec))
 
 
-def _python_input(source: bytes) -> tuple[bytes, str, _RawOffsets | None]:
+def python_input(source: bytes) -> tuple[bytes, str, _RawOffsets | None]:
+    """Tree-sitter UTF-8 input and an optional map back to encoded source bytes."""
     encoding, _ = tokenize.detect_encoding(io.BytesIO(source).readline)
     decoded = source.decode(encoding)
     utf8 = decoded.encode("utf-8")
@@ -94,7 +95,7 @@ def scan(suffix: str, source: bytes) -> tuple[dict, Node]:
     """Return partial evidence and the parsed tree for a current-language adapter."""
     grammar_name, distribution, module = GRAMMARS[suffix]
     language = Language(module.language())
-    parse_bytes, encoding, offsets = (_python_input(source) if suffix == ".py"
+    parse_bytes, encoding, offsets = (python_input(source) if suffix == ".py"
                                       else (source, "utf-8", None))
     root = Parser(language).parse(parse_bytes).root_node
 
