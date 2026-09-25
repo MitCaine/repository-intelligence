@@ -67,7 +67,8 @@ class ScanSetup:
     """Reuse immutable grammar metadata and parsers only within one scan call."""
 
     def __init__(self) -> None:
-        self._grammars: dict[str, tuple[Parser, Language, dict]] = {}
+        self._grammars: dict[str, tuple[Language, dict]] = {}
+        self._parsers: dict[str, Parser] = {}
         self._versions: dict[str, str] = {}
 
     def _version(self, distribution: str) -> str:
@@ -75,7 +76,7 @@ class ScanSetup:
             self._versions[distribution] = version(distribution)
         return self._versions[distribution]
 
-    def get(self, suffix: str) -> tuple[Parser, dict]:
+    def metadata(self, suffix: str) -> dict:
         grammar_name, distribution, provider = GRAMMARS[suffix]
         if grammar_name not in self._grammars:
             language = Language(provider.language() if suffix in {".py", ".rs"} else provider())
@@ -83,8 +84,16 @@ class ScanSetup:
                     "grammar": grammar_name, "grammar_version": self._version(distribution),
                     "grammar_abi_version": language.abi_version,
                     "adapter_version": ADAPTER_VERSION}
-            self._grammars[grammar_name] = Parser(language), language, info
-        parser, _, info = self._grammars[grammar_name]
+            self._grammars[grammar_name] = language, info
+        _, info = self._grammars[grammar_name]
+        return dict(info)
+
+    def get(self, suffix: str) -> tuple[Parser, dict]:
+        grammar_name = GRAMMARS[suffix][0]
+        info = self.metadata(suffix)
+        if grammar_name not in self._parsers:
+            self._parsers[grammar_name] = Parser(self._grammars[grammar_name][0])
+        parser = self._parsers[grammar_name]
         return parser, dict(info)
 
 

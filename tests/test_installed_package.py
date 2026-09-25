@@ -58,25 +58,9 @@ class InstalledPackageTests(unittest.TestCase):
             with zipfile.ZipFile(built[0]) as archive:
                 modules = {name for name in archive.namelist()
                            if name.startswith("repository_intelligence/") and name.endswith(".py")}
-            self.assertEqual(modules, {"repository_intelligence/__init__.py",
-                                       "repository_intelligence/rust_index.py",
-                                       "repository_intelligence/rust_semantic.py",
-                                       "repository_intelligence/rust_tree_index.py",
-                                       "repository_intelligence/python_index.py",
-                                       "repository_intelligence/python_tree_index.py",
-                                       "repository_intelligence/js_tree_index.py",
-                                       "repository_intelligence/java_tree_index.py",
-                                       "repository_intelligence/go_tree_index.py",
-                                       "repository_intelligence/csharp_tree_index.py",
-                                       "repository_intelligence/c_family_tree_index.py",
-                                       "repository_intelligence/search.py",
-                                       "repository_intelligence/source.py",
-                                       "repository_intelligence/declarations.py",
-                                       "repository_intelligence/structural.py",
-                                       "repository_intelligence/adapters.py",
-                                       "repository_intelligence/scan.py",
-                                       "repository_intelligence/locator.py",
-                                       "repository_intelligence/inventory.py"})
+            expected_modules = {f"repository_intelligence/{path.name}" for path in
+                                (ROOT / "src/repository_intelligence").glob("*.py")}
+            self.assertEqual(modules, expected_modules)
             run(sys.executable, "-m", "venv", install, env=environment)
             installed_python = install / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
             run(installed_python, "-m", "pip", "install", "--no-index",
