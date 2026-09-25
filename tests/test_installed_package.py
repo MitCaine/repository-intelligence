@@ -37,6 +37,11 @@ class InstalledPackageTests(unittest.TestCase):
         environment = {key: value for key, value in os.environ.items() if key != "PYTHONPATH"}
         environment.update(PIP_NO_INDEX="1", PIP_NO_CACHE_DIR="1",
                            PIP_DISABLE_PIP_VERSION_CHECK="1", PYTHONDONTWRITEBYTECODE="1")
+        expected_versions = {"tree-sitter": "0.25.0", "tree-sitter-python": "0.25.0",
+                             "tree-sitter-rust": "0.24.2", "tree-sitter-javascript": "0.25.0",
+                             "tree-sitter-typescript": "0.23.2", "tree-sitter-java": "0.23.5",
+                             "tree-sitter-go": "0.25.0", "tree-sitter-c-sharp": "0.23.5",
+                             "tree-sitter-c": "0.24.2", "tree-sitter-cpp": "0.23.4"}
         with tempfile.TemporaryDirectory(prefix="ri-installed-") as raw:
             temp = Path(raw)
             build, install, output = (temp / name for name in ("build", "install", "wheels"))
@@ -88,6 +93,7 @@ class InstalledPackageTests(unittest.TestCase):
             script = temp / "smoke.py"
             script.write_text(
                 "import json\n"
+                "from importlib.metadata import version\n"
                 "from pathlib import Path\n"
                 "from repository_intelligence.locator import query_path\n"
                 "from repository_intelligence.inventory import inventory_tree, compare_inventories\n"
@@ -113,10 +119,30 @@ class InstalledPackageTests(unittest.TestCase):
                 "assert query_path(Path('fixture.cs'), 'total')['matches'][0]['name'] == 'Total'\n"
                 "assert query_path(Path('fixture.c'), 'total')['matches'][0]['name'] == 'total'\n"
                 "assert query_path(Path('fixture.cpp'), 'total')['matches'][0]['name'] == 'total'\n"
-                "print(json.dumps(sorted(item['path'] for item in result['matches'])))\n")
+                f"expected_versions = {expected_versions!r}\n"
+                "assert {name: version(name) for name in expected_versions} == expected_versions\n"
+                "grammar_probes = {'src/orders.py': ('total', 'tree-sitter-python'), "
+                "'src/lib.rs': ('total', 'tree-sitter-rust'), "
+                "'fixture.js': ('total', 'tree-sitter-javascript'), "
+                "'fixture.ts': ('total', 'tree-sitter-typescript'), "
+                "'fixture.tsx': ('view', 'tree-sitter-typescript'), "
+                "'fixture.java': ('total', 'tree-sitter-java'), "
+                "'fixture.go': ('total', 'tree-sitter-go'), "
+                "'fixture.cs': ('total', 'tree-sitter-c-sharp'), "
+                "'fixture.c': ('total', 'tree-sitter-c'), "
+                "'fixture.cpp': ('total', 'tree-sitter-cpp')}\n"
+                "for path, (term, distribution) in grammar_probes.items():\n"
+                "    parser = query_path(Path(path), term)['structural']['parser']\n"
+                "    assert parser['runtime_version'] == expected_versions['tree-sitter']\n"
+                "    assert parser['grammar_version'] == expected_versions[distribution]\n"
+                "    assert parser['adapter_version'] == 1\n"
+                "print(json.dumps({'matches': sorted(item['path'] for item in result['matches']), "
+                "'versions': {name: version(name) for name in expected_versions}}))\n")
             consumer_environment = {**environment, "PATH": str(install / "bin")}
             result = run(installed_python, "-I", script, cwd=consumer, env=consumer_environment)
-            self.assertEqual(json.loads(result), ["src/lib.rs", "src/orders.py"])
+            payload = json.loads(result)
+            self.assertEqual(payload["matches"], ["src/lib.rs", "src/orders.py"])
+            self.assertEqual(payload["versions"], expected_versions)
             inventory_output = run(installed_python, "-m", "repository_intelligence.inventory",
                                    "scan", "src", "--assert-stable-materialization", "--json",
                                    cwd=consumer, env=consumer_environment)
