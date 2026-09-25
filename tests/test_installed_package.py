@@ -57,6 +57,7 @@ class InstalledPackageTests(unittest.TestCase):
                                        "repository_intelligence/rust_index.py",
                                        "repository_intelligence/rust_tree_index.py",
                                        "repository_intelligence/python_index.py",
+                                       "repository_intelligence/python_tree_index.py",
                                        "repository_intelligence/search.py",
                                        "repository_intelligence/source.py",
                                        "repository_intelligence/declarations.py",
@@ -78,6 +79,7 @@ class InstalledPackageTests(unittest.TestCase):
                 "assert result['structural_error_count'] == 0\n"
                 "single = query_path(Path('src/orders.py'), 'calculate total')\n"
                 "assert single['structural']['parser']['runtime_version'] == '0.25.0'\n"
+                "assert single['parser']['name'] == 'tree-sitter'\n"
                 "rust = query_path(Path('src/lib.rs'), 'calculate total')\n"
                 "assert rust['parser']['name'] == 'tree-sitter'\n"
                 "print(json.dumps(sorted(item['path'] for item in result['matches'])))\n")

@@ -72,15 +72,14 @@ class LocatorTests(unittest.TestCase):
             (root / ".venv" / "hidden.py").write_text("def calculate_total(): pass\n")
             (root / "lib.rs").write_text("fn calculate_total(value: i32) -> i32 { value }\n")
             result = query_path(root, "calculate total")
-            self.assertEqual(result["scanned_files"], 2)
-            self.assertEqual(len(result["failures"]), 1)
-            self.assertEqual(result["failures"][0]["error"], "SyntaxError")
+            self.assertEqual(result["scanned_files"], 3)
+            self.assertEqual(result["failures"], [])
             self.assertEqual(result["mapping_status"], "incomplete")
+            self.assertGreater(result["structural_error_count"], 0)
             self.assertEqual(result["scan_scope"]["extensions"], [".py", ".rs"])
             self.assertEqual(result["scan_scope"]["source_kind"], "working_tree_non_atomic")
-            self.assertIn("raw_sha256", result["failures"][0]["source_identity"])
             self.assertIn("INCOMPLETE", format_tree_compact(result))
-            self.assertEqual(result["total_matches"], result["scanned_files"])
+            self.assertEqual(result["total_matches"], 2)
             self.assertIn("git_blob_sha1", result["matches"][0])
 
     def test_python_declaration_ranges_include_decorators_and_anonymous_lambda(self):
@@ -105,7 +104,7 @@ class LocatorTests(unittest.TestCase):
             lambda_span = anonymous["byte_range"]
             self.assertEqual(source[lambda_span["start"]:lambda_span["end"]],
                              b"lambda x: x + value")
-            self.assertEqual(indexed["parser"]["adapter_version"], 2)
+            self.assertEqual(indexed["parser"]["adapter_version"], 1)
             self.assertEqual(indexed["mapping_status"], "navigation_only")
 
     def test_same_name_declarations_and_lambdas_have_distinct_byte_identities(self):
@@ -274,7 +273,7 @@ class LocatorTests(unittest.TestCase):
             broken.write_bytes(b"def broken(:\n")
             result = query_path(broken, "broken")
             self.assertEqual(result["mapping_status"], "incomplete")
-            self.assertEqual(result["failures"][0]["error"], "SyntaxError")
+            self.assertGreater(result["structural"]["diagnostic_count"], 0)
             self.assertEqual(result["source_identity"]["raw_sha256"],
                              hashlib.sha256(broken.read_bytes()).hexdigest())
 

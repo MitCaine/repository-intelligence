@@ -6,8 +6,9 @@ and what RI deliberately does not own. The capabilities below describe the
 current implementation, which is narrower than that end state.
 
 A small, source-derived function locator for AI-assisted repository navigation.
-The common query interface currently supports Python (`ast` plus Tree-sitter
-syntax evidence) and Rust (Tree-sitter navigation) files in any local project.
+The common query interface currently supports Python and Rust through
+Tree-sitter navigation in any local project. The Python standard-library AST
+adapter remains available directly as a reference/fallback.
 It returns compact function
 locations and source hashes without a database or maintained function
 dictionary. It does not grant edit authority, resolve a call graph, or replace
