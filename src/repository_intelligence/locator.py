@@ -69,7 +69,8 @@ def parse_language_choices(values: list[str]) -> dict[str, str]:
 
 def index_file(path: Path, *, root: Path | None = None,
                object_format: str | None | object = _AUTO_FORMAT,
-               language: str | None = None) -> dict:
+               language: str | None = None,
+               scan_setup: structural.ScanSetup | None = None) -> dict:
     """Identify one file's bytes, then attempt structural navigation if supported."""
     if language is not None and language not in LANGUAGE_SUFFIX:
         raise ValueError(f"Unsupported language: {language}")
@@ -115,7 +116,8 @@ def index_file(path: Path, *, root: Path | None = None,
         return {**basic, "mapping_status": "incomplete", "parser": None,
                 "failures": [{"error": "SourceLimitExceeded", "limit_bytes": MAX_PARSE_BYTES}]}
     try:
-        syntax, tree, parse_bytes, offsets = structural.scan(parser_suffix, source)
+        syntax, tree, parse_bytes, offsets = structural.scan(parser_suffix, source,
+                                                              setup=scan_setup)
     except (OSError, ValueError, UnicodeError, ImportError, SyntaxError, LookupError) as error:
         return {**basic, "mapping_status": "incomplete", "parser": None,
                 "structural": None,
@@ -214,11 +216,12 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
     parse_errors = 0
     structural_errors = 0
     object_format = git_object_format(source)
+    scan_setup = structural.ScanSetup()
     for path in paths:
         try:
             choice = (language_choices or {}).get(path.relative_to(source).as_posix())
             indexed = index_file(path, root=source, object_format=object_format,
-                                 language=choice)
+                                 language=choice, scan_setup=scan_setup)
         except (OSError, ValueError) as error:
             failures.append({"path": str(path), "error": type(error).__name__})
             continue

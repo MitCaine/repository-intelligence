@@ -5,12 +5,34 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from repository_intelligence import structural
 from repository_intelligence.inventory import compare_inventories, inventory_tree
 from repository_intelligence.locator import MAX_PARSE_BYTES, query_path
 
 
 class InventoryTests(unittest.TestCase):
+    def test_parser_setup_is_reused_only_within_each_inventory(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "first.py").write_text("def first(): pass\n")
+            (root / "second.py").write_text("def second(): pass\n")
+            (root / "third.js").write_text("function third() {}\n")
+            expected_parsers = len({item[0] for item in structural.GRAMMARS.values()})
+            expected_versions = len({item[1] for item in structural.GRAMMARS.values()}
+                                    | {"tree-sitter"})
+            with patch.object(structural, "Parser", wraps=structural.Parser) as parsers, \
+                    patch.object(structural, "version", wraps=structural.version) as versions:
+                first = inventory_tree(root, stable=True)
+                self.assertEqual(parsers.call_count, expected_parsers)
+                self.assertEqual(versions.call_count, expected_versions)
+                second = inventory_tree(root, stable=True)
+                self.assertEqual(parsers.call_count, 2 * expected_parsers)
+                self.assertEqual(versions.call_count, 2 * expected_versions)
+            self.assertEqual(first["inventory_digest"], second["inventory_digest"])
+            self.assertEqual(first["parser_contract"], second["parser_contract"])
+
     def test_files_and_declarations_change_independently_of_queries_or_absolute_roots(self):
         with tempfile.TemporaryDirectory() as raw:
             planning, candidate = (Path(raw) / name for name in ("planning", "candidate"))

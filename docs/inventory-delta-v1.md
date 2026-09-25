@@ -109,6 +109,9 @@ changed-declaration references with hashes and ranges. Unchanged declaration
 records are omitted from that projection, not from the comparison itself.
 Use `--json` when full declaration evidence is needed; the compact projection
 does not change qualification, ranking, or the underlying inventory digest.
+Parser and pinned-version setup is reused only during one directory
+navigation or inventory invocation. RI does not keep a persistent source cache;
+each invocation reads and parses current files again.
 
 The CLI accepts repeatable `--header-language include/api.h=cpp` and
 `--exclude-directory generated` for either `scan` or `compare`. Pass the same

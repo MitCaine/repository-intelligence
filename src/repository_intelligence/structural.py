@@ -116,13 +116,37 @@ def _rust_start(node, source: bytes) -> int:
     return attachments[0].start_byte if attachments else node.start_byte
 
 
-def scan(suffix: str, source: bytes) -> tuple[dict, Node, bytes, _RawOffsets | None]:
+class ScanSetup:
+    """Reuse immutable grammar metadata and parsers only within one scan call."""
+
+    def __init__(self) -> None:
+        self._grammars: dict[str, tuple[Parser, Language, dict]] = {}
+        self._versions: dict[str, str] = {}
+
+    def _version(self, distribution: str) -> str:
+        if distribution not in self._versions:
+            self._versions[distribution] = version(distribution)
+        return self._versions[distribution]
+
+    def get(self, suffix: str) -> tuple[Parser, dict]:
+        grammar_name, distribution, provider = GRAMMARS[suffix]
+        if grammar_name not in self._grammars:
+            language = Language(provider.language() if suffix in {".py", ".rs"} else provider())
+            info = {"name": "tree-sitter", "runtime_version": self._version("tree-sitter"),
+                    "grammar": grammar_name, "grammar_version": self._version(distribution),
+                    "grammar_abi_version": language.abi_version,
+                    "adapter_version": ADAPTER_VERSION}
+            self._grammars[grammar_name] = Parser(language), language, info
+        parser, _, info = self._grammars[grammar_name]
+        return parser, dict(info)
+
+
+def scan(suffix: str, source: bytes, *, setup: ScanSetup | None = None) -> tuple[dict, Node, bytes, _RawOffsets | None]:
     """Return evidence, syntax tree, and decoded input for a language adapter."""
-    grammar_name, distribution, provider = GRAMMARS[suffix]
-    language = Language(provider.language() if suffix in {".py", ".rs"} else provider())
+    parser, parser_info = (setup or ScanSetup()).get(suffix)
     parse_bytes, encoding, offsets = (python_input(source) if suffix == ".py"
                                       else (source, "utf-8", None))
-    root = Parser(language).parse(parse_bytes).root_node
+    root = parser.parse(parse_bytes).root_node
 
     def raw(offset: int) -> int:
         return offsets.raw(offset) if offsets is not None else offset
@@ -217,10 +241,7 @@ def scan(suffix: str, source: bytes) -> tuple[dict, Node, bytes, _RawOffsets | N
                                      "byte_range": {"start": start, "end": end},
                                      "declaration_sha256": hashlib.sha256(source[start:end]).hexdigest()})
         pending.extend(reversed(node.children))
-    result = {"parser": {"name": "tree-sitter", "runtime_version": version("tree-sitter"),
-                       "grammar": grammar_name, "grammar_version": version(distribution),
-                       "grammar_abi_version": language.abi_version,
-                       "adapter_version": ADAPTER_VERSION},
+    result = {"parser": parser_info,
             "source_encoding": encoding, "coordinate_space": "raw_bytes",
             "error_count": error_count, "missing_count": missing_count,
             "diagnostic_count": error_count + missing_count,
@@ -232,6 +253,6 @@ def scan(suffix: str, source: bytes) -> tuple[dict, Node, bytes, _RawOffsets | N
     return result, root, parse_bytes, offsets
 
 
-def probe(suffix: str, source: bytes) -> dict:
+def probe(suffix: str, source: bytes, *, setup: ScanSetup | None = None) -> dict:
     """Return partial structural evidence without exposing parser objects."""
-    return scan(suffix, source)[0]
+    return scan(suffix, source, setup=setup)[0]

@@ -14,7 +14,7 @@ from pathlib import Path
 
 from .locator import PARSERS, SUFFIX_LANGUAGE, index_file, parse_language_choices, walk_supported_paths
 from .source import SCHEMA_VERSION, git_object_format
-from .structural import probe
+from .structural import ScanSetup
 
 
 INVENTORY_SCHEMA_VERSION = 8
@@ -41,7 +41,8 @@ def inventory_tree(root: Path, *, stable: bool = False,
     if not logical_root or logical_root.startswith("/") or ".." in Path(logical_root).parts:
         raise ValueError("Logical root must be a nonempty relative identifier")
     root = root.resolve()
-    parser_contract = {suffix: probe(suffix, b"")["parser"] for suffix in sorted(PARSERS)}
+    scan_setup = ScanSetup()
+    parser_contract = {suffix: scan_setup.get(suffix)[1] for suffix in sorted(PARSERS)}
     object_format = git_object_format(root)
     files: list[dict] = []
     paths, exclusions, failures, other_files, unsupported = walk_supported_paths(
@@ -52,7 +53,7 @@ def inventory_tree(root: Path, *, stable: bool = False,
         try:
             choice = (language_choices or {}).get(relative)
             indexed = index_file(path, root=root, object_format=object_format,
-                                 language=choice)
+                                 language=choice, scan_setup=scan_setup)
         except (OSError, ValueError) as error:
             failures.append({"path": relative, "error": type(error).__name__})
             continue
