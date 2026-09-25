@@ -62,14 +62,27 @@ def _calls(node, source: bytes) -> list[str]:
 def _module_bindings(tree, source: bytes) -> dict:
     imports = []
     exports = []
-    for node in tree.named_children:
+    pending = [tree]
+    while pending:
+        node = pending.pop()
         if node.type == "import_statement":
             target = node.child_by_field_name("source")
             imports.append({"source": _text(source, target) if target is not None else None,
                             "byte_range": {"start": node.start_byte, "end": node.end_byte}})
         elif node.type == "export_statement":
+            target = node.child_by_field_name("source")
+            owner = []
+            ancestor = node.parent
+            while ancestor is not None:
+                if ancestor.type in {"internal_module", "module"}:
+                    name = ancestor.child_by_field_name("name")
+                    if name is not None:
+                        owner.append(_text(source, name))
+                ancestor = ancestor.parent
             exports.append({"kind": "default" if any(child.type == "default" for child in node.children)
                             else "named",
+                            "source": _text(source, target) if target is not None else None,
+                            "owner": ".".join(reversed(owner)) or None,
                             "byte_range": {"start": node.start_byte, "end": node.end_byte}})
         elif node.type == "expression_statement":
             assignment = next((child for child in node.named_children
@@ -77,7 +90,11 @@ def _module_bindings(tree, source: bytes) -> dict:
             target = assignment.child_by_field_name("left") if assignment is not None else None
             if target is not None and _text(source, target).startswith(("module.exports", "exports.")):
                 exports.append({"kind": "commonjs",
+                                "source": None, "owner": None,
                                 "byte_range": {"start": node.start_byte, "end": node.end_byte}})
+        pending.extend(reversed(node.named_children))
+    imports.sort(key=lambda entry: entry["byte_range"]["start"])
+    exports.sort(key=lambda entry: entry["byte_range"]["start"])
     return {"imports": imports, "exports": exports,
             "meaning": "syntactic module bindings only; not resolved imports or exports"}
 
