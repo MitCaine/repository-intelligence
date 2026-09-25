@@ -22,12 +22,14 @@ def _text(source: bytes, node) -> str:
 def _name_from_assignment(node, source: bytes) -> str | None:
     parent = node.parent
     if parent is None or parent.type not in {"variable_declarator", "pair", "public_field_definition",
+                                            "field_definition",
                                             "assignment_expression"}:
         return None
     field = "right" if parent.type == "assignment_expression" else "value"
     if parent.child_by_field_name(field) != node:
         return None
     target = (parent.child_by_field_name("name") or parent.child_by_field_name("key")
+              or parent.child_by_field_name("property")
               or parent.child_by_field_name("left"))
     return _text(source, target) if target is not None else None
 
@@ -139,10 +141,12 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
             name_node = node.child_by_field_name("name")
             if name_node is not None:
                 owners = (*owners, _text(source, name_node))
-        elif node.type in {"variable_declarator", "pair", "public_field_definition"}:
+        elif node.type in {"variable_declarator", "pair", "public_field_definition",
+                          "field_definition"}:
             value = node.child_by_field_name("value")
             if value is not None and value.type not in CALLABLES:
-                name_node = node.child_by_field_name("name") or node.child_by_field_name("key")
+                name_node = (node.child_by_field_name("name") or node.child_by_field_name("key")
+                             or node.child_by_field_name("property"))
                 if name_node is not None:
                     owners = (*owners, _text(source, name_node))
         if node.type in BODYLESS:

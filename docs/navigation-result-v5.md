@@ -1,6 +1,6 @@
 # Navigation result v5
 
-This is the standalone current navigation reference. The public functions are `repository_intelligence.locator.index_file` and `query_path`; the latter also provides the locator CLI. They emit `schema_version: 5`. The associated inventory schema is 11, mapping contract is `python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v5`, and adapter version is 5. Adapter version 5 corrects nested C++ lambda traversal, reference declarators, comment extras in identities, and C# constructor modifiers without changing the packet shape.
+This is the standalone current navigation reference. The public functions are `repository_intelligence.locator.index_file` and `query_path`; the latter also provides the locator CLI. They emit `schema_version: 5`. The associated inventory schema is 11, mapping contract is `python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v6`, and adapter version is 6. Adapter version 6 additionally preserves variadic parameter syntax, normalizes C# defaults and indexer owners, follows parenthesized C/C++ declarators, and binds JavaScript class fields without changing the packet shape.
 
 Check versions before interpreting saved packets. The package metadata version alone is not a result contract. Earlier navigation documents describe historical behavior; the separate `rust_index.query_tree` result remains `legacy_rust_query`, not v5. Read [known limitations](known-limitations.md) with this specification: intended mapping contracts do not eliminate implementation defects.
 

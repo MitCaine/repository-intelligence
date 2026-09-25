@@ -1,6 +1,6 @@
 # Known limitations
 
-The four follow-up logic findings after PR #61 are corrected in adapter version 5 and mapping contract v5. The deliberate boundaries below still apply.
+The four follow-up logic findings after PR #61 were corrected in adapter version 5 and mapping contract v5; later variants were corrected in version 6. The deliberate boundaries below still apply.
 
 Navigation is lexical and bounded; no matches is not proof of absence. Inventories cover the documented source constructs in selected supported files, not the whole compiled program. C/C++ macros, conditionals, includes, and build settings remain unexpanded. Imports, initializers, configuration, enclosing containers, and unsupported files can change behavior without a callable delta. Full changed-file review remains required.
 

@@ -37,7 +37,7 @@ Failure tests should preserve usable partial evidence, reject contradictory comp
 
 ## Change contracts deliberately
 
-The current implementation emits navigation schema 5, inventory schema 11, mapping contract v5, and adapter version 5. Changes to identity, source envelopes, classification, or accounting need an explicit compatibility decision and corresponding version updates before old/new observations are compared. Update the current reference, callable contract, README, fixtures, and any exact-version packaging assertions together. Retain historical navigation pages for existing consumers rather than silently rewriting their old meanings.
+The current implementation emits navigation schema 5, inventory schema 11, mapping contract v6, and adapter version 6. Changes to identity, source envelopes, classification, or accounting need an explicit compatibility decision and corresponding version updates before old/new observations are compared. Update the current reference, callable contract, README, fixtures, and any exact-version packaging assertions together. Retain historical navigation pages for existing consumers rather than silently rewriting their old meanings.
 
 A grammar-pin change requires reviewing upstream `node-types.json` and relevant grammar rules at the exact tags, not only incrementing a dependency string. The existing `scripts/check_grammar_nodes.py` covers its documented Python/Rust checks; it is not a complete all-language upgrade verifier. Run affected language fixtures, common navigation/inventory tests, and installed-wheel verification after an upgrade. Do not assume every declarator child has a field name or every named child is a parameter.
 

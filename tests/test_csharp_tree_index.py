@@ -10,6 +10,60 @@ from repository_intelligence.inventory import compare_inventories, inventory_tre
 
 
 class CSharpTreeIndexTests(unittest.TestCase):
+    def test_params_array_overloads_have_distinct_identity(self):
+        source = (b"class C { int F(params int[] xs) { return 1; } "
+                  b"int F(params string[] xs) { return 2; } }")
+        entries = [entry for entry in self._index(source)["functions"] if entry["name"] == "F"]
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(len({entry["identity_signature"] for entry in entries}), 2)
+        self.assertFalse(any(entry["identity_ambiguous"] for entry in entries))
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "C.cs").write_bytes(source)
+            (right / "C.cs").write_bytes(b"// unrelated\n" + source)
+            changes = compare_inventories(inventory_tree(left, stable=True),
+                                          inventory_tree(right, stable=True))["declaration_changes"]
+            self.assertEqual(tuple(len(changes[key]) for key in
+                                   ("added", "removed", "modified", "unchanged")),
+                             (0, 0, 0, 2))
+
+    def test_default_value_changes_hash_not_identity(self):
+        before_source = b"class C { int F(int x = 1) { return x; } }"
+        after_source = b"class C { int F(int x = 2) { return x; } }"
+        before = self._index(before_source)["functions"][0]
+        after = self._index(after_source)["functions"][0]
+        self.assertEqual(before["declaration_id"], after["declaration_id"])
+        self.assertNotEqual(before["declaration_sha256"], after["declaration_sha256"])
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "C.cs").write_bytes(before_source)
+            (right / "C.cs").write_bytes(after_source)
+            changes = compare_inventories(inventory_tree(left, stable=True),
+                                          inventory_tree(right, stable=True))["declaration_changes"]
+            self.assertEqual(tuple(len(changes[key]) for key in
+                                   ("added", "removed", "modified")), (0, 0, 1))
+
+    def test_indexer_parameter_comment_does_not_rename_getter(self):
+        before_source = b"class C { int this[int x, int y] { get { return x; } } }"
+        after_source = b"class C { int this[int x, /* note */ int y] { get { return x; } } }"
+        before = self._index(before_source)
+        after = self._index(after_source)
+        left, right = before["functions"][0], after["functions"][0]
+        self.assertEqual(left["declaration_id"], right["declaration_id"])
+        self.assertEqual(left["declaration_sha256"], right["declaration_sha256"])
+        with tempfile.TemporaryDirectory() as raw:
+            planning, candidate = Path(raw) / "planning", Path(raw) / "candidate"
+            planning.mkdir(); candidate.mkdir()
+            (planning / "C.cs").write_bytes(before_source)
+            (candidate / "C.cs").write_bytes(after_source)
+            changes = compare_inventories(inventory_tree(planning, stable=True),
+                                          inventory_tree(candidate, stable=True))["declaration_changes"]
+            self.assertEqual(tuple(len(changes[key]) for key in
+                                   ("added", "removed", "modified", "unchanged")),
+                             (0, 0, 0, 1))
+
     def test_attribute_text_does_not_make_constructor_static(self):
         source = (b'class C { [System.Obsolete(" static ")] public C() {} '
                   b'[System.Obsolete("instance")] static C() {} }')

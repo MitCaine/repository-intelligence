@@ -82,7 +82,7 @@ if delta['status'] != 'comparable_candidate_delta':
 # Review delta['file_changes'] and delta['declaration_changes'] with the full diff.
 ```
 
-A declaration marked unchanged has the same structural identity and hashed source unit, not necessarily unchanged program behavior. Imports, enclosing containers, configuration, build conditions, and unsupported files can affect behavior. File-level changes remain important when the declaration delta is empty. The known C++ omission described in [known limitations](known-limitations.md) is an additional outstanding implementation defect, not an intended exclusion.
+A declaration marked unchanged has the same structural identity and hashed source unit, not necessarily unchanged program behavior. Imports, enclosing containers, configuration, build conditions, and unsupported files can affect behavior. File-level changes remain important when the declaration delta is empty.
 
 ## Handle results and failures
 

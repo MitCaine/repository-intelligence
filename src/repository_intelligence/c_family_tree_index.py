@@ -16,8 +16,12 @@ def _declarator_child(node):
     if node is None:
         return None
     child = node.child_by_field_name("declarator")
-    if child is None and node.type == "reference_declarator":
-        child = next((part for part in node.named_children if part.type != "comment"), None)
+    if child is None and node.type in {"reference_declarator", "parenthesized_declarator",
+                                       "attributed_declarator"}:
+        child = next((part for part in node.named_children
+                      if part.type.endswith("_declarator") or part.type in {
+                          "identifier", "field_identifier", "qualified_identifier",
+                          "operator_name", "destructor_name", "type_identifier"}), None)
     return child
 
 
@@ -193,10 +197,11 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 if parameters is not None and not anonymous:
                     identity_signature = ",".join(
                         _parameter_identity(parameter, source)
-                        for parameter in parameters.named_children
+                        if parameter.type != "..." else syntax_token_key(parameter, source)
+                        for parameter in parameters.children
                         if parameter.type in {"parameter_declaration", "optional_parameter_declaration",
                                               "variadic_parameter_declaration", "variadic_parameter",
-                                              "parameter_pack_expansion"})
+                                              "parameter_pack_expansion", "..."})
                     qualifiers = "".join(_text(source, child) for child in parameter_node.named_children
                                          if child.type in {"type_qualifier", "ref_qualifier"})
                     if qualifiers:

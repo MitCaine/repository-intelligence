@@ -10,6 +10,27 @@ from repository_intelligence.locator import index_file, query_path
 
 
 class JavaScriptTypeScriptTests(unittest.TestCase):
+    def test_class_field_arrow_binding_in_js_and_ts(self):
+        source = b"class Worker { reconcileInvoices = () => 1; }"
+        for suffix in (".js", ".ts"):
+            with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as raw:
+                path = Path(raw) / f"worker{suffix}"
+                path.write_bytes(source)
+                result = index_file(path)
+                self.assertEqual(result["function_count"], 1)
+                self.assertEqual(result["functions"][0]["qualified_name"],
+                                 "Worker.reconcileInvoices")
+                self.assertEqual(len(query_path(path, "reconcile invoices")["matches"]), 1)
+
+    def test_nested_object_in_class_field_preserves_owner(self):
+        source = b"class Worker { api = { reconcileInvoices: () => 1 }; }"
+        for suffix in (".js", ".ts"):
+            with self.subTest(suffix=suffix):
+                entries = self._index(suffix, source)["functions"]
+                self.assertEqual(len(entries), 1)
+                self.assertEqual(entries[0]["qualified_name"],
+                                 "Worker.api.reconcileInvoices")
+
     def test_export_is_direct_and_commonjs_target_is_exact(self):
         source = (b"export class C { run() {} }\n"
                   b"export const n = register(() => 1);\n"

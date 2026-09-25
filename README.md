@@ -6,9 +6,9 @@ Ordinary operation uses pinned Tree-sitter grammars for Python, Rust, JavaScript
 
 ## Current state
 
-The current result contracts are navigation schema **5**, inventory schema **11**, adapter version **5**, and mapping contract `python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v5`. Package metadata remains version `0.1.0`; use the result contracts and a pinned RI revision, not the package version alone, to identify behavior.
+The current result contracts are navigation schema **5**, inventory schema **11**, adapter version **6**, and mapping contract `python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v6`. Package metadata remains version `0.1.0`; use the result contracts and a pinned RI revision, not the package version alone, to identify behavior.
 
-PR #61 records 139 passing pinned tests, including the offline installed-wheel check and live Rust lookup. That is recorded verification for that revision, not a guarantee of exhaustive language coverage. Four subsequent C++/C# and identity-handling findings have parser-integrated fixes; [known limitations](docs/known-limitations.md) still apply to declaration deltas.
+PR #64 records 146 passing pinned Python 3.13 tests, including the offline installed-wheel check. PR #61 separately records its earlier 139-test run and live Rust lookup. These are verification records for their respective revisions, not guarantees of exhaustive language coverage. The follow-up cases tracked by issue #63 have parser-integrated fixes; the deliberate boundaries in [known limitations](docs/known-limitations.md) still apply.
 
 ## Install and navigate
 
