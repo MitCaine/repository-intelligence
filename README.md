@@ -84,6 +84,11 @@ unversioned result shape (`legacy_rust_query`); that label distinguishes the
 protocol, not support status. RI does not interpret project-specific authority
 Markdown; callers can combine RI's source locations with their own documents.
 
+For a specific Rust reference whose definition matters, the separate
+[semantic definition proof](docs/rust-semantic-definition.md) asks
+`rust-analyzer` one opt-in question and labels its answer separately from
+structural or lexical candidates.
+
 ## Verify
 
 ```sh

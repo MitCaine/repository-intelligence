@@ -60,6 +60,7 @@ class InstalledPackageTests(unittest.TestCase):
                            if name.startswith("repository_intelligence/") and name.endswith(".py")}
             self.assertEqual(modules, {"repository_intelligence/__init__.py",
                                        "repository_intelligence/rust_index.py",
+                                       "repository_intelligence/rust_semantic.py",
                                        "repository_intelligence/rust_tree_index.py",
                                        "repository_intelligence/python_index.py",
                                        "repository_intelligence/python_tree_index.py",
@@ -97,6 +98,7 @@ class InstalledPackageTests(unittest.TestCase):
                 "from pathlib import Path\n"
                 "from repository_intelligence.locator import query_path\n"
                 "from repository_intelligence.inventory import inventory_tree, compare_inventories\n"
+                "from repository_intelligence.rust_semantic import resolve_definition\n"
                 "result = query_path(Path('src'), 'calculate total')\n"
                 "assert result['structural_error_count'] == 0\n"
                 "single = query_path(Path('src/orders.py'), 'calculate total')\n"
