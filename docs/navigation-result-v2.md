@@ -1,4 +1,4 @@
-# Superseded by [navigation result v3](navigation-result-v3.md)
+# Superseded by [navigation result v4](navigation-result-v4.md)
 
 This file documents historical version 2 packets. Keep using this contract only to interpret already-produced v2 results.
 

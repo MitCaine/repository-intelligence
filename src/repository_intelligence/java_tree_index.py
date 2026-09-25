@@ -85,7 +85,9 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     identity_signature = None
                     if parameters is not None and not is_lambda:
                         identity_signature = ",".join(
-                            _text(source, parameter.child_by_field_name("type"))
+                            (_text(source, parameter.child_by_field_name("type"))
+                             + "".join(_text(source, child) for child in parameter.named_children
+                                       if child.type == "dimensions"))
                             if parameter.child_by_field_name("type") is not None
                             else _text(source, parameter)
                             for parameter in parameters.named_children)

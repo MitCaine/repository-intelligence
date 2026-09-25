@@ -68,14 +68,17 @@ members are counted separately, not mapped as executable callables. Static
 and instance initializer blocks are deliberately not callables. Their source
 bytes still change the containing file hash, so inventory comparison reports
 the file as modified even if no callable declaration changes.
+Syntactic overload identity includes array dimensions attached to a formal
+parameter's variable declarator, not just its base type.
 
-For pinned Go, `.go` promises every `function_declaration`,
-`method_declaration`, and `func_literal` node, including `init`, generic
+For pinned Go, `.go` promises body-bearing `function_declaration`,
+`method_declaration`, and `func_literal` nodes, including `init`, generic
 functions, pointer/value receiver methods, and nested anonymous literals.
 The package and exact receiver syntax contribute to qualified identities;
 anonymous literals receive source-position-based IDs. Interface `method_elem`
-nodes are counted as bodyless, with their interface owner, not as executable
-functions. This is syntax coverage, not Go type/package resolution.
+nodes and valid bodyless external function declarations are counted as
+bodyless, not as executable functions. Interface entries retain their owner.
+This is syntax coverage, not Go type/package resolution.
 
 For pinned C#, `.cs` promises body-bearing methods, constructors (including
 static), destructors, operators/conversions, local functions, lambdas,
@@ -86,6 +89,10 @@ containers contribute ownership. Bodyless interface/abstract methods and
 semicolon accessors are counted separately, not as executable declarations.
 Attributes and modifiers within each callable node's source range affect its
 hash. This is syntax navigation, not Roslyn semantic resolution.
+C# syntactic identity includes method generic arity; explicit indexer accessor
+owners include indexer parameter types, and nested local callables inherit an
+enclosing method discriminator. `ref` and `out` alone are not treated as valid
+distinct overloads.
 
 For pinned C/C++, the source-level contract promises every Tree-sitter
 `function_definition`, plus C++ `lambda_expression`; declarations/prototypes
@@ -95,6 +102,9 @@ RI does not guess. `.c` uses C;
 `.cc`, `.cpp`, `.cxx`, `.hh`, `.hpp`, and `.hxx` use C++. Templates and friend
 wrappers are included in declaration byte ranges, and namespace/class owners
 locate C++ members. `preprocessing` reports directives in unexpanded raw text.
+Member cv/ref qualifiers distinguish syntactic overload identities, while
+out-of-class constructor, destructor, and operator kinds use their terminal
+declarator nodes.
 Conditional branches, macros that generate declarations, includes, and build
 flags mean this is **not** a claim about the effective compiled program. Ask
 Clang with the actual flags/includes when effective declarations are needed;

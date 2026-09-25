@@ -77,7 +77,7 @@ class LocatorTests(unittest.TestCase):
             source = b"#[inline]\nfn calculate_total(value: i32) -> i32 { value }\n"
             path.write_bytes(source)
             result = query_path(path, "calculate total")
-            self.assertEqual(result["schema_version"], 3)
+            self.assertEqual(result["schema_version"], 4)
             self.assertEqual(result["mapping_status"], "navigation_only")
             self.assertEqual(result["source_identity"]["raw_sha256"],
                              hashlib.sha256(source).hexdigest())
@@ -163,7 +163,7 @@ class LocatorTests(unittest.TestCase):
             lambda_span = anonymous["byte_range"]
             self.assertEqual(source[lambda_span["start"]:lambda_span["end"]],
                              b"lambda x: x + value")
-            self.assertEqual(indexed["parser"]["adapter_version"], 2)
+            self.assertEqual(indexed["parser"]["adapter_version"], 3)
             self.assertEqual(indexed["mapping_status"], "navigation_only")
 
     def test_same_name_declarations_and_lambdas_have_distinct_byte_identities(self):
@@ -290,7 +290,7 @@ class LocatorTests(unittest.TestCase):
             outside = base / "outside.py"
             outside.write_text("def secret(): return 1\n")
             result = query_path(outside, "secret", root=root)
-            self.assertEqual(result["schema_version"], 3)
+            self.assertEqual(result["schema_version"], 4)
             self.assertEqual(result["mapping_status"], "excluded")
             self.assertEqual(result["excluded_reason"], "outside_root")
             self.assertIsNone(result["source_identity"])

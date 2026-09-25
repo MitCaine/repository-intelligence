@@ -73,6 +73,8 @@ class InstalledPackageTests(unittest.TestCase):
                                        "repository_intelligence/source.py",
                                        "repository_intelligence/declarations.py",
                                        "repository_intelligence/structural.py",
+                                       "repository_intelligence/adapters.py",
+                                       "repository_intelligence/scan.py",
                                        "repository_intelligence/locator.py",
                                        "repository_intelligence/inventory.py"})
             run(sys.executable, "-m", "venv", install, env=environment)
@@ -137,7 +139,7 @@ class InstalledPackageTests(unittest.TestCase):
                 "    parser = query_path(Path(path), term)['structural']['parser']\n"
                 "    assert parser['runtime_version'] == expected_versions['tree-sitter']\n"
                 "    assert parser['grammar_version'] == expected_versions[distribution]\n"
-                "    assert parser['adapter_version'] == 2\n"
+                "    assert parser['adapter_version'] == 3\n"
                 "polyglot = inventory_tree(Path('.'), stable=True)\n"
                 "assert polyglot['status'] == 'complete'\n"
                 "assert {f['path'] for f in polyglot['files']} == "

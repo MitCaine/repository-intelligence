@@ -10,6 +10,40 @@ from repository_intelligence.locator import index_file, query_path
 
 
 class JavaScriptTypeScriptTests(unittest.TestCase):
+    def test_named_expression_keeps_external_binding_searchable_once(self):
+        for suffix in (".js", ".ts"):
+            with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as raw:
+                source = (b"const locateInvoice = function worker(x: number) { return x; };\n"
+                          if suffix == ".ts" else
+                          b"const locateInvoice = function worker() { return 1; };\n")
+                path = Path(raw) / f"fixture{suffix}"
+                path.write_bytes(source)
+                indexed = index_file(path)
+                self.assertEqual(indexed["function_count"], 1)
+                entry = indexed["functions"][0]
+                self.assertEqual(entry["qualified_name"], "worker")
+                self.assertEqual(entry["binding_aliases"], ["locateInvoice"])
+                self.assertEqual(entry["byte_range"],
+                                 {"start": source.index(b"function"), "end": source.index(b"}") + 1})
+                self.assertEqual(query_path(path, "locate invoice")["matches"][0]["name"],
+                                 "worker")
+                self._exact(indexed, source)
+
+    def test_nested_callable_does_not_inherit_outer_export(self):
+        for suffix in (".js", ".ts"):
+            with self.subTest(suffix=suffix):
+                source = (b"export function outer() { function helper() {} return helper; }\n"
+                          b"export default function directDefault() {}\n"
+                          b"exports.direct = function directWorker() {};\n")
+                indexed = self._index(suffix, source)
+                by_name = {entry["qualified_name"]: entry for entry in indexed["functions"]}
+                self.assertEqual(len(by_name), 4)
+                self.assertEqual(by_name["outer"]["export_kind"], "named")
+                self.assertIsNone(by_name["outer.helper"]["export_kind"])
+                self.assertEqual(by_name["directDefault"]["export_kind"], "default")
+                self.assertEqual(by_name["directWorker"]["export_kind"], "commonjs")
+                self._exact(indexed, source)
+
     def test_nearby_comment_terms_find_opaque_method_name(self):
         source = b"// Reconcile overdue invoices.\nfunction run(){}\n"
         result = self._index(".ts", source)
@@ -175,7 +209,7 @@ class JavaScriptTypeScriptTests(unittest.TestCase):
             (c / "main.ts").write_text("export function total(){ return 2; }\n")
             self.assertEqual(query_path(c / "main.ts", "total")["matches"][0]["name"], "total")
             before, after = inventory_tree(p, stable=True), inventory_tree(c, stable=True)
-            self.assertEqual(before["inventory_schema_version"], 9)
+            self.assertEqual(before["inventory_schema_version"], 10)
             self.assertEqual(before["scope"]["extensions"],
                              [".c", ".cc", ".cjs", ".cpp", ".cs", ".cts", ".cxx", ".go", ".hh", ".hpp", ".hxx", ".java", ".js", ".jsx", ".mjs", ".mts", ".py", ".rs", ".ts", ".tsx"])
             delta = compare_inventories(before, after)

@@ -65,11 +65,21 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                              "owner": ".".join(owners) or None,
                              "byte_range": {"start": node.start_byte, "end": node.end_byte}})
         elif node.type in CALLABLES:
-            promised += 1
             body = node.child_by_field_name("body")
             name_node = node.child_by_field_name("name")
             anonymous = node.type == "func_literal"
-            if body is None or body.start_byte == body.end_byte or (not anonymous and name_node is None):
+            external = (node.type == "function_declaration" and body is None
+                        and name_node is not None and not node.has_error)
+            if external:
+                bodyless.append({"syntax_kind": node.type,
+                                 "owner": ".".join(owners) or None,
+                                 "byte_range": {"start": node.start_byte,
+                                                "end": node.end_byte}})
+            else:
+                promised += 1
+            if external:
+                pass
+            elif body is None or body.start_byte == body.end_byte or (not anonymous and name_node is None):
                 unhandled_count += 1
                 if len(unhandled) < 50:
                     unhandled.append({"syntax_kind": node.type,

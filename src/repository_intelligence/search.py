@@ -31,6 +31,8 @@ def validate_query(terms: str, limit: int) -> list[str]:
 
 def score(entry: dict, words: list[str]) -> int:
     name = set(tokens(entry["name"]))
+    for alias in entry.get("binding_aliases", []):
+        name.update(tokens(alias))
     qualified = set(tokens(entry["qualified_name"]))
     docs = set(tokens(entry["docs"]))
     calls = set(word for call in entry["lexical_call_candidates"] for word in tokens(call))
@@ -40,9 +42,10 @@ def score(entry: dict, words: list[str]) -> int:
 
 
 def rank(entries: list[dict], words: list[str]) -> list[dict]:
-    return sorted((entry for entry in entries if score(entry, words) > 0),
-                  key=lambda entry: (-score(entry, words),
-                                     entry.get("path", ""), entry["line"]))
+    scored = [(score(entry, words), entry) for entry in entries]
+    return [entry for value, entry in sorted(
+        (pair for pair in scored if pair[0] > 0),
+        key=lambda pair: (-pair[0], pair[1].get("path", ""), pair[1]["line"]))]
 
 
 def display_entry(entry: dict, words: list[str]) -> dict:

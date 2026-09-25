@@ -10,6 +10,49 @@ from repository_intelligence.locator import index_file
 
 
 class CFamilyTests(unittest.TestCase):
+    def test_member_qualifiers_distinguish_overloads(self):
+        before = b"struct C { int f() & {return 1;} int f() const & {return 2;} };\n"
+        indexed = self._index(".cpp", before)
+        self.assertEqual({before[e["byte_range"]["start"]:e["byte_range"]["end"]]
+                          for e in indexed["functions"]},
+                         {b"int f() & {return 1;}", b"int f() const & {return 2;}"})
+        self.assertFalse(any(e.get("identity_ambiguous") for e in indexed["functions"]))
+        after = (b"// unrelated\nstruct C { int f() const & {return 2;} "
+                 b"int f() & {return 1;} };\n")
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "C.cpp").write_bytes(before)
+            (right / "C.cpp").write_bytes(after)
+            changes = compare_inventories(inventory_tree(left, stable=True),
+                                          inventory_tree(right, stable=True))["declaration_changes"]
+            self.assertEqual(tuple(len(changes[k]) for k in
+                                   ("added", "removed", "modified", "unchanged")),
+                             (0, 0, 0, 2))
+
+    def test_out_of_class_special_members_use_terminal_declarator_kind(self):
+        source = (b"struct C { C(); ~C(); C operator+(const C&) const; };\n"
+                  b"C::C(){}\n"
+                  b"C::~C(){}\n"
+                  b"C C::operator+(const C& other) const {return *this;}\n")
+        indexed = self._index(".cpp", source)
+        self.assertEqual({(e["qualified_name"], e["declaration_kind"],
+                           source[e["byte_range"]["start"]:e["byte_range"]["end"]])
+                          for e in indexed["functions"]},
+                         {("C.C", "constructor", b"C::C(){}"),
+                          ("C.~C", "destructor", b"C::~C(){}"),
+                          ("C.operator+", "operator",
+                           b"C C::operator+(const C& other) const {return *this;}")})
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "C.cpp").write_bytes(source)
+            (right / "C.cpp").write_bytes(b"// unrelated\n" + source)
+            changes = compare_inventories(inventory_tree(left, stable=True),
+                                          inventory_tree(right, stable=True))["declaration_changes"]
+            self.assertEqual(tuple(len(changes[k]) for k in
+                                   ("added", "removed", "modified", "unchanged")),
+                             (0, 0, 0, 3))
     def test_spaced_operator_is_not_conversion(self):
         result = self._index(".cpp", b"struct C { C operator +(const C&) { return *this; } };\n")
         self.assertEqual([(item["qualified_name"], item["declaration_kind"])

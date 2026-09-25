@@ -15,10 +15,15 @@ class CSharpTreeIndexTests(unittest.TestCase):
         self.assertEqual({item["qualified_name"] for item in result["functions"]},
                          {"Example.C.Run"})
 
-    def test_ref_out_overloads_survive_insert_and_reorder(self):
-        before = b"class C { int F(ref int x){return 1;} int F(out int y){y=2;return y;} }\n"
+    def test_valid_value_reference_overloads_survive_insert_and_reorder(self):
+        before = b"class C { int F(int x){return 1;} int F(ref int y){return 2;} }\n"
         after = (b"class C { int F(double d){return 3;} "
-                 b"int F(out int y){y=2;return y;} int F(ref int x){return 1;} }\n")
+                 b"int F(ref int y){return 2;} int F(int x){return 1;} }\n")
+        indexed = self._index(before)
+        self.assertEqual({before[e["byte_range"]["start"]:e["byte_range"]["end"]]
+                          for e in indexed["functions"]},
+                         {b"int F(int x){return 1;}", b"int F(ref int y){return 2;}"})
+        self.assertFalse(any(e.get("identity_ambiguous") for e in indexed["functions"]))
         with tempfile.TemporaryDirectory() as raw:
             left, right = Path(raw) / "left", Path(raw) / "right"
             left.mkdir(); right.mkdir()
@@ -31,6 +36,52 @@ class CSharpTreeIndexTests(unittest.TestCase):
             self.assertEqual(tuple(len(changes[key]) for key in
                                    ("added", "removed", "modified", "unchanged")),
                              (1, 0, 0, 2))
+
+    def test_generic_arity_and_indexer_parameter_owners(self):
+        before = (b"class C { int F<T>(){return 1;} int F<T,U>(){return 2;} "
+                  b"int this[int i] { get { return i; } } "
+                  b"int this[string s] { get { return 2; } } }\n")
+        indexed = self._index(before)
+        entries = indexed["functions"]
+        self.assertFalse(any(e.get("identity_ambiguous") for e in entries
+                             if e["qualified_name"] == "C.F"))
+        expected = {
+            ("C.F", b"int F<T>(){return 1;}"),
+            ("C.F", b"int F<T,U>(){return 2;}"),
+            ("C.this[int].get", b"get { return i; }"),
+            ("C.this[string].get", b"get { return 2; }"),
+        }
+        self.assertEqual({(e["qualified_name"], before[e["byte_range"]["start"]:
+                                                    e["byte_range"]["end"]]) for e in entries},
+                         expected)
+        self.assertEqual(len({e["declaration_id"] for e in entries}), 4)
+        self.assertFalse(any(e.get("identity_ambiguous") for e in entries))
+        after = (b"// unrelated\nclass C { int F<T,U>(){return 2;} "
+                 b"int this[string s] { get { return 2; } } "
+                 b"int F<T>(){return 1;} int this[int i] { get { return i; } } }\n")
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "C.cs").write_bytes(before)
+            (right / "C.cs").write_bytes(after)
+            delta = compare_inventories(inventory_tree(left, stable=True),
+                                        inventory_tree(right, stable=True))
+            self.assertEqual(delta["status"], "comparable_candidate_delta")
+            changes = delta["declaration_changes"]
+            self.assertEqual(tuple(len(changes[k]) for k in
+                                   ("added", "removed", "modified", "unchanged")),
+                             (0, 0, 0, 4))
+
+    def test_nested_local_identity_in_generic_overloads(self):
+        source = (b"class C { int F<T>() { int Local(){return 1;} return Local(); } "
+                  b"int F<T,U>() { int Local(){return 2;} return Local(); } }\n")
+        entries = self._index(source)["functions"]
+        locals_ = [entry for entry in entries if entry["qualified_name"] == "C.F.Local"]
+        self.assertEqual(len(locals_), 2)
+        self.assertEqual({source[e["byte_range"]["start"]:e["byte_range"]["end"]]
+                          for e in locals_},
+                         {b"int Local(){return 1;}", b"int Local(){return 2;}"})
+        self.assertFalse(any(e.get("identity_ambiguous") for e in locals_))
     def _index(self, source: bytes) -> dict:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "Fixture.cs"
@@ -86,7 +137,7 @@ class CSharpTreeIndexTests(unittest.TestCase):
         result = self._index(source)
         self.assertEqual(result["mapping_status"], "navigation_only")
         names = {item["qualified_name"] for item in result["functions"]}
-        self.assertTrue({"C.P.get", "C.P.set", "C.this[].get", "C.this[].set",
+        self.assertTrue({"C.P.get", "C.P.set", "C.this[int].get", "C.this[int].set",
                          "C.E.add", "C.E.remove", "C.Q.get"}.issubset(names))
         self.assertNotIn("C.Auto.get", names)
         self.assertEqual(result["adapter_coverage"]["bodyless_excluded_count"], 5)

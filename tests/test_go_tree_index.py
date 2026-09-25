@@ -45,6 +45,13 @@ class GoTreeIndexTests(unittest.TestCase):
         self.assertGreater(result["structural"]["error_count"] +
                            result["structural"]["missing_count"], 0)
 
+    def test_external_function_declaration_is_bodyless_not_unhandled(self):
+        result = self._index(b"package p\nfunc external(x int) int\nfunc local() {}\n")
+        self.assertEqual(result["mapping_status"], "navigation_only")
+        self.assertEqual(result["adapter_coverage"]["bodyless_excluded_count"], 1)
+        self.assertEqual(result["adapter_coverage"]["unhandled_node_count"], 0)
+        self.assertEqual([item["name"] for item in result["functions"]], ["local"])
+
 
 if __name__ == "__main__":
     unittest.main()

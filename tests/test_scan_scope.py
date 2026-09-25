@@ -3,12 +3,42 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from repository_intelligence import locator
 from repository_intelligence.inventory import compare_inventories, inventory_tree
 from repository_intelligence.locator import query_path
 
 
 class ScanScopeTests(unittest.TestCase):
+    def test_directory_traversal_failure_without_sources_is_a_partial_packet(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            with patch.object(locator, "walk_supported_paths", return_value=(
+                    [], [], [{"path": "unreadable", "error": "PermissionError"}], 0, [])):
+                result = query_path(root, "missing")
+            self.assertEqual(result["mapping_status"], "incomplete")
+            self.assertEqual(result["scanned_files"], 0)
+            self.assertEqual(result["failures"][0]["error"], "PermissionError")
+
+    def test_selected_source_becoming_symlink_returns_partial_packet(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            path = root / "source.py"
+            path.write_text("def source(): pass\n")
+            real_walk = locator.walk_supported_paths
+
+            def changing_walk(*args, **kwargs):
+                result = real_walk(*args, **kwargs)
+                path.unlink()
+                path.symlink_to(root / "missing.py")
+                return result
+
+            with patch.object(locator, "walk_supported_paths", side_effect=changing_walk):
+                result = query_path(root, "source")
+            self.assertEqual(result["mapping_status"], "incomplete")
+            self.assertGreaterEqual(len(result["failures"]), 1)
+
     def test_mixed_typescript_and_selected_header(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

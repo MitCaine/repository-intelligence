@@ -6,7 +6,27 @@ from pathlib import Path
 
 from .declarations import assign_named_ids, declaration, finalize_coverage
 from .source import utf8_display_column
-from .structural import rust_attachments
+
+
+def rust_attachments(node, source: bytes) -> list:
+    """Return Rust outer attributes/docs, including intervening trivia."""
+    start = node.start_byte
+    prior = node.prev_named_sibling
+    attached_nodes = []
+    while prior is not None:
+        snippet = source[prior.start_byte:prior.end_byte]
+        attached = (prior.type == "attribute_item"
+                    or (prior.type == "line_comment"
+                        and snippet.startswith(b"///") and not snippet.startswith(b"////"))
+                    or (prior.type == "block_comment"
+                        and snippet.startswith(b"/**") and not snippet.startswith(b"/***")))
+        if not attached and prior.type not in {"line_comment", "block_comment"}:
+            break
+        if attached:
+            start = prior.start_byte
+            attached_nodes.append(prior)
+        prior = prior.prev_named_sibling
+    return list(reversed(attached_nodes))
 
 
 def _text(source: bytes, node) -> str:

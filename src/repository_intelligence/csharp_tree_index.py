@@ -39,8 +39,18 @@ def _owner(node, source: bytes) -> str | None:
         name = node.child_by_field_name("name")
         return _text(source, name) if name is not None else None
     if node.type == "indexer_declaration":
-        return "this[]"
+        parameters = node.child_by_field_name("parameters")
+        types = ",".join(_parameter_identity(parameter, source)
+                         for parameter in parameters.named_children) if parameters else ""
+        return f"this[{types}]"
     return None
+
+
+def _parameter_identity(parameter, source: bytes) -> str:
+    type_node = parameter.child_by_field_name("type")
+    if type_node is None:
+        return _text(source, parameter)
+    return "".join(source[parameter.start_byte:type_node.end_byte].decode("utf-8").split())
 
 
 def _calls(body, source: bytes) -> list[str]:
@@ -92,13 +102,13 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
     unhandled = []
     promised = 0
     unhandled_count = 0
-    pending = [(tree, ())]
+    pending = [(tree, (), ())]
     file_namespace = next((node for node in tree.named_children
                            if node.type == "file_scoped_namespace_declaration"), None)
     file_namespace_name = (_owner(file_namespace, source)
                            if file_namespace is not None else None)
     while pending:
-        node, owners = pending.pop()
+        node, owners, owner_identities = pending.pop()
         if node.parent == tree and node is not file_namespace and file_namespace_name is not None:
             owners = (file_namespace_name,)
         owner = _owner(node, source)
@@ -130,13 +140,16 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     parameters = node.child_by_field_name("parameters")
                     identity_signature = None
                     if parameters is not None and not anonymous:
-                        identity_signature = ",".join(
-                            "".join(source[parameter.start_byte:
-                                           parameter.child_by_field_name("type").end_byte]
-                                    .decode("utf-8").split())
-                            if parameter.child_by_field_name("type") is not None
-                            else _text(source, parameter)
-                            for parameter in parameters.named_children)
+                        identity_signature = ",".join(_parameter_identity(parameter, source)
+                                                      for parameter in parameters.named_children)
+                        type_parameters = next((child for child in node.named_children
+                                                if child.type == "type_parameter_list"), None)
+                        if type_parameters is not None:
+                            identity_signature = (f"arity={len(type_parameters.named_children)}|"
+                                                  + identity_signature)
+                    own_signature = identity_signature
+                    if owner_identities:
+                        identity_signature = "/".join(owner_identities) + ":" + (own_signature or "")
                     functions.append({
                         "name": name, "qualified_name": qualified,
                         "line": node.start_point.row + 1,
@@ -151,7 +164,10 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     if node.type in {"method_declaration", "constructor_declaration",
                                      "local_function_statement"}:
                         owners = (*owners, name)
-        pending.extend((child, owners) for child in reversed(node.named_children))
+                        owner_identities = (*owner_identities,
+                                            f"{name}({own_signature or ''})")
+        pending.extend((child, owners, owner_identities)
+                       for child in reversed(node.named_children))
     assign_named_ids(functions)
     coverage = finalize_coverage(functions, promised, unhandled_count, len(bodyless))
     return {"path": str(path), "function_count": len(functions),

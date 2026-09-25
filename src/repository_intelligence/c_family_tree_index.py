@@ -146,10 +146,27 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     if operator_node.type == "operator_name":
                         break
                     operator_node = operator_node.child_by_field_name("declarator")
+                terminal = declarator
+                while terminal is not None and terminal.type not in {
+                        "qualified_identifier", "operator_name", "operator_cast",
+                        "destructor_name", "identifier", "field_identifier"}:
+                    terminal = terminal.child_by_field_name("declarator")
+                terminal_scope = (terminal.child_by_field_name("scope")
+                                  if terminal is not None and terminal.type == "qualified_identifier"
+                                  else None)
+                if terminal is not None and terminal.type == "qualified_identifier":
+                    terminal = terminal.child_by_field_name("name")
+                constructor_owner = (_text(source, terminal_scope).split("::")[-1]
+                                     if terminal_scope is not None else
+                                     next((part[1] for part in reversed(owners)
+                                           if part[0] in {"class_specifier", "struct_specifier"}), None))
                 kind = ("lambda" if anonymous else "conversion" if operator_node is not None
                         and operator_node.type == "operator_cast" else
-                        "operator" if name.startswith("operator") else
-                        "destructor" if name.startswith("~") else
+                        "operator" if terminal is not None and terminal.type == "operator_name" else
+                        "destructor" if terminal is not None and terminal.type == "destructor_name" else
+                        "constructor" if node.child_by_field_name("type") is None
+                        and terminal is not None and terminal.type in {"identifier", "field_identifier"}
+                        and constructor_owner == _text(source, terminal) else
                         "friend_function" if friend else "function")
                 parameter_node = declarator
                 while parameter_node is not None and parameter_node.type != "function_declarator":
@@ -161,6 +178,10 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     identity_signature = ",".join(
                         _parameter_identity(parameter, source)
                         for parameter in parameters.named_children)
+                    qualifiers = "".join(_text(source, child) for child in parameter_node.named_children
+                                         if child.type in {"type_qualifier", "ref_qualifier"})
+                    if qualifiers:
+                        identity_signature += "|" + qualifiers
                 functions.append({
                     "name": name, "qualified_name": qualified,
                     "line": node.start_point.row + 1,
