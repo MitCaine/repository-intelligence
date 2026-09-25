@@ -8,6 +8,8 @@ import io
 import tokenize
 from pathlib import Path
 
+from .declarations import declaration
+
 
 def _signatures(source: bytes) -> dict[tuple[int, str], str]:
     """Locate Python headers with tokenizer coordinates, including inline bodies."""
@@ -56,6 +58,23 @@ def index_source(path: Path, source: bytes) -> dict:
     tree = ast.parse(source, filename=str(path))
     signatures = _signatures(source)
     functions: list[dict] = []
+    encoding, _ = tokenize.detect_encoding(io.BytesIO(source).readline)
+    decoded = source.decode(encoding)
+    raw_lines = source.splitlines(keepends=True)
+    text_lines = decoded.splitlines(keepends=True)
+    starts = [0]
+    for line in raw_lines:
+        starts.append(starts[-1] + len(line))
+
+    def offset(line: int, column: int) -> int:
+        # AST columns count UTF-8 bytes even in a declared non-UTF-8 file.
+        prefix = text_lines[line - 1].encode("utf-8")[:column].decode("utf-8")
+        codec = "utf-8" if encoding == "utf-8-sig" else encoding
+        bom = 3 if line == 1 and encoding == "utf-8-sig" else 0
+        return starts[line - 1] + bom + len(prefix.encode(codec))
+
+    def position(node: ast.expr | ast.stmt) -> tuple[int, int]:
+        return offset(node.lineno, node.col_offset), offset(node.end_lineno, node.end_col_offset)
 
     class Collector(ast.NodeVisitor):
         def __init__(self) -> None:
@@ -69,6 +88,24 @@ def index_source(path: Path, source: bytes) -> dict:
 
         def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
             self._visit_function(node)
+
+        def visit_Lambda(self, node: ast.Lambda) -> None:
+            start, end = position(node)
+            name = f"<lambda@{start}>"
+            qualified = ".".join((*self.owners, name))
+            calls = {ast.unparse(child.func) for child in ast.walk(node)
+                     if isinstance(child, ast.Call)}
+            functions.append({
+                "name": name, "qualified_name": qualified,
+                "line": node.lineno, "end_line": node.end_lineno,
+                "signature": "lambda", "docs": "",
+                "lexical_call_candidates": sorted(calls),
+                **declaration(source, "lambda", qualified, start, end),
+            })
+            prior = self.owners
+            self.owners += (name,)
+            self.generic_visit(node)
+            self.owners = prior
 
         def _visit_owner(self, node: ast.ClassDef) -> None:
             prior = self.owners
@@ -85,14 +122,26 @@ def index_source(path: Path, source: bytes) -> dict:
                 if isinstance(child, ast.Call):
                     name = ast.unparse(child.func)
                     calls.add(name)
+            start, end = position(node)
+            if node.decorator_list:
+                first = node.decorator_list[0]
+                decorator_start, _ = position(first)
+                line_start = starts[first.lineno - 1]
+                prefix = source[line_start:decorator_start]
+                marker = prefix.rfind(b"@")
+                if marker < 0:
+                    raise ValueError(f"Could not locate decorator at line {first.lineno}")
+                start = line_start + marker
+            qualified = ".".join((*self.owners, node.name))
             functions.append({
                 "name": node.name,
-                "qualified_name": ".".join((*self.owners, node.name)),
+                "qualified_name": qualified,
                 "line": node.lineno,
                 "end_line": node.end_lineno,
                 "signature": header,
                 "docs": ast.get_docstring(node) or "",
                 "lexical_call_candidates": sorted(calls),
+                **declaration(source, "function", qualified, start, end),
             })
             prior = self.owners
             self.owners += (node.name,)

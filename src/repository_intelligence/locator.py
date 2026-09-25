@@ -61,7 +61,13 @@ def index_file(path: Path, *, root: Path | None = None,
     parser_info = {"name": parser_name,
                    "version": (platform.python_version() if parser_name == "python.ast"
                                else _rust_analyzer_version()),
-                   "adapter_version": 1}
+                   "adapter_version": 2,
+                   "runtime": ("CPython" if parser_name == "python.ast" else None),
+                   "runtime_version": (platform.python_version()
+                                       if parser_name == "python.ast" else None),
+                   "grammar": ("Python" if parser_name == "python.ast" else "Rust"),
+                   "grammar_version": (platform.python_version()
+                                       if parser_name == "python.ast" else None)}
     if len(source) > MAX_PARSE_BYTES:
         return {**basic, "mapping_status": "incomplete", "parser": parser_info,
                 "failures": [{"error": "SourceLimitExceeded", "limit_bytes": MAX_PARSE_BYTES}]}
