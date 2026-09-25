@@ -57,6 +57,20 @@ class PythonTreeNavigationTests(unittest.TestCase):
             self.assertEqual([entry["byte_range"] for entry in current["functions"]],
                              [entry["byte_range"] for entry in reference["functions"]])
 
+    def test_inline_header_comment_and_parenthesized_call_target_parity(self):
+        source = b"def f(): # note\n    pass\ndef g(): return (f)()\n"
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "comments_and_calls.py"
+            path.write_bytes(source)
+            current = index_file(path)
+            reference = ast_index_source(path, source)
+            self.assertEqual(current["mapping_status"], "navigation_only")
+            for actual, expected in zip(current["functions"], reference["functions"]):
+                with self.subTest(symbol=expected["name"]):
+                    self.assertEqual(actual["signature"], expected["signature"])
+                    self.assertEqual(actual["lexical_call_candidates"],
+                                     expected["lexical_call_candidates"])
+
     def test_missing_syntax_and_unhandled_recovery_are_not_complete(self):
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "broken.py"

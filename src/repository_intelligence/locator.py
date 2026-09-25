@@ -57,7 +57,7 @@ def index_file(path: Path, *, root: Path | None = None,
         return {**basic, "mapping_status": "incomplete", "parser": None,
                 "failures": [{"error": "SourceLimitExceeded", "limit_bytes": MAX_PARSE_BYTES}]}
     try:
-        syntax, tree = structural.scan(path.suffix.lower(), source)
+        syntax, tree, parse_bytes, offsets = structural.scan(path.suffix.lower(), source)
     except (OSError, ValueError, UnicodeError, ImportError, SyntaxError, LookupError) as error:
         return {**basic, "mapping_status": "incomplete", "parser": None,
                 "structural": None,
@@ -65,7 +65,9 @@ def index_file(path: Path, *, root: Path | None = None,
     parser_info = {**syntax["parser"], "version": syntax["parser"]["runtime_version"],
                    "runtime": "tree-sitter"}
     try:
-        indexed = parser(path, source, tree=tree)
+        indexed = (parser(path, source, tree=tree, parse_bytes=parse_bytes,
+                          offsets=offsets) if path.suffix.lower() == ".py"
+                   else parser(path, source, tree=tree))
     except PARSE_FAILURES as error:
         return {**basic, "mapping_status": "incomplete", "parser": parser_info,
                 "structural": syntax,

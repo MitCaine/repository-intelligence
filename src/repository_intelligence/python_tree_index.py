@@ -9,7 +9,6 @@ from pathlib import Path
 
 from .declarations import assign_named_ids, declaration
 from .source import utf8_display_column
-from .structural import python_input
 
 
 def _text(parse_bytes: bytes, node) -> str:
@@ -24,6 +23,8 @@ def _calls(node, parse_bytes: bytes) -> list[str]:
         if current.type == "call":
             function = current.child_by_field_name("function")
             if function is not None:
+                while function.type == "parenthesized_expression" and len(function.named_children) == 1:
+                    function = function.named_children[0]
                 candidates.add(_text(parse_bytes, function))
         pending.extend(current.named_children)
     return sorted(candidates)
@@ -42,11 +43,10 @@ def _docs(body, parse_bytes: bytes) -> str:
     return inspect.cleandoc(value) if isinstance(value, str) else ""
 
 
-def index_source(path: Path, source: bytes, *, tree) -> dict:
+def index_source(path: Path, source: bytes, *, tree, parse_bytes: bytes, offsets) -> dict:
     """Extract Python callables from an already parsed Tree-sitter syntax tree."""
     if len(source) > 4_000_000:
         raise ValueError("Python source exceeds the 4 MB per-file limit")
-    parse_bytes, _, offsets = python_input(source)
 
     def raw(offset: int) -> int:
         return offsets.raw(offset) if offsets is not None else offset
@@ -72,8 +72,15 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
         kind = "lambda" if is_lambda else "function"
         name = f"<lambda@{begin}>" if is_lambda else _text(parse_bytes, name_node)
         qualified = ".".join((*owners, name))
+        colon = next((child for child in node.children if child.type == ":"), None)
+        if not is_lambda and colon is None:
+            unhandled_count += 1
+            if len(unhandled) < 50:
+                unhandled.append({"syntax_kind": node.type,
+                                  "byte_range": {"start": begin, "end": end}})
+            return None
         signature = ("lambda" if is_lambda else
-                     parse_bytes[node.start_byte:body.start_byte].decode("utf-8").rstrip())
+                     parse_bytes[node.start_byte:colon.end_byte].decode("utf-8"))
         functions.append({
             "name": name, "qualified_name": qualified,
             "line": node.start_point.row + 1,

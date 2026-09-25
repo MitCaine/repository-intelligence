@@ -91,8 +91,8 @@ def _rust_start(node, source: bytes) -> int:
     return attachments[0].start_byte if attachments else node.start_byte
 
 
-def scan(suffix: str, source: bytes) -> tuple[dict, Node]:
-    """Return partial evidence and the parsed tree for a current-language adapter."""
+def scan(suffix: str, source: bytes) -> tuple[dict, Node, bytes, _RawOffsets | None]:
+    """Return evidence, syntax tree, and decoded input for a language adapter."""
     grammar_name, distribution, module = GRAMMARS[suffix]
     language = Language(module.language())
     parse_bytes, encoding, offsets = (python_input(source) if suffix == ".py"
@@ -164,7 +164,7 @@ def scan(suffix: str, source: bytes) -> tuple[dict, Node]:
             "details_truncated": (declaration_count > len(declarations)
                                   or error_count + missing_count > len(diagnostics)),
             "coverage": "partial_navigation_evidence"}
-    return result, root
+    return result, root, parse_bytes, offsets
 
 
 def probe(suffix: str, source: bytes) -> dict:
