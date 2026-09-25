@@ -23,9 +23,14 @@ def _calls(node, parse_bytes: bytes) -> list[str]:
         if current.type == "call":
             function = current.child_by_field_name("function")
             if function is not None:
-                while function.type == "parenthesized_expression" and len(function.named_children) == 1:
-                    function = function.named_children[0]
-                candidates.add(_text(parse_bytes, function))
+                expression = _text(parse_bytes, function)
+                try:
+                    # Match the legacy AST candidate spelling; Tree-sitter still
+                    # owns declaration discovery and all source coordinates.
+                    candidate = ast.unparse(ast.parse(f"({expression})", mode="eval").body)
+                except SyntaxError:
+                    candidate = expression
+                candidates.add(candidate)
         pending.extend(current.named_children)
     return sorted(candidates)
 

@@ -65,7 +65,14 @@ with total counts. It is not an exhaustive contract. Rust navigation parity
 with the optional analyzer is fixture-tested for names, locations, docs, and
 lexical call candidates. Python Tree-sitter navigation is fixture-compared with
 the standard-library AST adapter for signatures, docs, calls, and raw-byte
-ranges, including declared Latin-1 source.
+ranges, including declared Latin-1 source. For lexical call candidates, the
+Python adapter uses the standard-library AST only to normalize a Tree-sitter
+identified call target's display text, preserving search terms that source
+spelling (such as string-escape variants) could otherwise change. If a target
+cannot be normalized, its source text remains a lexical candidate. This is
+not AST-based declaration discovery or a resolved call graph. RI's current
+Python modules match the AST reference for call text and search tokens; that
+fixture does not promise identical presentation for every possible source.
 
 Explicit language selection is available for ambiguous direct files, but only
 Python and Rust adapters are shipped. The pinned upstream node types have been

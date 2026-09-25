@@ -6,6 +6,7 @@ from pathlib import Path
 
 from repository_intelligence.locator import index_file
 from repository_intelligence.python_index import index_source as ast_index_source
+from repository_intelligence.search import query, score, tokens
 
 
 ROOT = Path(__file__).resolve().parents[1] / "src" / "repository_intelligence"
@@ -31,6 +32,29 @@ class RealWorldParityTests(unittest.TestCase):
                     span = actual["byte_range"]
                     self.assertEqual(actual["declaration_sha256"], hashlib.sha256(
                         source[span["start"]:span["end"]]).hexdigest())
+                    current_terms = {term for call in actual["lexical_call_candidates"]
+                                     for term in tokens(call)}
+                    reference_terms = {term for call in expected["lexical_call_candidates"]
+                                       for term in tokens(call)}
+                    self.assertEqual(current_terms, reference_terms,
+                                     f"{path.name}: {expected['qualified_name']}: call search terms")
+                    self.assertEqual(actual["lexical_call_candidates"],
+                                     expected["lexical_call_candidates"],
+                                     f"{path.name}: {expected['qualified_name']}: call presentation")
+
+    def test_call_escape_terms_preserve_navigation_discoverability(self):
+        path = ROOT / "source.py"
+        source = path.read_bytes()
+        current = index_file(path)
+        reference = ast_index_source(path, source)
+        selected = "identify_bytes"
+        current_entry = next(entry for entry in current["functions"] if entry["name"] == selected)
+        reference_entry = next(entry for entry in reference["functions"] if entry["name"] == selected)
+        for words in (tokens("x00"), tokens("hashlib new")):
+            with self.subTest(words=words):
+                self.assertEqual(score(current_entry, words), score(reference_entry, words))
+        self.assertEqual([entry["name"] for entry in query(current, "x00")["matches"]],
+                         [entry["name"] for entry in query(reference, "x00")["matches"]])
 
 
 if __name__ == "__main__":
