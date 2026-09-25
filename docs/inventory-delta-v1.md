@@ -32,8 +32,11 @@ mapping/parser contracts and logical scope, and both are complete under the
 caller-stable condition. A mismatch returns `incompatible`; an incomplete
 side returns `incomplete`. Neither case emits file or declaration deltas, but
 both sides' identities, coverage, exclusions, and failure reasons remain
-visible. Comparison never authorizes edits or qualifies a candidate on behalf
-of a controller.
+visible. Comparison rechecks each purportedly complete file's mapping status,
+source identity, parser contract, callable accounting, structural diagnostics,
+and the normalized inventory checksum; a contradictory packet is incompatible
+even if its top-level status says `complete`. Comparison never authorizes edits
+or qualifies a candidate on behalf of a controller.
 
 Comparable results classify files by relative path and raw file hash as added,
 removed, modified, or unchanged, including zero-callable files. Declarations

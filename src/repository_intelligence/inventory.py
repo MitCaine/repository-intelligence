@@ -8,17 +8,15 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from pathlib import Path
 
-from .locator import PARSERS, index_file
+from .locator import PARSERS, index_file, walk_supported_paths
 from .source import SCHEMA_VERSION, git_object_format
 from .structural import probe
 
 
 INVENTORY_SCHEMA_VERSION = 1
 MAPPING_CONTRACT = "python-rust-source-callables-v1"
-EXCLUDED_DIRECTORIES = {"target", "__pycache__", "venv"}
 
 
 def _digest(scope: dict, files: list[dict]) -> str:
@@ -43,66 +41,29 @@ def inventory_tree(root: Path, *, stable: bool = False,
     parser_contract = {suffix: probe(suffix, b"")["parser"] for suffix in sorted(PARSERS)}
     object_format = git_object_format(root)
     files: list[dict] = []
-    exclusions: list[dict] = []
-    failures: list[dict] = []
-    other_files = 0
-    seen_physical: set[tuple[int, int]] = set()
-
-    def walk_error(error: OSError) -> None:
-        failures.append({"path": error.filename or ".", "error": type(error).__name__})
-
-    for current, directories, filenames in os.walk(root, topdown=True, followlinks=False,
-                                                    onerror=walk_error):
-        parent = Path(current)
-        kept = []
-        for name in sorted(directories):
-            path = parent / name
-            relative = path.relative_to(root).as_posix()
-            reason = ("excluded_directory" if name.startswith(".") or name in EXCLUDED_DIRECTORIES
-                      else "symlink_directory" if path.is_symlink()
-                      else "nested_repository" if (path / ".git").exists() else None)
-            if reason is None:
-                kept.append(name)
-            else:
-                exclusions.append({"path": relative, "reason": reason})
-        directories[:] = kept
-        for name in sorted(filenames):
-            path = parent / name
-            suffix = path.suffix.lower()
-            if suffix not in PARSERS:
-                other_files += 1
-                continue
-            relative = path.relative_to(root).as_posix()
-            if name.startswith(".") or path.is_symlink():
-                exclusions.append({"path": relative,
-                                   "reason": "symlink_file" if path.is_symlink() else "hidden_file"})
-                continue
-            try:
-                if not path.resolve().is_relative_to(root):
-                    exclusions.append({"path": relative, "reason": "outside_root"})
-                    continue
-                stat = path.stat()
-                physical = stat.st_dev, stat.st_ino
-                if stat.st_ino and physical in seen_physical:
-                    exclusions.append({"path": relative, "reason": "duplicate_physical_file"})
-                    failures.append({"path": relative, "error": "DuplicatePhysicalFile"})
-                    continue
-                if stat.st_ino:
-                    seen_physical.add(physical)
-                indexed = index_file(path, root=root, object_format=object_format)
-            except (OSError, ValueError) as error:
-                failures.append({"path": relative, "error": type(error).__name__})
-                continue
-            files.append({"path": relative, "language": "python" if suffix == ".py" else "rust",
-                          "source_identity": indexed.get("source_identity"),
-                          "parser": indexed.get("parser"),
-                          "mapping_status": indexed["mapping_status"],
-                          "adapter_coverage": indexed.get("adapter_coverage"),
-                          "structural": indexed.get("structural"),
-                          "declarations": indexed["functions"]})
-            failures.extend({"path": relative, **failure} for failure in indexed["failures"])
-            if indexed["mapping_status"] != "navigation_only":
-                failures.append({"path": relative, "error": "IncompleteMapping"})
+    paths, exclusions, failures, other_files = walk_supported_paths(root)
+    # Navigation merely reports hardlink exclusions; a complete inventory
+    # cannot omit a second in-scope relative source path.
+    failures.extend({"path": item["path"], "error": "DuplicatePhysicalFile"}
+                    for item in exclusions if item["reason"] == "duplicate_physical_file")
+    for path in paths:
+        relative = path.relative_to(root).as_posix()
+        suffix = path.suffix.lower()
+        try:
+            indexed = index_file(path, root=root, object_format=object_format)
+        except (OSError, ValueError) as error:
+            failures.append({"path": relative, "error": type(error).__name__})
+            continue
+        files.append({"path": relative, "language": "python" if suffix == ".py" else "rust",
+                      "source_identity": indexed.get("source_identity"),
+                      "parser": indexed.get("parser"),
+                      "mapping_status": indexed["mapping_status"],
+                      "adapter_coverage": indexed.get("adapter_coverage"),
+                      "structural": indexed.get("structural"),
+                      "declarations": indexed["functions"]})
+        failures.extend({"path": relative, **failure} for failure in indexed["failures"])
+        if indexed["mapping_status"] != "navigation_only":
+            failures.append({"path": relative, "error": "IncompleteMapping"})
     files.sort(key=lambda item: item["path"])
     exclusions.sort(key=lambda item: (item["path"], item["reason"]))
     failures.sort(key=lambda item: (item["path"], item["error"]))
@@ -158,10 +119,60 @@ def _summary(inventory: dict) -> dict:
             "incomplete_reasons": inventory.get("incomplete_reasons"),
             "digest": inventory.get("inventory_digest"), "scope": inventory.get("scope"),
             "failures": inventory.get("failures"),
-            "files": [{"path": file["path"], "source_identity": file["source_identity"],
-                       "mapping_status": file["mapping_status"],
-                       "adapter_coverage": file["adapter_coverage"]}
+            "files": [{"path": file.get("path"), "source_identity": file.get("source_identity"),
+                       "mapping_status": file.get("mapping_status"),
+                       "adapter_coverage": file.get("adapter_coverage")}
                       for file in inventory.get("files", [])]}
+
+
+def _complete_packet_errors(inventory: dict) -> list[str]:
+    """Do not trust a top-level complete flag over contradictory file evidence."""
+    if inventory.get("status") != "complete":
+        return []
+    errors = []
+    if (inventory.get("materialization") != "caller_asserted_stable"
+            or inventory.get("failures") or inventory.get("incomplete_reasons")):
+        errors.append("false_complete_status")
+    try:
+        if inventory.get("inventory_digest") != _digest(inventory["scope"], inventory["files"]):
+            errors.append("inventory_digest_mismatch")
+    except (KeyError, TypeError, ValueError):
+        errors.append("invalid_inventory_digest_input")
+    parser_contract = inventory.get("parser_contract") or {}
+    for file in inventory.get("files", []):
+        path = file.get("path")
+        suffix = Path(path).suffix.lower() if isinstance(path, str) else None
+        identity = file.get("source_identity")
+        parser = file.get("parser")
+        structural = file.get("structural")
+        coverage = file.get("adapter_coverage")
+        declarations = file.get("declarations")
+        expected = parser_contract.get(suffix)
+        if (suffix not in PARSERS or file.get("language") !=
+                ("python" if suffix == ".py" else "rust") or
+                not isinstance(identity, dict) or identity.get("relative_path") != path or
+                not isinstance(identity.get("raw_sha256"), str) or
+                len(identity["raw_sha256"]) != 64 or
+                not isinstance(identity.get("byte_count"), int) or identity["byte_count"] < 0 or
+                not isinstance(parser, dict) or not isinstance(expected, dict) or
+                any(parser.get(key) != value for key, value in (expected or {}).items()) or
+                not isinstance(structural, dict) or structural.get("parser") != expected or
+                not isinstance(coverage, dict) or not isinstance(declarations, list) or
+                file.get("mapping_status") != "navigation_only"):
+            errors.append(f"invalid_file_packet:{path}")
+            continue
+        if (structural.get("error_count") != 0 or structural.get("missing_count") != 0 or
+                structural.get("diagnostic_count") != 0 or
+                coverage.get("unhandled_node_count") != 0 or
+                coverage.get("promised_node_count") != coverage.get("mapped_node_count") or
+                coverage.get("mapped_node_count") != len(declarations) or
+                structural.get("declaration_count") != coverage.get("promised_node_count")):
+            errors.append(f"incomplete_file_packet:{path}")
+        ids = [item.get("declaration_id") for item in declarations if isinstance(item, dict)]
+        if (len(ids) != len(declarations) or not all(isinstance(item, str) for item in ids)
+                or len(ids) != len(set(ids))):
+            errors.append(f"duplicate_or_missing_declaration_id:{path}")
+    return errors
 
 
 def compare_inventories(planning: dict, candidate: dict) -> dict:
@@ -175,12 +186,9 @@ def compare_inventories(planning: dict, candidate: dict) -> dict:
     for label, inventory in (("planning", planning), ("candidate", candidate)):
         files = inventory.get("files", [])
         paths = [file.get("path") for file in files]
-        if len(paths) != len(set(paths)):
+        if any(not isinstance(path, str) for path in paths) or len(paths) != len(set(paths)):
             mismatches.append(f"{label}_duplicate_file_path")
-        if inventory.get("status") == "complete" and (inventory.get("failures") or
-                                                     inventory.get("materialization") !=
-                                                     "caller_asserted_stable"):
-            mismatches.append(f"{label}_false_complete_status")
+        mismatches.extend(f"{label}_{error}" for error in _complete_packet_errors(inventory))
     if mismatches:
         return {**basic, "status": "incompatible", "mismatches": mismatches,
                 "file_changes": None, "declaration_changes": None}

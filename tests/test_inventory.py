@@ -107,6 +107,32 @@ class InventoryTests(unittest.TestCase):
             self.assertEqual(duplicate["status"], "incomplete")
             self.assertIn("DuplicatePhysicalFile", {item["error"] for item in duplicate["failures"]})
 
+    def test_forged_complete_flag_cannot_override_file_evidence(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "one.py").write_text("def one(): return 1\n")
+            valid = inventory_tree(root, stable=True)
+            mutations = {
+                "mapping": lambda packet: packet["files"][0].__setitem__("mapping_status", "incomplete"),
+                "error": lambda packet: packet["files"][0]["structural"].__setitem__("error_count", 1),
+                "missing": lambda packet: packet["files"][0]["structural"].__setitem__("missing_count", 1),
+                "unhandled": lambda packet: packet["files"][0]["adapter_coverage"].__setitem__(
+                    "unhandled_node_count", 1),
+                "parser": lambda packet: packet["files"][0]["parser"].__setitem__(
+                    "grammar_version", "future"),
+                "identity": lambda packet: packet["files"][0].__setitem__("source_identity", None),
+                "digest": lambda packet: packet.__setitem__("inventory_digest", "wrong"),
+            }
+            for label, mutate in mutations.items():
+                with self.subTest(mutation=label):
+                    forged = copy.deepcopy(valid)
+                    mutate(forged)
+                    self.assertEqual(forged["status"], "complete")
+                    delta = compare_inventories(valid, forged)
+                    self.assertEqual(delta["status"], "incompatible")
+                    self.assertIsNone(delta["file_changes"])
+                    self.assertIsNone(delta["declaration_changes"])
+
     def test_anonymous_movement_is_reported_as_add_and_remove(self):
         with tempfile.TemporaryDirectory() as raw:
             left, right = (Path(raw) / name for name in ("left", "right"))
