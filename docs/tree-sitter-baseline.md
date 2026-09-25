@@ -6,6 +6,12 @@ standard-library AST adapter remains available directly as a reference or
 fallback; the separate rust-analyzer route is
 preserved as an opt-in escalation for richer source/metadata questions. No
 exhaustive language coverage is claimed.
+The syntax probe owns parser metadata and `ERROR`/`MISSING` diagnostics only.
+Each language adapter alone owns callable selection, promised/unhandled counts,
+names, kinds, ownership, and source slices. Version 3 structural declaration
+details are a bounded presentation of adapter entries, not a second independent
+classifier. Fixed expected-source fixtures, not agreement between two counters,
+test the mapping promise.
 
 ## Promised source-level forms
 
@@ -22,7 +28,8 @@ is adapter-unhandled, not a successful map.
 For the pinned Rust grammar, the adapter promises every `function_item` and
 `closure_expression` node exposed by Tree-sitter, including top-level, nested,
 trait default and impl methods, generic functions, and nested closures.
-Immediately attached outer attributes and doc comments are included in named
+Applicable outer attributes and doc comments, including across blank lines and
+ordinary comment trivia, are included in named
 function source ranges. `function_signature_item` is intentionally bodyless:
 inside a `trait_item` or `foreign_mod_item` it is counted as excluded from the
 callable map. Elsewhere it is treated as adapter-unhandled and makes the result
@@ -82,8 +89,9 @@ hash. This is syntax navigation, not Roslyn semantic resolution.
 
 For pinned C/C++, the source-level contract promises every Tree-sitter
 `function_definition`, plus C++ `lambda_expression`; declarations/prototypes
-without bodies are recorded separately. C/C++ direct `.h` queries require an explicit
-`c` or `cpp` language choice; directory scans do not guess. `.c` uses C;
+without bodies are recorded separately. C/C++ `.h` queries require an explicit
+`c` or `cpp` language choice, including per-path choices in directory scans;
+RI does not guess. `.c` uses C;
 `.cc`, `.cpp`, `.cxx`, `.hh`, `.hpp`, and `.hxx` use C++. Templates and friend
 wrappers are included in declaration byte ranges, and namespace/class owners
 locate C++ members. `preprocessing` reports directives in unexpanded raw text.
@@ -98,7 +106,7 @@ Pinned package versions in `pyproject.toml` are `tree-sitter==0.25.0`,
 `tree-sitter-java==0.23.5`, `tree-sitter-go==0.25.0`, and
 `tree-sitter-c-sharp==0.23.5`, `tree-sitter-c==0.24.2`, and
 `tree-sitter-cpp==0.23.4`. Results record
-actual installed distribution versions, grammar ABI, and adapter version 1.
+actual installed distribution versions, grammar ABI, and adapter version 2.
 Changing a grammar pin requires reviewing that grammar's upstream generated
 `node-types.json` for changed declaration nodes/fields, then running the
 language fixtures and installed-wheel check before adoption. The wheel

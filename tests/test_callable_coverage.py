@@ -4,9 +4,10 @@ import hashlib
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from repository_intelligence.declarations import finalize_coverage
-from repository_intelligence.locator import index_file
+from repository_intelligence.locator import PARSERS, index_file, query_path
 
 
 class CallableCoverageTests(unittest.TestCase):
@@ -98,6 +99,25 @@ class CallableCoverageTests(unittest.TestCase):
         python = self._index("invalid.py", b"def empty():\n")
         self.assertEqual(python["mapping_status"], "incomplete")
         self.assertEqual(python["adapter_coverage"]["unhandled_node_count"], 1)
+
+    def test_unhandled_promise_is_incomplete_even_if_legacy_error_count_is_zero(self):
+        original = PARSERS[".rs"]
+
+        def wrapped(*args, **kwargs):
+            result = original(*args, **kwargs)
+            return {**result, "parse_error_count": 0}
+
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "orphan.rs"
+            path.write_bytes(b"fn orphan();\n")
+            with patch.dict(PARSERS, {".rs": wrapped}):
+                result = index_file(path)
+                directory = query_path(Path(raw), "orphan")
+        self.assertEqual(result["mapping_status"], "incomplete")
+        self.assertEqual(directory["mapping_status"], "incomplete")
+        self.assertEqual(result["structural"]["declaration_count"], 1)
+        self.assertEqual(result["structural"]["declarations"], [])
+        self.assertEqual(result["adapter_coverage"]["unhandled_node_count"], 1)
 
     def test_error_and_missing_never_claim_complete(self):
         for filename, source, kind in [

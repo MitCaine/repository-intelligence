@@ -10,6 +10,30 @@ from repository_intelligence.structural import probe
 
 
 class StructuralTests(unittest.TestCase):
+    def test_cross_language_expected_callable_slices_and_owners(self):
+        cases = [
+            (".py", b"class C:\n    def run(self): return 1\n", "C.run", b"def run(self): return 1"),
+            (".rs", b"mod m { fn run() {} }\n", "m::run", b"fn run() {}"),
+            (".js", b"class C { run(){} }\n", "C.run", b"run(){}"),
+            (".ts", b"namespace N { export function run(){} }\n", "N.run", b"function run(){}"),
+            (".java", b"class C { void run(){} }\n", "C.run", b"void run(){}"),
+            (".go", b"package m\nfunc run() {}\n", "m.run", b"func run() {}"),
+            (".cs", b"namespace N; class C { void Run(){} }\n", "N.C.Run", b"void Run(){}"),
+            (".cpp", b"struct C { int run(){return 1;} };\n", "C.run", b"int run(){return 1;}"),
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            for number, (suffix, source, expected_name, expected_slice) in enumerate(cases):
+                with self.subTest(suffix=suffix):
+                    path = Path(raw) / f"case{number}{suffix}"
+                    path.write_bytes(source)
+                    result = index_file(path)
+                    self.assertEqual(result["mapping_status"], "navigation_only")
+                    self.assertEqual([entry["qualified_name"] for entry in result["functions"]],
+                                     [expected_name])
+                    span = result["functions"][0]["byte_range"]
+                    self.assertEqual(source[span["start"]:span["end"]], expected_slice)
+                    self.assertEqual(result["structural"]["declaration_count"], 1)
+                    self.assertEqual(result["structural"]["declarations"][0]["byte_range"], span)
     def test_python_async_nested_method_decorator_and_lambda(self):
         source = (b"@cache\nasync def outer(x):\n"
                   b"    class C:\n"
@@ -23,8 +47,8 @@ class StructuralTests(unittest.TestCase):
             self.assertEqual(result["mapping_status"], "navigation_only")
             self.assertEqual(syntax["parser"]["runtime_version"], "0.25.0")
             self.assertEqual(syntax["parser"]["grammar_version"], "0.25.0")
-            self.assertEqual(syntax["parser"]["adapter_version"], 1)
-            self.assertEqual(syntax["coverage"], "partial_navigation_evidence")
+            self.assertEqual(syntax["parser"]["adapter_version"], 2)
+            self.assertEqual(syntax["coverage"], "adapter_owned_callable_accounting")
             self.assertEqual(syntax["error_count"], 0)
             self.assertEqual(syntax["missing_count"], 0)
             self.assertEqual([(entry["kind"], entry["name"])
