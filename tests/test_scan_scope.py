@@ -56,6 +56,21 @@ class ScanScopeTests(unittest.TestCase):
             lost = inventory_tree(root, stable=True)
             self.assertIn("coverage_lost:source.py", compare_inventories(baseline, lost)["mismatches"])
 
+    def test_excluded_parent_directory_cannot_hide_prior_source(self):
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = (Path(raw) / name for name in ("left", "right"))
+            for root in (left, right):
+                (root / "src").mkdir(parents=True)
+                (root / "src" / "source.py").write_text("def source(): pass\n")
+            planning = inventory_tree(left, stable=True)
+            (right / "src" / "source.py").unlink()
+            (right / "src").rmdir()
+            (right / "replacement").mkdir()
+            (right / "src").symlink_to(right / "replacement", target_is_directory=True)
+            candidate = inventory_tree(right, stable=True)
+            self.assertIn("coverage_lost:src/source.py",
+                          compare_inventories(planning, candidate)["mismatches"])
+
     def test_caller_generated_directory_and_unsupported_paths(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

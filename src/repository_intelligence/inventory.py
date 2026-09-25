@@ -223,8 +223,9 @@ def compare_inventories(planning: dict, candidate: dict) -> dict:
     planning_files = {file["path"]: file for file in planning["files"]}
     candidate_files = {file["path"]: file for file in candidate["files"]}
     candidate_exclusions = {item["path"] for item in candidate.get("observed_exclusions", [])}
-    mismatches.extend(f"coverage_lost:{path}" for path in sorted(
-        planning_files.keys() & candidate_exclusions))
+    mismatches.extend(f"coverage_lost:{path}" for path in sorted(planning_files)
+                      if any(path == excluded or path.startswith(excluded + "/")
+                             for excluded in candidate_exclusions))
     for path in sorted(planning_files.keys() & candidate_files.keys()):
         prior, current = planning_files[path], candidate_files[path]
         if (prior["source_identity"]["raw_sha256"] ==
