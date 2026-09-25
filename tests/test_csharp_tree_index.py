@@ -10,6 +10,25 @@ from repository_intelligence.inventory import compare_inventories, inventory_tre
 
 
 class CSharpTreeIndexTests(unittest.TestCase):
+    def test_explicit_interface_methods_keep_distinct_identity(self):
+        source = (b"interface I { void Run(); } interface J { void Run(); } "
+                  b"class C : I, J { void I.Run() {} void J.Run() {} }")
+        entries = [entry for entry in self._index(source)["functions"]
+                   if entry["declaration_kind"] == "method"]
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(len({entry["declaration_id"] for entry in entries}), 2)
+        self.assertFalse(any(entry["identity_ambiguous"] for entry in entries))
+        with tempfile.TemporaryDirectory() as raw:
+            left, right = Path(raw) / "left", Path(raw) / "right"
+            left.mkdir(); right.mkdir()
+            (left / "C.cs").write_bytes(source)
+            (right / "C.cs").write_bytes(b"// unrelated\n" + source)
+            changes = compare_inventories(inventory_tree(left, stable=True),
+                                          inventory_tree(right, stable=True))["declaration_changes"]
+            self.assertEqual(tuple(len(changes[key]) for key in
+                                   ("added", "removed", "modified", "unchanged")),
+                             (0, 0, 0, 2))
+
     def test_params_array_overloads_have_distinct_identity(self):
         source = (b"class C { int F(params int[] xs) { return 1; } "
                   b"int F(params string[] xs) { return 2; } }")

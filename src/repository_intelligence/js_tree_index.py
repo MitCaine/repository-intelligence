@@ -172,6 +172,10 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 qualified = ".".join((*owners, name))
                 method_tokens = tuple(child.type for child in node.children
                                       if name_node is not None and child.end_byte <= name_node.start_byte)
+                class_method = (node.type == "method_definition" and node.parent is not None
+                                and node.parent.type == "class_body")
+                identity_signature = (("static" if "static" in method_tokens else "instance")
+                                      if class_method else None)
                 kind = ("arrow" if node.type == "arrow_function" else
                         "constructor" if node.type == "method_definition" and name == "constructor"
                         and node.parent is not None and node.parent.type == "class_body"
@@ -189,6 +193,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     "docs": nearby_comment(node, source), "lexical_call_candidates": _calls(node, source),
                     "syntax_kind": node.type, "export_kind": export_kind,
                     "anonymous": anonymous,
+                    "identity_signature": identity_signature,
                     **declaration(source, kind, qualified, node.start_byte, node.end_byte),
                 })
                 if node.type in CALLABLES:
