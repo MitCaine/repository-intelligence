@@ -1,5 +1,10 @@
 # Repository Intelligence
 
+The [project direction](docs/project-direction.md) shows the intended
+controller/Codex review workflow, source-evidence pipeline, coverage invariant,
+and what RI deliberately does not own. The capabilities below describe the
+current implementation, which is narrower than that end state.
+
 A small, source-derived function locator for AI-assisted repository navigation.
 The common query interface currently supports Python (`ast`) and Rust
 (`rust-analyzer`) files in any local project. It returns compact function
