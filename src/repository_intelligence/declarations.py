@@ -20,7 +20,7 @@ def assign_named_ids(entries: list[dict]) -> None:
     """Distinguish duplicate names without tying named identity to byte position."""
     ordinals: dict[tuple[str, str], int] = {}
     for entry in entries:
-        if entry["declaration_kind"] == "lambda":
+        if entry["declaration_kind"] in {"lambda", "closure"}:
             continue
         key = (entry["declaration_kind"], entry["qualified_name"])
         ordinal = ordinals.get(key, 0)

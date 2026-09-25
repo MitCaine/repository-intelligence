@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 
 from .declarations import assign_named_ids, declaration
+from .source import utf8_display_column
 
 from .search import (compact as _compact, display_entry, format_compact,
                      format_tree_compact, query, rank, tokens as _tokens,
@@ -21,12 +22,6 @@ def _children(node: dict, kind: str) -> list[dict]:
 
 def _slice(source: bytes, node: dict) -> str:
     return source[node["start"][0] : node["end"][0]].decode("utf-8", "replace")
-
-
-def _display_column(source: bytes, offset: int) -> int:
-    """One-based character column for navigation, not declaration identity."""
-    line_start = max(source.rfind(b"\n", 0, offset), source.rfind(b"\r", 0, offset)) + 1
-    return len(source[line_start:offset].decode("utf-8", "replace")) + 1
 
 
 def _walk(node: dict, source: bytes, owners: tuple[str, ...], output: list[dict]) -> None:
@@ -74,7 +69,7 @@ def _walk(node: dict, source: bytes, owners: tuple[str, ...], output: list[dict]
                 "name": name,
                 "qualified_name": "::".join((*owners, name)),
                 "line": names[0]["start"][1] + 1,
-                "column": _display_column(source, names[0]["start"][0]),
+                "column": utf8_display_column(source, names[0]["start"][0]),
                 "end_line": node["end"][1] + (node["end"][2] != 0),
                 "signature": source[signature_start:signature_end].decode("utf-8", "replace"),
                 "docs": " ".join(docs),

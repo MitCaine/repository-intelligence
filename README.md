@@ -6,8 +6,9 @@ and what RI deliberately does not own. The capabilities below describe the
 current implementation, which is narrower than that end state.
 
 A small, source-derived function locator for AI-assisted repository navigation.
-The common query interface currently supports Python (`ast`) and Rust
-(`rust-analyzer`) files in any local project. It returns compact function
+The common query interface currently supports Python (`ast` plus Tree-sitter
+syntax evidence) and Rust (Tree-sitter navigation) files in any local project.
+It returns compact function
 locations and source hashes without a database or maintained function
 dictionary. It does not grant edit authority, resolve a call graph, or replace
 checking the relevant source. Other languages are not yet supported.
@@ -25,10 +26,10 @@ preserved in Git history but is not part of the current package.
 
 ## Use
 
-Python 3.12 or 3.13 is required. The package now pins the Tree-sitter runtime
-and Python/Rust grammar wheels for structural syntax evidence. The current
-Rust navigation adapter still needs a local `rust-analyzer`; removing that
-requirement awaits #8 parity work. No hosted service is needed. From this
+Python 3.12 or 3.13 is required. The package pins the Tree-sitter runtime
+and Python/Rust grammar wheels. Ordinary Rust navigation now uses Tree-sitter
+without `rust-analyzer`. The analyzer remains available as an opt-in Rust
+source and metadata route when needed. No hosted service is needed. From this
 repository:
 
 ```sh
@@ -51,11 +52,11 @@ The shared command's [versioned result contract](docs/navigation-result-v2.md)
 explains source identity, incomplete results, and directory scope. It is for
 navigation, not candidate-change qualification.
 
-The earlier Rust-only command remains available as a separate legacy navigation
-interface, `python3.13 -m repository_intelligence.rust_index`. Its output is
-not the shared versioned result. RI does not interpret project-specific
-authority Markdown; callers can combine RI's source locations with their own
-documents when needed.
+The Rust-only analyzer command remains available as an opt-in escalation,
+`python3.13 -m repository_intelligence.rust_index`. Its output uses a distinct
+unversioned result shape (`legacy_rust_query`); that label distinguishes the
+protocol, not support status. RI does not interpret project-specific authority
+Markdown; callers can combine RI's source locations with their own documents.
 
 ## Verify
 

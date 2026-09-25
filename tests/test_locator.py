@@ -3,7 +3,6 @@
 import hashlib
 import io
 import os
-import shutil
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -44,7 +43,6 @@ class LocatorTests(unittest.TestCase):
             self.assertEqual(result["matches"][0]["end_line"], 4)
             self.assertIn("self.apply_tax", result["matches"][0]["lexical_call_candidates"])
 
-    @unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer not installed")
     def test_shared_rust_result_has_v2_source_and_declaration_contract(self):
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "sample.rs"
@@ -55,7 +53,8 @@ class LocatorTests(unittest.TestCase):
             self.assertEqual(result["mapping_status"], "navigation_only")
             self.assertEqual(result["source_identity"]["raw_sha256"],
                              hashlib.sha256(source).hexdigest())
-            self.assertEqual(result["parser"]["name"], "rust-analyzer")
+            self.assertEqual(result["parser"]["name"], "tree-sitter")
+            self.assertEqual(result["parser"]["grammar_version"], "0.24.2")
             entry = result["matches"][0]
             span = entry["byte_range"]
             self.assertEqual(source[span["start"]:span["end"]], source.rstrip(b"\n"))
@@ -71,10 +70,9 @@ class LocatorTests(unittest.TestCase):
             (root / "ignored.txt").write_text("calculate_total")
             (root / ".venv").mkdir()
             (root / ".venv" / "hidden.py").write_text("def calculate_total(): pass\n")
-            if shutil.which("rust-analyzer"):
-                (root / "lib.rs").write_text("fn calculate_total(value: i32) -> i32 { value }\n")
+            (root / "lib.rs").write_text("fn calculate_total(value: i32) -> i32 { value }\n")
             result = query_path(root, "calculate total")
-            self.assertEqual(result["scanned_files"], 1 + bool(shutil.which("rust-analyzer")))
+            self.assertEqual(result["scanned_files"], 2)
             self.assertEqual(len(result["failures"]), 1)
             self.assertEqual(result["failures"][0]["error"], "SyntaxError")
             self.assertEqual(result["mapping_status"], "incomplete")

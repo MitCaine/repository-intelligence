@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -28,10 +27,9 @@ class InstalledPackageTests(unittest.TestCase):
         names = ("RI_SETUPTOOLS_WHEEL", "RI_WHEEL_WHEEL")
         wheels = [Path(os.environ[name]).resolve() for name in names if os.environ.get(name)]
         grammar_wheels = Path(os.environ.get("RI_TREE_SITTER_WHEELHOUSE", ""))
-        analyzer = shutil.which(os.environ.get("RI_RUST_ANALYZER", "rust-analyzer"))
         if (len(wheels) != 2 or not all(path.is_file() for path in wheels)
-                or not grammar_wheels.is_dir() or analyzer is None):
-            message = "offline build and Tree-sitter wheels plus rust-analyzer are required"
+                or not grammar_wheels.is_dir()):
+            message = "offline build and Tree-sitter wheels are required"
             if required:
                 self.fail(message)
             self.skipTest(message)
@@ -57,6 +55,7 @@ class InstalledPackageTests(unittest.TestCase):
                            if name.startswith("repository_intelligence/") and name.endswith(".py")}
             self.assertEqual(modules, {"repository_intelligence/__init__.py",
                                        "repository_intelligence/rust_index.py",
+                                       "repository_intelligence/rust_tree_index.py",
                                        "repository_intelligence/python_index.py",
                                        "repository_intelligence/search.py",
                                        "repository_intelligence/source.py",
@@ -79,9 +78,11 @@ class InstalledPackageTests(unittest.TestCase):
                 "assert result['structural_error_count'] == 0\n"
                 "single = query_path(Path('src/orders.py'), 'calculate total')\n"
                 "assert single['structural']['parser']['runtime_version'] == '0.25.0'\n"
+                "rust = query_path(Path('src/lib.rs'), 'calculate total')\n"
+                "assert rust['parser']['name'] == 'tree-sitter'\n"
                 "print(json.dumps(sorted(item['path'] for item in result['matches'])))\n")
-            environment["PATH"] = str(Path(analyzer).parent) + os.pathsep + environment.get("PATH", "")
-            result = run(installed_python, "-I", script, cwd=consumer, env=environment)
+            consumer_environment = {**environment, "PATH": str(install / "bin")}
+            result = run(installed_python, "-I", script, cwd=consumer, env=consumer_environment)
             self.assertEqual(json.loads(result), ["src/lib.rs", "src/orders.py"])
 
 
