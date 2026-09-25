@@ -35,8 +35,11 @@ in the final snapshot. Project-local targets omitted by the snapshot (for
 example under `target/` or through a symlink) remain
 `post_analysis_observation`. External or unreadable targets also remain
 `post_analysis_observation`: their bytes, if available, are not verified to
-match what the analyzer used. None of these checks makes the working tree
-atomic.
+match what the analyzer used. A target-byte read failure retains the URI and
+range with `source_identity: null` and a `source_identity_error` class name;
+it does not discard the resolved location. Required snapshot traversal or
+source-read failures instead raise, so missing coverage is not reported as a
+complete digest. None of these checks makes the working tree atomic.
 
 The snapshot is a non-atomic checksum of local `.rs` files, Cargo manifests
 and lockfiles, Rust toolchain files, and `.cargo` configuration below the

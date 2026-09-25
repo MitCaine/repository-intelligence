@@ -21,7 +21,11 @@ def _sha(data: bytes) -> str:
 def _snapshot(root: Path) -> dict:
     """Checksum local Rust/Cargo inputs, without claiming an atomic workspace view."""
     files = []
-    for current, directories, names in os.walk(root, followlinks=False):
+    def traversal_failed(error: OSError) -> None:
+        raise error
+
+    for current, directories, names in os.walk(root, followlinks=False,
+                                                onerror=traversal_failed):
         directories[:] = [name for name in directories
                           if name not in {"target", ".git", "node_modules"}
                           and not (Path(current) / name).is_symlink()]
@@ -201,13 +205,20 @@ def resolve_definition(project_root: Path, source_path: Path, line: int, column:
         parsed = urlparse(uri)
         target_path = Path(unquote(parsed.path)) if parsed.scheme == "file" else None
         identity = None
-        if target_path is not None and target_path.is_file():
-            target_bytes = target_path.read_bytes()
-            identity = {"raw_sha256": _sha(target_bytes),
-                        "byte_count": len(target_bytes),
-                        "within_project": target_path.is_relative_to(root)}
-        packet["targets"].append({"uri": uri, "range": span, "source_identity": identity,
-                                  "byte_binding": "post_analysis_observation"})
+        identity_error = None
+        try:
+            if target_path is not None and target_path.is_file():
+                target_bytes = target_path.read_bytes()
+                identity = {"raw_sha256": _sha(target_bytes),
+                            "byte_count": len(target_bytes),
+                            "within_project": target_path.is_relative_to(root)}
+        except OSError as error:
+            identity_error = type(error).__name__
+        observation = {"uri": uri, "range": span, "source_identity": identity,
+                       "byte_binding": "post_analysis_observation"}
+        if identity_error is not None:
+            observation["source_identity_error"] = identity_error
+        packet["targets"].append(observation)
     after = _snapshot(root)
     if before != after or _sha(source_path.read_bytes()) != _sha(source):
         return {**packet, "status": "incomplete_changed_source",

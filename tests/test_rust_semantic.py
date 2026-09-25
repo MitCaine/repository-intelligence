@@ -14,6 +14,69 @@ from repository_intelligence.rust_semantic import resolve_definition
 
 
 class RustSemanticTests(unittest.TestCase):
+    def test_snapshot_propagates_directory_traversal_error(self):
+        def inaccessible(root, *, followlinks=False, onerror=None):
+            if onerror is not None:
+                onerror(PermissionError("unreadable Rust directory"))
+            return
+            yield
+
+        with tempfile.TemporaryDirectory() as raw, \
+                patch.object(rust_semantic.os, "walk", side_effect=inaccessible):
+            with self.assertRaises(PermissionError):
+                rust_semantic._snapshot(Path(raw))
+
+    def test_unreadable_external_target_preserves_location(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw) / "project"
+            root.mkdir()
+            (root / "Cargo.toml").write_text('[package]\nname="x"\nversion="0.1.0"\n')
+            source = root / "lib.rs"
+            source.write_text("fn caller() { target(); }\n")
+            target = Path(raw) / "external.rs"
+            target.write_text("fn target() {}\n")
+
+            class FakeAnalyzer:
+                def __init__(self, *args):
+                    self.last_status = {"health": "ok", "quiescent": True}
+
+                def request(self, request_id, method, params):
+                    if method == "textDocument/definition":
+                        return {"uri": target.as_uri(), "range": {
+                            "start": {"line": 0, "character": 3},
+                            "end": {"line": 0, "character": 9}}}
+                    return {}
+
+                def send(self, message):
+                    pass
+
+                def wait_ready(self):
+                    pass
+
+                def close(self):
+                    pass
+
+            original_read = Path.read_bytes
+
+            def read_or_fail(path):
+                if path == target:
+                    raise PermissionError("external target unreadable")
+                return original_read(path)
+
+            with patch.object(rust_semantic, "_RustAnalyzer", FakeAnalyzer), \
+                    patch.object(rust_semantic.subprocess, "run") as version, \
+                    patch.object(Path, "read_bytes", read_or_fail):
+                version.return_value.stdout = "rust-analyzer test"
+                result = resolve_definition(root, source, 1, 15, features=(),
+                                            no_default_features=False, target="test-target")
+            self.assertEqual(result["status"], "resolved")
+            self.assertEqual(result["targets"][0]["uri"], target.as_uri())
+            self.assertIsNone(result["targets"][0]["source_identity"])
+            self.assertEqual(result["targets"][0]["source_identity_error"],
+                             "PermissionError")
+            self.assertEqual(result["targets"][0]["byte_binding"],
+                             "post_analysis_observation")
+
     def test_provider_send_obeys_deadline_when_pipe_stalls(self):
         script = """\
 import os, time
