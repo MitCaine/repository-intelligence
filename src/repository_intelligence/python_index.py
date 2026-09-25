@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .declarations import declaration
 from .declarations import assign_named_ids
-from .source import physical_lines
+from .source import RawOffsets, physical_lines
 
 
 def _signatures(source: bytes) -> dict[tuple[int, str], str]:
@@ -63,19 +63,20 @@ def index_source(path: Path, source: bytes) -> dict:
     signatures = _signatures(source)
     functions: list[dict] = []
     encoding, _ = tokenize.detect_encoding(io.BytesIO(source).readline)
+    decoded = source.decode(encoding)
+    offsets = RawOffsets(source, decoded, encoding)
     raw_lines = physical_lines(source)
-    codec = "utf-8" if encoding == "utf-8-sig" else encoding
-    text_lines = [line.decode(encoding if index == 0 else codec)
-                  for index, line in enumerate(raw_lines)]
+    text_lines = physical_lines(decoded)
     starts = [0]
     for line in raw_lines:
         starts.append(starts[-1] + len(line))
+    utf8_starts = [0]
+    for line in text_lines:
+        utf8_starts.append(utf8_starts[-1] + len(line.encode("utf-8")))
 
     def offset(line: int, column: int) -> int:
         # AST columns count UTF-8 bytes even in a declared non-UTF-8 file.
-        prefix = text_lines[line - 1].encode("utf-8")[:column].decode("utf-8")
-        bom = 3 if line == 1 and encoding == "utf-8-sig" else 0
-        return starts[line - 1] + bom + len(prefix.encode(codec))
+        return offsets.raw(utf8_starts[line - 1] + column)
 
     def display_column(line: int, column: int) -> int:
         """One-based Unicode character column, distinct from AST byte column."""

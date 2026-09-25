@@ -2,13 +2,45 @@
 
 from __future__ import annotations
 
+import codecs
 import hashlib
 import re
 import subprocess
+from array import array
 from pathlib import Path
 
 
 SCHEMA_VERSION = 5
+
+
+class RawOffsets:
+    """Map decoded UTF-8 byte boundaries to original Python source bytes."""
+
+    def __init__(self, source: bytes, decoded: str, encoding: str) -> None:
+        decoder = codecs.getincrementaldecoder(encoding)(errors="strict")
+        bom = 3 if encoding == "utf-8-sig" and source.startswith(codecs.BOM_UTF8) else 0
+        self.positions = array("I", [bom])
+        pieces = []
+
+        def record(output: str, raw_end: int) -> None:
+            if len(output) > 1:
+                raise ValueError("Python encoding emitted multiple characters at one byte boundary")
+            if output:
+                pieces.append(output)
+                width = len(output.encode("utf-8"))
+                self.positions.extend([0] * (width - 1))
+                self.positions.append(raw_end)
+
+        for raw_end, byte in enumerate(source, 1):
+            record(decoder.decode(bytes((byte,)), final=False), raw_end)
+        record(decoder.decode(b"", final=True), len(source))
+        if "".join(pieces) != decoded:
+            raise ValueError("Python encoding could not be mapped to raw byte boundaries")
+
+    def raw(self, offset: int) -> int:
+        if not 0 <= offset < len(self.positions) or (offset and not self.positions[offset]):
+            raise ValueError("Parser position is not a decoded character boundary")
+        return self.positions[offset]
 
 
 def legacy_git_blob_sha1(source: bytes) -> str:

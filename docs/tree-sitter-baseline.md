@@ -100,9 +100,9 @@ Attributes and modifiers within each callable node's source range affect its
 hash. This is syntax navigation, not Roslyn semantic resolution.
 C# syntactic identity includes method generic arity; explicit indexer accessor
 owners include indexer parameter types, and nested local callables inherit an
-enclosing method discriminator. `ref` and `out` alone are not treated as valid
-distinct overloads.
-Parameter keys preserve token boundaries, and conversion labels come from the
+enclosing method discriminator. Parameter keys preserve `ref` and `out` token
+boundaries for syntactic identity; RI does not determine whether a pair of
+overloads is legal C#. Conversion labels come from the
 actual `implicit` or `explicit` token rather than annotation/comment text.
 
 For pinned C/C++, the source-level contract promises every Tree-sitter
