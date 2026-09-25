@@ -6,9 +6,9 @@ Ordinary operation uses pinned Tree-sitter grammars for Python, Rust, JavaScript
 
 ## Current state
 
-The implementation baseline is merge commit `80d56d9433813a7da8debafb3a3a88b96178695c` ([PR #61](https://github.com/MitCaine/repository-intelligence/pull/61)). It emits navigation schema **5**, inventory schema **11**, adapter version **4**, and mapping contract `python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v4`. Package metadata remains version `0.1.0`; use the result contracts and a pinned RI revision, not the package version alone, to identify behavior.
+The current result contracts are navigation schema **5**, inventory schema **11**, adapter version **5**, and mapping contract `python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v5`. Package metadata remains version `0.1.0`; use the result contracts and a pinned RI revision, not the package version alone, to identify behavior.
 
-PR #61 records 139 passing pinned tests, including the offline installed-wheel check and live Rust lookup. That is recorded verification for that revision, not a guarantee of exhaustive language coverage. The follow-up source/logic review identified four bounded C++/C# and identity-handling issues; see [known limitations](docs/known-limitations.md) before relying on declaration deltas. The documentation does not mark those issues fixed.
+PR #61 records 139 passing pinned tests, including the offline installed-wheel check and live Rust lookup. That is recorded verification for that revision, not a guarantee of exhaustive language coverage. Four subsequent C++/C# and identity-handling findings have parser-integrated fixes; [known limitations](docs/known-limitations.md) still apply to declaration deltas.
 
 ## Install and navigate
 

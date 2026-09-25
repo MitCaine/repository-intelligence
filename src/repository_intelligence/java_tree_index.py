@@ -94,7 +94,9 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     identity_signature = None
                     if parameters is not None and not is_lambda:
                         identity_signature = ",".join(_parameter_identity(parameter, source)
-                                                      for parameter in parameters.named_children)
+                                                      for parameter in parameters.named_children
+                                                      if parameter.type in {"formal_parameter", "spread_parameter",
+                                                                            "receiver_parameter"})
                     own_signature = identity_signature
                     if owner_identities:
                         identity_signature = "/".join(owner_identities) + ":" + (own_signature or "")

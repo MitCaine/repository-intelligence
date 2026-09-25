@@ -10,6 +10,12 @@ from repository_intelligence.locator import index_file, query_path
 
 
 class JavaTreeIndexTests(unittest.TestCase):
+    def test_parameter_comment_does_not_change_identity(self):
+        plain = self._index(b"class C { int add(int a, int b) {return a+b;} }")
+        commented = self._index(b"class C { int add(int a, /* note */ int b) {return a+b;} }")
+        self.assertEqual(plain["functions"][0]["declaration_id"],
+                         commented["functions"][0]["declaration_id"])
+
     def test_varargs_local_name_is_not_declaration_identity(self):
         before = b"class C { void f(String... args) {} }"
         after = b"class C { void f(String... values) {} }"
