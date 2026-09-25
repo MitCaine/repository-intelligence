@@ -28,7 +28,8 @@ preserved in Git history but is not part of the current package.
 
 ## Use
 
-Python 3.12 or 3.13 is required. The package pins the Tree-sitter runtime
+The package requires Python 3.12 or newer; macOS ARM64 Python 3.12 and 3.13
+are the combinations verified so far. The package pins the Tree-sitter runtime
 and pinned language grammar wheels. Ordinary navigation uses Tree-sitter
 without `rust-analyzer`. The analyzer remains available as an opt-in Rust
 source and metadata route when needed. No hosted service is needed. From this
@@ -38,6 +39,8 @@ repository:
 PYTHONPATH=src python3.13 -m repository_intelligence.locator \
   /path/to/project --query 'pause resume clock' --limit 8
 ```
+
+For a separate project, follow the [local install and verification guide](docs/install-and-verify.md).
 
 Pass one file instead of a directory to narrow the scan. Add `--json` for
 structured output. For a direct file, `--root /path/to/project` confines
