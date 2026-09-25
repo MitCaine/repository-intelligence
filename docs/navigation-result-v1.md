@@ -35,14 +35,17 @@ available. Python uses the running interpreter's AST parser; Rust uses the
 installed `rust-analyzer`. No native semantic relationship is claimed by this
 result. The controller still chooses task scope and confirms relevant source.
 
-Parsed callable entries include a `declaration_id` synthesized from kind,
-qualified name, and starting byte offset; a half-open `byte_range` in the
+Parsed callable entries include a `declaration_id` synthesized from kind and
+qualified name. Named functions also carry a source-order ordinal among
+same-kind, same-qualified-name declarations, so unrelated preceding edits do
+not change their ID; inserting another duplicate may change those ordinals.
+Anonymous lambda IDs include their starting byte offset, which can change
+when preceding source moves. Entries also include a half-open `byte_range` in the
 exact `source_identity` bytes; and `declaration_sha256` over that range.
 Display `line`/`end_line` are not identities and may be less precise. Python
 function ranges include attached decorators and the complete function body;
 Rust function ranges come from the analyzer's `FN` node, including attached
-attributes and doc comments. Python AST lambdas are given anonymous identities
-containing their byte offset. A declaration hash changes with behavior-affecting
+attributes and doc comments. A declaration hash changes with behavior-affecting
 source in that range, but does not attest to a checkout or imply exhaustive
 callable coverage. Calls remain lexical candidates from these adapters, not
 resolved relationships. Rust analyzer version is recorded when available;

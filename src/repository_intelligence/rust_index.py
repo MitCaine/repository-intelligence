@@ -9,7 +9,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from .declarations import declaration
+from .declarations import assign_named_ids, declaration
 
 from .search import (compact as _compact, display_entry, format_compact,
                      format_tree_compact, query, rank, tokens as _tokens,
@@ -94,6 +94,7 @@ def index_source(path: Path, source: bytes, *, analyzer: str = "rust-analyzer") 
     tree = json.loads(parsed.stdout)
     functions: list[dict] = []
     _walk(tree, source, (), functions)
+    assign_named_ids(functions)
     def error_count(node: dict) -> int:
         return (node["kind"] == "ERROR") + sum(error_count(child) for child in node.get("children", [])
                                                 if child.get("type") == "Node")

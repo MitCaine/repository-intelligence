@@ -5,21 +5,38 @@ from __future__ import annotations
 import ast
 import hashlib
 import io
+import re
 import tokenize
 from pathlib import Path
 
 from .declarations import declaration
+from .declarations import assign_named_ids
+
+
+def _physical_lines(value: bytes | str) -> list[bytes] | list[str]:
+    """Split only Python physical newlines, not Unicode line separators in strings."""
+    pattern = rb"\r\n|\r|\n" if isinstance(value, bytes) else r"\r\n|\r|\n"
+    lines = []
+    start = 0
+    for match in re.finditer(pattern, value):
+        lines.append(value[start:match.end()])
+        start = match.end()
+    if start < len(value):
+        lines.append(value[start:])
+    return lines
 
 
 def _signatures(source: bytes) -> dict[tuple[int, str], str]:
     """Locate Python headers with tokenizer coordinates, including inline bodies."""
     encoding, _ = tokenize.detect_encoding(io.BytesIO(source).readline)
     text = source.decode(encoding)
-    lines = text.splitlines(keepends=True)
+    lines = _physical_lines(text)
     starts = [0]
     for line in lines:
         starts.append(starts[-1] + len(line))
-    items = list(tokenize.generate_tokens(io.StringIO(text).readline))
+    normalized = "".join(line.rstrip("\r\n") + "\n"
+                         if line.endswith(("\r", "\n")) else line for line in lines)
+    items = list(tokenize.generate_tokens(io.StringIO(normalized).readline))
     signatures: dict[tuple[int, str], str] = {}
     for position, token in enumerate(items[:-1]):
         if token.type != tokenize.NAME or token.string != "def":
@@ -59,9 +76,10 @@ def index_source(path: Path, source: bytes) -> dict:
     signatures = _signatures(source)
     functions: list[dict] = []
     encoding, _ = tokenize.detect_encoding(io.BytesIO(source).readline)
-    decoded = source.decode(encoding)
-    raw_lines = source.splitlines(keepends=True)
-    text_lines = decoded.splitlines(keepends=True)
+    raw_lines = _physical_lines(source)
+    codec = "utf-8" if encoding == "utf-8-sig" else encoding
+    text_lines = [line.decode(encoding if index == 0 else codec)
+                  for index, line in enumerate(raw_lines)]
     starts = [0]
     for line in raw_lines:
         starts.append(starts[-1] + len(line))
@@ -69,7 +87,6 @@ def index_source(path: Path, source: bytes) -> dict:
     def offset(line: int, column: int) -> int:
         # AST columns count UTF-8 bytes even in a declared non-UTF-8 file.
         prefix = text_lines[line - 1].encode("utf-8")[:column].decode("utf-8")
-        codec = "utf-8" if encoding == "utf-8-sig" else encoding
         bom = 3 if line == 1 and encoding == "utf-8-sig" else 0
         return starts[line - 1] + bom + len(prefix.encode(codec))
 
@@ -149,6 +166,7 @@ def index_source(path: Path, source: bytes) -> dict:
             self.owners = prior
 
     Collector().visit(tree)
+    assign_named_ids(functions)
     blob = hashlib.sha1(f"blob {len(source)}\0".encode() + source).hexdigest()
     return {"path": str(path), "raw_sha256": hashlib.sha256(source).hexdigest(),
             "git_blob_sha1": blob, "function_count": len(functions),

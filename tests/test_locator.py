@@ -101,6 +101,26 @@ class LocatorTests(unittest.TestCase):
             self.assertEqual(len({entry["declaration_sha256"] for entry in entries}), 4)
             self.assertEqual([entry["declaration_kind"] for entry in entries],
                              ["function", "function", "lambda", "lambda"])
+            named_ids = [entry["declaration_id"] for entry in entries[:2]]
+            self.assertEqual(named_ids, ["function:repeat#0", "function:repeat#1"])
+            path.write_bytes(b"unrelated = 0\n" + source)
+            shifted = index_file(path)["functions"]
+            self.assertEqual([entry["declaration_id"] for entry in shifted[:2]], named_ids)
+            self.assertNotEqual(shifted[2]["declaration_id"], entries[2]["declaration_id"])
+
+    def test_latin1_nel_in_prior_string_does_not_shift_byte_range(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "nel.py"
+            source = b'# coding: latin-1\nx = "\x85"\ndef target(): return 1\n'
+            path.write_bytes(source)
+            indexed = index_file(path)
+            entry = indexed["functions"][0]
+            expected = b"def target(): return 1"
+            span = entry["byte_range"]
+            self.assertEqual(source[span["start"]:span["end"]], expected)
+            self.assertEqual(entry["declaration_sha256"], hashlib.sha256(expected).hexdigest())
+            self.assertEqual(entry["signature"], "def target():")
+            self.assertEqual(indexed["mapping_status"], "navigation_only")
 
     def test_utf8_bom_does_not_enter_declaration_range(self):
         with tempfile.TemporaryDirectory() as raw:
