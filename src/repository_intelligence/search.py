@@ -108,12 +108,6 @@ def format_tree_compact(result: dict) -> str:
     for entry in result["matches"]:
         lines.append(f"{entry['path']}:{entry['line']}-{entry['end_line']} "
                      f"{entry['qualified_name']} sha256={entry['raw_sha256']}")
-        if entry.get("guidance_candidates"):
-            shown = entry["guidance_candidates"]
-            extra = entry["guidance_candidate_count"] - len(shown)
-            lines.append("  guidance?: " + ", ".join(
-                record["authority"] for record in shown)
-                + (f" (+{extra} more)" if extra else ""))
     if result.get("mapping_status") == "incomplete" or result["failures"] or result["parse_error_count"]:
         lines.append("INCOMPLETE: some source could not be parsed; no absence claim is valid")
     if exclusions:

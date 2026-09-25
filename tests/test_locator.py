@@ -44,6 +44,25 @@ class LocatorTests(unittest.TestCase):
             self.assertEqual(result["matches"][0]["end_line"], 4)
             self.assertIn("self.apply_tax", result["matches"][0]["lexical_call_candidates"])
 
+    @unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer not installed")
+    def test_shared_rust_result_has_v2_source_and_declaration_contract(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "sample.rs"
+            source = b"#[inline]\nfn calculate_total(value: i32) -> i32 { value }\n"
+            path.write_bytes(source)
+            result = query_path(path, "calculate total")
+            self.assertEqual(result["schema_version"], 2)
+            self.assertEqual(result["mapping_status"], "navigation_only")
+            self.assertEqual(result["source_identity"]["raw_sha256"],
+                             hashlib.sha256(source).hexdigest())
+            self.assertEqual(result["parser"]["name"], "rust-analyzer")
+            entry = result["matches"][0]
+            span = entry["byte_range"]
+            self.assertEqual(source[span["start"]:span["end"]], source.rstrip(b"\n"))
+            self.assertEqual(entry["declaration_sha256"],
+                             hashlib.sha256(source[span["start"]:span["end"]]).hexdigest())
+            self.assertNotIn("guidance_candidates", entry)
+
     def test_mixed_tree_and_failures(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
