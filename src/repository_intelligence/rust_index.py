@@ -78,7 +78,11 @@ def _walk(node: dict, source: bytes, owners: tuple[str, ...], output: list[dict]
 
 
 def index_file(path: Path, *, analyzer: str = "rust-analyzer") -> dict:
-    source = path.read_bytes()
+    return index_source(path, path.read_bytes(), analyzer=analyzer)
+
+
+def index_source(path: Path, source: bytes, *, analyzer: str = "rust-analyzer") -> dict:
+    """Parse the same bytes the caller identified; never reopen the file."""
     if len(source) > 4_000_000:
         raise ValueError("Rust source exceeds the 4 MB pilot limit")
     parsed = subprocess.run([analyzer, "parse", "--json"], input=source, capture_output=True,
