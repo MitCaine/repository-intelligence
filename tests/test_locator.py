@@ -1,6 +1,7 @@
 """Tests for the shared locator across distinct languages and projects."""
 
 import hashlib
+import os
 import shutil
 import tempfile
 import unittest
@@ -8,6 +9,7 @@ from pathlib import Path
 
 from repository_intelligence.locator import index_file, query_path
 from repository_intelligence.search import format_tree_compact, tokens
+from repository_intelligence.source import SCHEMA_VERSION, identify_bytes
 
 
 class LocatorTests(unittest.TestCase):
@@ -52,9 +54,33 @@ class LocatorTests(unittest.TestCase):
             self.assertEqual(result["scanned_files"], 1 + bool(shutil.which("rust-analyzer")))
             self.assertEqual(len(result["failures"]), 1)
             self.assertEqual(result["failures"][0]["error"], "SyntaxError")
+            self.assertEqual(result["mapping_status"], "incomplete")
+            self.assertEqual(result["scan_scope"]["extensions"], [".py", ".rs"])
+            self.assertEqual(result["scan_scope"]["source_kind"], "working_tree_non_atomic")
+            self.assertIn("raw_sha256", result["failures"][0]["source_identity"])
             self.assertIn("INCOMPLETE", format_tree_compact(result))
             self.assertEqual(result["total_matches"], result["scanned_files"])
             self.assertIn("git_blob_sha1", result["matches"][0])
+
+    def test_directory_scope_reports_duplicate_symlink_and_nested_repo(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = root / "a.py"
+            source.write_text("def calculate_total():\n    return 1\n")
+            os.link(source, root / "z.py")
+            (root / "link.py").symlink_to(source)
+            nested = root / "nested"
+            nested.mkdir()
+            (nested / ".git").mkdir()
+            (nested / "other.py").write_text("def calculate_total(): return 2\n")
+            result = query_path(root, "calculate total")
+            self.assertEqual(result["scanned_files"], 1)
+            self.assertEqual(result["total_matches"], 1)
+            excluded = {item["path"]: item["reason"]
+                        for item in result["scan_scope"]["excluded_paths"]}
+            self.assertEqual(excluded["link.py"], "symlink_file")
+            self.assertEqual(excluded["nested"], "nested_repository")
+            self.assertEqual(excluded["z.py"], "duplicate_physical_file")
 
     def test_ranking_preserves_terms_beyond_display_limits(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -94,13 +120,50 @@ class LocatorTests(unittest.TestCase):
     def test_unsupported_file_is_explicit(self):
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "unknown.java"
-            path.write_text("class Unknown {}")
-            with self.assertRaisesRegex(ValueError, "Unsupported source type"):
-                index_file(path)
+            source = b"class Unknown {}"
+            path.write_bytes(source)
+            result = query_path(path, "unknown")
+            self.assertEqual(result["schema_version"], SCHEMA_VERSION)
+            self.assertEqual(result["mapping_status"], "unsupported")
+            self.assertEqual(result["source_identity"]["relative_path"], "unknown.java")
+            self.assertEqual(result["source_identity"]["raw_sha256"],
+                             hashlib.sha256(source).hexdigest())
+            self.assertEqual(result["matches"], [])
             with self.assertRaisesRegex(ValueError, "existing file or directory"):
                 query_path(Path(raw) / "missing", "unknown")
             with self.assertRaisesRegex(ValueError, "No supported"):
                 query_path(Path(raw), "unknown")
+
+    def test_failed_or_oversized_source_remains_identified_and_incomplete(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            broken = root / "broken.py"
+            broken.write_bytes(b"def broken(:\n")
+            result = query_path(broken, "broken")
+            self.assertEqual(result["mapping_status"], "incomplete")
+            self.assertEqual(result["failures"][0]["error"], "SyntaxError")
+            self.assertEqual(result["source_identity"]["raw_sha256"],
+                             hashlib.sha256(broken.read_bytes()).hexdigest())
+
+            large = root / "large.py"
+            large.write_bytes(b"x" * 4_000_001)
+            limited = query_path(large, "large")
+            self.assertEqual(limited["mapping_status"], "incomplete")
+            self.assertEqual(limited["failures"][0]["error"], "SourceLimitExceeded")
+            self.assertEqual(limited["source_identity"]["byte_count"], 4_000_001)
+
+    def test_tagged_git_blob_identity_is_a_computed_byte_identity(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "sample.xyz"
+            source = b"hello\n"
+            identity = identify_bytes(path, source, root=Path(raw), object_format="sha256")
+            expected = hashlib.sha256(b"blob 6\0hello\n").hexdigest()
+            self.assertEqual(identity["git_blob"]["algorithm"], "sha256")
+            self.assertEqual(identity["git_blob"]["object_id"], expected)
+            self.assertIn("not checkout attestation", identity["git_blob"]["meaning"])
+            with self.assertRaises(ValueError):
+                identify_bytes(Path(raw).parent / "outside.xyz", source,
+                               root=Path(raw), object_format="sha256")
 
 
 if __name__ == "__main__":

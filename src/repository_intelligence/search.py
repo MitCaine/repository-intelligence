@@ -94,12 +94,19 @@ def format_compact(result: dict) -> str:
         if relevant_calls:
             line += f" | calls?: {', '.join(relevant_calls[:2])}"
         lines.append(line)
+    if result.get("mapping_status") == "unsupported":
+        lines.append("UNSUPPORTED: bytes identified; no structural interpretation")
+    elif result.get("mapping_status") == "incomplete":
+        lines.append("INCOMPLETE: source could not be fully parsed; no absence claim is valid")
     return "\n".join(lines)
 
 
 def format_tree_compact(result: dict) -> str:
+    scope = result.get("scan_scope", {})
+    exclusions = scope.get("excluded_paths", [])
     lines = [f"{result['root']} scanned={result['scanned_files']} "
-             f"parse_errors={result['parse_error_count']} failures={len(result['failures'])}",
+             f"parse_errors={result['parse_error_count']} failures={len(result['failures'])} "
+             f"excluded={len(exclusions)} status={result.get('mapping_status', 'unknown')}",
              f"query={result['query']!r} matches={result['total_matches']} "
              f"shown={len(result['matches'])}; calls are lexical candidates, not a call graph"]
     for entry in result["matches"]:
@@ -111,6 +118,10 @@ def format_tree_compact(result: dict) -> str:
             lines.append("  guidance?: " + ", ".join(
                 record["authority"] for record in shown)
                 + (f" (+{extra} more)" if extra else ""))
-    if result["failures"] or result["parse_error_count"]:
+    if result.get("mapping_status") == "incomplete" or result["failures"] or result["parse_error_count"]:
         lines.append("INCOMPLETE: some source could not be parsed; no absence claim is valid")
+    if exclusions:
+        lines.append("EXCLUDED: " + ", ".join(
+            f"{item['path']} ({item['reason']})" for item in exclusions[:3])
+            + (f" (+{len(exclusions) - 3} more; use --json)" if len(exclusions) > 3 else ""))
     return "\n".join(lines)

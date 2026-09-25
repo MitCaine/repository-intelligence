@@ -57,6 +57,7 @@ class InstalledPackageTests(unittest.TestCase):
                                        "repository_intelligence/rust_index.py",
                                        "repository_intelligence/python_index.py",
                                        "repository_intelligence/search.py",
+                                       "repository_intelligence/source.py",
                                        "repository_intelligence/locator.py"})
             run(sys.executable, "-m", "venv", install, env=environment)
             installed_python = install / ("Scripts/python.exe" if os.name == "nt" else "bin/python")

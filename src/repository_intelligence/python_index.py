@@ -46,7 +46,11 @@ def _signatures(source: bytes) -> dict[tuple[int, str], str]:
 
 
 def index_file(path: Path) -> dict:
-    source = path.read_bytes()
+    return index_source(path, path.read_bytes())
+
+
+def index_source(path: Path, source: bytes) -> dict:
+    """Parse the same bytes the caller identified; never reopen the file."""
     if len(source) > 4_000_000:
         raise ValueError("Python source exceeds the 4 MB per-file limit")
     tree = ast.parse(source, filename=str(path))
