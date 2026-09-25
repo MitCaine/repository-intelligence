@@ -8,7 +8,7 @@ RI is an on-demand reader of source, not a maintained symbol database. The norma
 
 [`source.py`](../src/repository_intelligence/source.py) owns raw-byte identity, repository-relative paths, algorithm-tagged computed Git blob IDs, and common display-coordinate helpers. Identity describes the bytes supplied to it; Git membership and source stability remain caller responsibilities.
 
-[`structural.py`](../src/repository_intelligence/structural.py) owns installed runtime/grammar metadata, Tree-sitter setup, Python declared-encoding input conversion, and independent ERROR/MISSING diagnostics. `ScanSetup` reuses parser and version setup within one invocation. It is not a persistent source cache or a global shared parser pool. Python raw positions come from actual incremental decoder boundaries; unsupported boundaries fail instead of receiving approximate offsets.
+[`structural.py`](../src/repository_intelligence/structural.py) owns installed runtime/grammar metadata, Tree-sitter setup, Python declared-encoding input conversion, and independent ERROR/MISSING diagnostics. `ScanSetup` collects full grammar metadata but constructs parsers only for languages encountered, reusing them within one invocation. It is not a persistent source cache or a global shared parser pool. Python raw positions come from actual incremental decoder boundaries; unsupported boundaries fail instead of receiving approximate offsets.
 
 ## Language adapters
 

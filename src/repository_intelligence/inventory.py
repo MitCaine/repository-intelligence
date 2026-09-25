@@ -43,7 +43,7 @@ def inventory_tree(root: Path, *, stable: bool = False,
         raise ValueError("Logical root must be a nonempty relative identifier")
     root = root.resolve()
     scan_setup = ScanSetup()
-    parser_contract = {suffix: scan_setup.get(suffix)[1] for suffix in sorted(PARSERS)}
+    parser_contract = {suffix: scan_setup.metadata(suffix) for suffix in sorted(PARSERS)}
     object_format = git_object_format(root)
     files: list[dict] = []
     paths, exclusions, failures, other_files, unsupported = walk_supported_paths(

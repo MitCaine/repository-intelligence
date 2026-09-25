@@ -63,7 +63,9 @@ def physical_lines(value: bytes | str) -> list[bytes] | list[str]:
 
 def utf8_display_column(source: bytes, offset: int) -> int:
     """One-based character column for a UTF-8 byte offset; never an identity."""
-    line_start = max(source.rfind(b"\n", 0, offset), source.rfind(b"\r", 0, offset)) + 1
+    last_lf = source.rfind(b"\n", 0, offset)
+    last_cr = source.rfind(b"\r", last_lf + 1, offset)
+    line_start = max(last_lf, last_cr) + 1
     return len(source[line_start:offset].decode("utf-8", "replace")) + 1
 
 

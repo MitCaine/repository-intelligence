@@ -19,7 +19,7 @@ class InventoryTests(unittest.TestCase):
             (root / "first.py").write_text("def first(): pass\n")
             (root / "second.py").write_text("def second(): pass\n")
             (root / "third.js").write_text("function third() {}\n")
-            expected_parsers = len({item[0] for item in structural.GRAMMARS.values()})
+            expected_parsers = 2  # Only Python and JavaScript are present.
             expected_versions = len({item[1] for item in structural.GRAMMARS.values()}
                                     | {"tree-sitter"})
             with patch.object(structural, "Parser", wraps=structural.Parser) as parsers, \
