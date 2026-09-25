@@ -53,6 +53,20 @@ class RustIndexTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             query({"functions": []}, "", 1)
 
+    def test_ranking_sees_rust_docs_and_calls_beyond_packet_limits(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "search.rs"
+            calls = " ".join(f"call_{number:02d}();" for number in range(20))
+            path.write_text(f"/// {'filler ' * 60}late_document_term\n"
+                            f"fn find_target() {{ {calls} }}\n")
+            indexed = index_file(path)
+            by_doc = query(indexed, "late document term")
+            by_call = query(indexed, "call 19")
+            self.assertEqual(by_doc["matches"][0]["name"], "find_target")
+            self.assertEqual(by_call["matches"][0]["name"], "find_target")
+            self.assertLessEqual(len(by_doc["matches"][0]["docs"]), 220)
+            self.assertIn("call_19", by_call["matches"][0]["lexical_call_candidates"])
+
     def test_inline_test_module_does_not_outrank_production_function(self):
         with tempfile.TemporaryDirectory() as directory:
             source_path = Path(directory) / "clock.rs"

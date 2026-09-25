@@ -4,9 +4,45 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import io
+import tokenize
 from pathlib import Path
 
-from .search import compact
+
+def _signatures(source: bytes) -> dict[tuple[int, str], str]:
+    """Locate Python headers with tokenizer coordinates, including inline bodies."""
+    encoding, _ = tokenize.detect_encoding(io.BytesIO(source).readline)
+    text = source.decode(encoding)
+    lines = text.splitlines(keepends=True)
+    starts = [0]
+    for line in lines:
+        starts.append(starts[-1] + len(line))
+    items = list(tokenize.generate_tokens(io.StringIO(text).readline))
+    signatures: dict[tuple[int, str], str] = {}
+    for position, token in enumerate(items[:-1]):
+        if token.type != tokenize.NAME or token.string != "def":
+            continue
+        name = items[position + 1]
+        if name.type != tokenize.NAME:
+            continue
+        first = token
+        if position and items[position - 1].string == "async" \
+                and items[position - 1].start[0] == token.start[0]:
+            first = items[position - 1]
+        depth = 0
+        for part in items[position + 2:]:
+            if part.type != tokenize.OP:
+                continue
+            if part.string in "([{":
+                depth += 1
+            elif part.string in ")]}":
+                depth -= 1
+            elif part.string == ":" and depth == 0:
+                begin = starts[first.start[0] - 1] + first.start[1]
+                end = starts[part.end[0] - 1] + part.end[1]
+                signatures[(first.start[0], name.string)] = text[begin:end]
+                break
+    return signatures
 
 
 def index_file(path: Path) -> dict:
@@ -14,8 +50,7 @@ def index_file(path: Path) -> dict:
     if len(source) > 4_000_000:
         raise ValueError("Python source exceeds the 4 MB per-file limit")
     tree = ast.parse(source, filename=str(path))
-    text = source.decode("utf-8", "replace")
-    lines = text.splitlines(keepends=True)
+    signatures = _signatures(source)
     functions: list[dict] = []
 
     class Collector(ast.NodeVisitor):
@@ -38,23 +73,22 @@ def index_file(path: Path) -> dict:
             self.owners = prior
 
         def _visit_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
-            first_body_line = node.body[0].lineno if node.body else node.end_lineno
-            header = "".join(lines[node.lineno - 1:first_body_line - 1])
-            if not header.strip() and node.lineno <= len(lines):
-                header = lines[node.lineno - 1].split(":", 1)[0] + ":"
+            header = signatures.get((node.lineno, node.name))
+            if header is None:
+                raise ValueError(f"Could not locate function header at line {node.lineno}")
             calls = set()
             for child in ast.walk(node):
                 if isinstance(child, ast.Call):
                     name = ast.unparse(child.func)
-                    calls.add(compact(name, 80))
+                    calls.add(name)
             functions.append({
                 "name": node.name,
                 "qualified_name": ".".join((*self.owners, node.name)),
                 "line": node.lineno,
                 "end_line": node.end_lineno,
-                "signature": compact(header, 180),
-                "docs": compact(ast.get_docstring(node) or "", 220),
-                "lexical_call_candidates": sorted(calls)[:12],
+                "signature": header,
+                "docs": ast.get_docstring(node) or "",
+                "lexical_call_candidates": sorted(calls),
             })
             prior = self.owners
             self.owners += (node.name,)

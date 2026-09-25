@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 
 from . import python_index, rust_index
-from .search import (format_compact, format_tree_compact, query, rank,
+from .search import (display_entry, format_compact, format_tree_compact, query, rank,
                      validate_query)
 
 
@@ -51,6 +51,7 @@ def query_path(source: Path, terms: str, limit: int = 8) -> dict:
         parse_errors += indexed["parse_error_count"]
         candidates.extend({**entry, "path": str(path),
                            "raw_sha256": indexed["raw_sha256"],
+                           "git_blob_sha1": indexed["git_blob_sha1"],
                            "parse_error_count": indexed["parse_error_count"]}
                           for entry in indexed["functions"])
     if supported == 0:
@@ -58,7 +59,8 @@ def query_path(source: Path, terms: str, limit: int = 8) -> dict:
     ranked = rank(candidates, words)
     return {"root": str(source), "query": terms, "scanned_files": scanned,
             "parse_error_count": parse_errors, "failures": failures,
-            "total_matches": len(ranked), "matches": ranked[:limit]}
+            "total_matches": len(ranked),
+            "matches": [display_entry(entry, words) for entry in ranked[:limit]]}
 
 
 def main() -> None:
