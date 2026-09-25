@@ -69,13 +69,14 @@ and instance initializer blocks are deliberately not callables. Their source
 bytes still change the containing file hash, so inventory comparison reports
 the file as modified even if no callable declaration changes.
 
-For pinned Go, `.go` promises every `function_declaration`,
-`method_declaration`, and `func_literal` node, including `init`, generic
+For pinned Go, `.go` promises body-bearing `function_declaration`,
+`method_declaration`, and `func_literal` nodes, including `init`, generic
 functions, pointer/value receiver methods, and nested anonymous literals.
 The package and exact receiver syntax contribute to qualified identities;
 anonymous literals receive source-position-based IDs. Interface `method_elem`
-nodes are counted as bodyless, with their interface owner, not as executable
-functions. This is syntax coverage, not Go type/package resolution.
+nodes and valid bodyless external function declarations are counted as
+bodyless, not as executable functions. Interface entries retain their owner.
+This is syntax coverage, not Go type/package resolution.
 
 For pinned C#, `.cs` promises body-bearing methods, constructors (including
 static), destructors, operators/conversions, local functions, lambdas,

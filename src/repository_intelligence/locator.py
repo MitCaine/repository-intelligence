@@ -235,6 +235,10 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
             failures.extend({"path": str(path), "source_identity": indexed["source_identity"],
                              **failure} for failure in indexed["failures"])
             continue
+        if indexed["mapping_status"] == "excluded":
+            failures.append({"path": str(path), "error": "SourceBecameExcluded",
+                             "reason": indexed["excluded_reason"]})
+            continue
         scanned += 1
         incomplete_files += indexed["mapping_status"] == "incomplete"
         parse_errors += indexed["parse_error_count"]
@@ -246,7 +250,7 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
                            "source_identity": indexed["source_identity"],
                            "parse_error_count": indexed["parse_error_count"]}
                           for entry in indexed["functions"])
-    if not paths and not unsupported:
+    if not paths and not unsupported and not failures:
         raise ValueError("No supported source files found in directory")
     ranked = rank(candidates, words)
     return {"schema_version": SCHEMA_VERSION, "root": str(source), "query": terms,
