@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 
 def compact(value: str, limit: int) -> str:
@@ -40,14 +39,9 @@ def score(entry: dict, words: list[str]) -> int:
     return sum(per_word) + 20 * max(0, sum(value > 0 for value in per_word) - 1)
 
 
-def is_test_entry(entry: dict) -> bool:
-    return ("tests" in Path(entry.get("path", "")).parts
-            or "tests" in re.split(r"::|\.", entry["qualified_name"])[:-1])
-
-
 def rank(entries: list[dict], words: list[str]) -> list[dict]:
     return sorted((entry for entry in entries if score(entry, words) > 0),
-                  key=lambda entry: (is_test_entry(entry), -score(entry, words),
+                  key=lambda entry: (-score(entry, words),
                                      entry.get("path", ""), entry["line"]))
 
 
@@ -96,6 +90,8 @@ def format_compact(result: dict) -> str:
         lines.append(line)
     if result.get("mapping_status") == "unsupported":
         lines.append("UNSUPPORTED: bytes identified; no structural interpretation")
+    elif result.get("mapping_status") == "excluded":
+        lines.append(f"EXCLUDED: {result['excluded_reason']}; source was not read")
     elif result.get("mapping_status") == "incomplete":
         lines.append("INCOMPLETE: source could not be fully parsed; no absence claim is valid")
     return "\n".join(lines)

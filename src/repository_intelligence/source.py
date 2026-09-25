@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def git_object_format(root: Path) -> str | None:

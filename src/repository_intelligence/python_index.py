@@ -90,6 +90,10 @@ def index_source(path: Path, source: bytes) -> dict:
         bom = 3 if line == 1 and encoding == "utf-8-sig" else 0
         return starts[line - 1] + bom + len(prefix.encode(codec))
 
+    def display_column(line: int, column: int) -> int:
+        """One-based Unicode character column, distinct from AST byte column."""
+        return len(text_lines[line - 1].encode("utf-8")[:column].decode("utf-8")) + 1
+
     def position(node: ast.expr | ast.stmt) -> tuple[int, int]:
         return offset(node.lineno, node.col_offset), offset(node.end_lineno, node.end_col_offset)
 
@@ -114,7 +118,8 @@ def index_source(path: Path, source: bytes) -> dict:
                      if isinstance(child, ast.Call)}
             functions.append({
                 "name": name, "qualified_name": qualified,
-                "line": node.lineno, "end_line": node.end_lineno,
+                "line": node.lineno, "column": display_column(node.lineno, node.col_offset),
+                "end_line": node.end_lineno,
                 "signature": "lambda", "docs": "",
                 "lexical_call_candidates": sorted(calls),
                 **declaration(source, "lambda", qualified, start, end),
@@ -154,6 +159,7 @@ def index_source(path: Path, source: bytes) -> dict:
                 "name": node.name,
                 "qualified_name": qualified,
                 "line": node.lineno,
+                "column": display_column(node.lineno, node.col_offset),
                 "end_line": node.end_lineno,
                 "signature": header,
                 "docs": ast.get_docstring(node) or "",

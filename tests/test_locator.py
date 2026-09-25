@@ -1,14 +1,17 @@
 """Tests for the shared locator across distinct languages and projects."""
 
 import hashlib
+import io
 import os
 import shutil
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
-from repository_intelligence.locator import index_file, query_path
-from repository_intelligence.search import format_tree_compact, tokens
+from repository_intelligence.locator import index_file, main, query_path
+from repository_intelligence.search import format_compact, format_tree_compact, tokens
 from repository_intelligence.source import SCHEMA_VERSION, identify_bytes
 
 
@@ -37,6 +40,7 @@ class LocatorTests(unittest.TestCase):
             self.assertEqual(result["raw_sha256"], hashlib.sha256(source.encode()).hexdigest())
             self.assertEqual(result["matches"][0]["qualified_name"], "Orders.calculate_total")
             self.assertEqual(result["matches"][0]["line"], 2)
+            self.assertEqual(result["matches"][0]["column"], 5)
             self.assertEqual(result["matches"][0]["end_line"], 4)
             self.assertIn("self.apply_tax", result["matches"][0]["lexical_call_candidates"])
 
@@ -200,6 +204,51 @@ class LocatorTests(unittest.TestCase):
                 query_path(Path(raw) / "missing", "unknown")
             with self.assertRaisesRegex(ValueError, "No supported"):
                 query_path(Path(raw), "unknown")
+
+    def test_direct_files_outside_root_or_symlinked_are_excluded_without_reading(self):
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw)
+            root = base / "project"
+            root.mkdir()
+            outside = base / "outside.py"
+            outside.write_text("def secret(): return 1\n")
+            result = query_path(outside, "secret", root=root)
+            self.assertEqual(result["schema_version"], 2)
+            self.assertEqual(result["mapping_status"], "excluded")
+            self.assertEqual(result["excluded_reason"], "outside_root")
+            self.assertIsNone(result["source_identity"])
+            self.assertIsNone(result["raw_sha256"])
+            self.assertEqual(result["matches"], [])
+            self.assertIn("EXCLUDED", format_compact(result))
+
+            link = root / "linked.py"
+            link.symlink_to(outside)
+            linked = query_path(link, "secret", root=root)
+            self.assertEqual(linked["mapping_status"], "excluded")
+            self.assertEqual(linked["excluded_reason"], "symlink_path")
+            self.assertIsNone(linked["source_identity"])
+
+            dangling = root / "dangling.py"
+            dangling.symlink_to(root / "missing.py")
+            dangling_result = query_path(dangling, "secret", root=root)
+            self.assertEqual(dangling_result["mapping_status"], "excluded")
+            self.assertEqual(dangling_result["excluded_reason"], "symlink_path")
+            self.assertIsNone(dangling_result["source_identity"])
+
+            directory_link = base / "project-link"
+            directory_link.symlink_to(root, target_is_directory=True)
+            linked_directory = query_path(directory_link, "secret")
+            self.assertEqual(linked_directory["mapping_status"], "excluded")
+            self.assertEqual(linked_directory["excluded_reason"], "symlink_path")
+            self.assertIsNone(linked_directory["source_identity"])
+            self.assertNotIn("scanned_files", linked_directory)
+            with patch("sys.argv", ["locator", str(directory_link), "--query", "secret"]):
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    main()
+            self.assertIn("EXCLUDED: symlink_path", output.getvalue())
+            with self.assertRaisesRegex(ValueError, "only to a direct file"):
+                query_path(root, "secret", root=root)
 
     def test_failed_or_oversized_source_remains_identified_and_incomplete(self):
         with tempfile.TemporaryDirectory() as raw:

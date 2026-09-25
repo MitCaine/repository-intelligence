@@ -37,6 +37,16 @@ def index_file(path: Path, *, root: Path | None = None,
                object_format: str | None | object = _AUTO_FORMAT) -> dict:
     """Identify one file's bytes, then attempt structural navigation if supported."""
     root = root or path.parent
+    excluded_reason = ("symlink_path" if path.is_symlink() else
+                       "outside_root" if not path.resolve().is_relative_to(root.resolve())
+                       else None)
+    if excluded_reason is not None:
+        return {"schema_version": SCHEMA_VERSION, "path": str(path),
+                "source_identity": None, "raw_sha256": None, "function_count": 0,
+                "parse_error_count": 0, "functions": [], "parser": None,
+                "relationship_kind": "lexical call candidates only; not resolved call graph",
+                "mapping_status": "excluded", "excluded_reason": excluded_reason,
+                "failures": []}
     if object_format is _AUTO_FORMAT:
         object_format = git_object_format(root)
     try:
@@ -82,12 +92,16 @@ def index_file(path: Path, *, root: Path | None = None,
             "failures": []}
 
 
-def query_path(source: Path, terms: str, limit: int = 8) -> dict:
+def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = None) -> dict:
     words = validate_query(terms, limit)
+    if source.is_symlink():
+        return query(index_file(source, root=root), terms, limit)
     if source.is_file():
-        return query(index_file(source), terms, limit)
+        return query(index_file(source, root=root), terms, limit)
     if not source.is_dir():
         raise ValueError("Source must be an existing file or directory")
+    if root is not None:
+        raise ValueError("Explicit root applies only to a direct file query")
     candidates: list[dict] = []
     failures: list[dict] = []
     excluded_paths: list[dict] = []
@@ -179,11 +193,12 @@ def main() -> None:
     parser.add_argument("source", type=Path)
     parser.add_argument("--query", required=True)
     parser.add_argument("--limit", type=int, default=8)
+    parser.add_argument("--root", type=Path, help="allowed root for a direct file query")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-    result = query_path(args.source, args.query, args.limit)
+    result = query_path(args.source, args.query, args.limit, root=args.root)
     print(json.dumps(result, indent=2) if args.json else
-          (format_tree_compact(result) if args.source.is_dir() else format_compact(result)))
+          (format_tree_compact(result) if "scan_scope" in result else format_compact(result)))
 
 
 if __name__ == "__main__":
