@@ -89,8 +89,9 @@ def _name_kind(node, source: bytes) -> tuple[str, str, bool]:
         return f"{label} operator {_text(source, target) if target is not None else '?'}", "conversion", False
     name = _text(source, name_node) if name_node is not None else "<unnamed>"
     if kind == "constructor_declaration":
-        prefix = source[node.start_byte:name_node.start_byte] if name_node is not None else b""
-        return name, "static_constructor" if b"static" in prefix.split() else "constructor", False
+        static = any(child.type == "modifier" and _text(source, child) == "static"
+                     for child in node.children)
+        return name, "static_constructor" if static else "constructor", False
     if kind == "destructor_declaration":
         return f"~{name}", "destructor", False
     return name, "local_function" if kind == "local_function_statement" else "method", False
@@ -145,11 +146,14 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     identity_signature = None
                     if parameters is not None and not anonymous:
                         identity_signature = ",".join(_parameter_identity(parameter, source)
-                                                      for parameter in parameters.named_children)
+                                                      for parameter in parameters.named_children
+                                                      if parameter.type == "parameter")
                         type_parameters = next((child for child in node.named_children
                                                 if child.type == "type_parameter_list"), None)
                         if type_parameters is not None:
-                            identity_signature = (f"arity={len(type_parameters.named_children)}|"
+                            arity = sum(child.type == "type_parameter"
+                                        for child in type_parameters.named_children)
+                            identity_signature = (f"arity={arity}|"
                                                   + identity_signature)
                     own_signature = identity_signature
                     if owner_identities:

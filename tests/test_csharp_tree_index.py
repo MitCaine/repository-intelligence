@@ -10,6 +10,26 @@ from repository_intelligence.inventory import compare_inventories, inventory_tre
 
 
 class CSharpTreeIndexTests(unittest.TestCase):
+    def test_attribute_text_does_not_make_constructor_static(self):
+        source = (b'class C { [System.Obsolete(" static ")] public C() {} '
+                  b'[System.Obsolete("instance")] static C() {} }')
+        entries = [entry for entry in self._index(source)["functions"]
+                   if entry["name"] == "C"]
+        self.assertEqual([entry["declaration_kind"] for entry in entries],
+                         ["constructor", "static_constructor"])
+
+    def test_generic_arity_ignores_comment(self):
+        plain = self._index(b"class C { void F<T, U>() {} }")
+        commented = self._index(b"class C { void F<T, /* note */ U>() {} }")
+        self.assertEqual(plain["functions"][0]["declaration_id"],
+                         commented["functions"][0]["declaration_id"])
+
+    def test_parameter_comment_does_not_change_identity(self):
+        plain = self._index(b"class C { int Add(int a, int b) {return a+b;} }")
+        commented = self._index(b"class C { int Add(int a, /* note */ int b) {return a+b;} }")
+        self.assertEqual(plain["functions"][0]["declaration_id"],
+                         commented["functions"][0]["declaration_id"])
+
     def test_conversion_keyword_not_attribute_text_controls_identity(self):
         source = (b"class C { [Obsolete(\"explicit\")] "
                   b"public static implicit operator int(C x) => 1; }")

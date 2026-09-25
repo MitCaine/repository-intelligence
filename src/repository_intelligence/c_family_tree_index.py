@@ -12,6 +12,15 @@ def _text(source: bytes, node) -> str:
     return source[node.start_byte:node.end_byte].decode("utf-8", "replace")
 
 
+def _declarator_child(node):
+    if node is None:
+        return None
+    child = node.child_by_field_name("declarator")
+    if child is None and node.type == "reference_declarator":
+        child = next((part for part in node.named_children if part.type != "comment"), None)
+    return child
+
+
 def _name(node, source: bytes) -> str | None:
     if node is None:
         return None
@@ -24,7 +33,7 @@ def _name(node, source: bytes) -> str | None:
     if node.type == "operator_cast":
         target = node.child_by_field_name("type")
         return "operator " + _text(source, target) if target is not None else None
-    next_node = node.child_by_field_name("declarator")
+    next_node = _declarator_child(node)
     if next_node is not None:
         return _name(next_node, source)
     if node.type in {"identifier", "field_identifier", "qualified_identifier",
@@ -37,8 +46,8 @@ def _parameter_identity(parameter, source: bytes) -> str:
     """Keep C/C++ declarator shape but omit the parameter's local name."""
     declarator = parameter.child_by_field_name("declarator")
     leaf = declarator
-    while leaf is not None and leaf.child_by_field_name("declarator") is not None:
-        leaf = leaf.child_by_field_name("declarator")
+    while _declarator_child(leaf) is not None:
+        leaf = _declarator_child(leaf)
     local_name = leaf if leaf is not None and leaf.type in {"identifier", "field_identifier"} else None
     default = parameter.child_by_field_name("default_value")
     return syntax_token_key(parameter, source,
@@ -129,6 +138,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     bodyless.append({"syntax_kind": node.type,
                                      "byte_range": {"start": node.start_byte,
                                                     "end": node.end_byte}})
+                    pending.extend((child, owners) for child in reversed(node.named_children))
                     continue
             promised += 1
             declarator = node.child_by_field_name("declarator")
@@ -156,7 +166,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 while terminal is not None and terminal.type not in {
                         "qualified_identifier", "operator_name", "operator_cast",
                         "destructor_name", "identifier", "field_identifier"}:
-                    terminal = terminal.child_by_field_name("declarator")
+                    terminal = _declarator_child(terminal)
                 terminal_scope = (terminal.child_by_field_name("scope")
                                   if terminal is not None and terminal.type == "qualified_identifier"
                                   else None)
@@ -176,14 +186,17 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                         "friend_function" if friend else "function")
                 parameter_node = declarator
                 while parameter_node is not None and parameter_node.type != "function_declarator":
-                    parameter_node = parameter_node.child_by_field_name("declarator")
+                    parameter_node = _declarator_child(parameter_node)
                 parameters = (parameter_node.child_by_field_name("parameters")
                               if parameter_node is not None else None)
                 identity_signature = None
                 if parameters is not None and not anonymous:
                     identity_signature = ",".join(
                         _parameter_identity(parameter, source)
-                        for parameter in parameters.named_children)
+                        for parameter in parameters.named_children
+                        if parameter.type in {"parameter_declaration", "optional_parameter_declaration",
+                                              "variadic_parameter_declaration", "variadic_parameter",
+                                              "parameter_pack_expansion"})
                     qualifiers = "".join(_text(source, child) for child in parameter_node.named_children
                                          if child.type in {"type_qualifier", "ref_qualifier"})
                     if qualifiers:

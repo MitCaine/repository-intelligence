@@ -10,6 +10,29 @@ from repository_intelligence.locator import index_file
 
 
 class CFamilyTests(unittest.TestCase):
+    def test_deleted_member_does_not_hide_default_argument_lambda(self):
+        source = b"struct C { void f(int x = [](){return 1;}()) = delete; };"
+        result = self._index(".cpp", source)
+        self.assertEqual(result["function_count"], 1)
+        self.assertEqual(result["functions"][0]["declaration_kind"], "lambda")
+        entry = result["functions"][0]
+        self.assertEqual(source[entry["byte_range"]["start"]:entry["byte_range"]["end"]],
+                         b"[](){return 1;}")
+
+    def test_reference_return_and_parameter_name_are_mapped(self):
+        before = self._index(".cpp", b"int &get(int &x) {return x;}")
+        after = self._index(".cpp", b"int &get(int &renamed) {return renamed;}")
+        self.assertEqual(before["function_count"], 1)
+        self.assertEqual(before["functions"][0]["name"], "get")
+        self.assertEqual(before["functions"][0]["declaration_id"],
+                         after["functions"][0]["declaration_id"])
+
+    def test_parameter_comment_does_not_change_identity(self):
+        plain = self._index(".cpp", b"int add(int a, int b) {return a+b;}")
+        commented = self._index(".cpp", b"int add(int a, /* note */ int b) {return a+b;}")
+        self.assertEqual(plain["functions"][0]["declaration_id"],
+                         commented["functions"][0]["declaration_id"])
+
     def test_constructor_try_body_and_intentionally_bodyless_members(self):
         source = (b"struct C { C(); C(const C&) = delete; C(C&&) = default; };\n"
                   b"C::C() try {} catch(...) {}\n")
