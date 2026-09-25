@@ -170,11 +170,13 @@ def _complete_packet_errors(inventory: dict) -> list[str]:
                 not isinstance(identity, dict) or identity.get("relative_path") != path or
                 not isinstance(identity.get("raw_sha256"), str) or
                 len(identity["raw_sha256"]) != 64 or
-                not isinstance(identity.get("byte_count"), int) or identity["byte_count"] < 0 or
+                any(char not in string.hexdigits for char in identity["raw_sha256"]) or
+                type(identity.get("byte_count")) is not int or identity["byte_count"] < 0 or
                 not isinstance(parser, dict) or not isinstance(expected, dict) or
                 any(parser.get(key) != value for key, value in (expected or {}).items()) or
                 not isinstance(structural, dict) or structural.get("parser") != expected or
                 not isinstance(coverage, dict) or not isinstance(declarations, list) or
+                "module_bindings" not in file or "preprocessing" not in file or
                 file.get("mapping_status") != "navigation_only"):
             errors.append(f"invalid_file_packet:{path}")
             continue
@@ -189,6 +191,14 @@ def _complete_packet_errors(inventory: dict) -> list[str]:
         if (len(ids) != len(declarations) or not all(isinstance(item, str) for item in ids)
                 or len(ids) != len(set(ids))):
             errors.append(f"duplicate_or_missing_declaration_id:{path}")
+        ranges = [(item.get("byte_range", {}).get("start"),
+                   item.get("byte_range", {}).get("end"))
+                  for item in declarations if isinstance(item, dict)
+                  and isinstance(item.get("byte_range"), dict)
+                  and type(item["byte_range"].get("start")) is int
+                  and type(item["byte_range"].get("end")) is int]
+        if len(ranges) == len(declarations) and len(ranges) != len(set(ranges)):
+            errors.append(f"duplicate_declaration_range:{path}")
         byte_count = identity["byte_count"]
         for item in declarations:
             if not isinstance(item, dict):
@@ -247,6 +257,11 @@ def compare_inventories(planning: dict, candidate: dict) -> dict:
                              for excluded in candidate_exclusions))
     for path in sorted(planning_files.keys() & candidate_files.keys()):
         prior, current = planning_files[path], candidate_files[path]
+        if (prior["source_identity"]["raw_sha256"] ==
+                current["source_identity"]["raw_sha256"] and
+                prior["source_identity"]["byte_count"] !=
+                current["source_identity"]["byte_count"]):
+            mismatches.append(f"equal_hash_different_size:{path}")
         if (prior["source_identity"]["raw_sha256"] ==
                 current["source_identity"]["raw_sha256"] and
                 not _unchanged_file_evidence_matches(prior, current)):

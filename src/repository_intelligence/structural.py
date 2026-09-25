@@ -8,9 +8,7 @@ to UTF-8 for Tree-sitter.
 from __future__ import annotations
 
 import io
-import codecs
 import tokenize
-from array import array
 from importlib.metadata import version
 
 from tree_sitter import Language, Node, Parser
@@ -25,6 +23,7 @@ import tree_sitter_c
 import tree_sitter_cpp
 
 from .adapters import PARSERS
+from .source import RawOffsets
 
 
 ADAPTER_VERSION = 6
@@ -55,40 +54,12 @@ GRAMMARS = {
 
 
 
-class _RawOffsets:
-    def __init__(self, source: bytes, decoded: str, encoding: str) -> None:
-        decoder = codecs.getincrementaldecoder(encoding)(errors="strict")
-        bom = 3 if encoding == "utf-8-sig" and source.startswith(codecs.BOM_UTF8) else 0
-        self.positions = array("I", [bom])
-        pieces = []
-
-        def record(output: str, raw_end: int) -> None:
-            if len(output) > 1:
-                raise ValueError("Python encoding emitted multiple characters at one byte boundary")
-            if output:
-                pieces.append(output)
-                width = len(output.encode("utf-8"))
-                self.positions.extend([0] * (width - 1))
-                self.positions.append(raw_end)
-
-        for raw_end, byte in enumerate(source, 1):
-            record(decoder.decode(bytes((byte,)), final=False), raw_end)
-        record(decoder.decode(b"", final=True), len(source))
-        if "".join(pieces) != decoded:
-            raise ValueError("Python encoding could not be mapped to raw byte boundaries")
-
-    def raw(self, offset: int) -> int:
-        if not 0 <= offset < len(self.positions) or (offset and not self.positions[offset]):
-            raise ValueError("Parser position is not a decoded character boundary")
-        return self.positions[offset]
-
-
-def python_input(source: bytes) -> tuple[bytes, str, _RawOffsets | None]:
+def python_input(source: bytes) -> tuple[bytes, str, RawOffsets | None]:
     """Tree-sitter UTF-8 input and an optional map back to encoded source bytes."""
     encoding, _ = tokenize.detect_encoding(io.BytesIO(source).readline)
     decoded = source.decode(encoding)
     utf8 = decoded.encode("utf-8")
-    return utf8, encoding, (_RawOffsets(source, decoded, encoding)
+    return utf8, encoding, (RawOffsets(source, decoded, encoding)
                             if utf8 != source else None)
 
 
@@ -117,7 +88,7 @@ class ScanSetup:
         return parser, dict(info)
 
 
-def scan(suffix: str, source: bytes, *, setup: ScanSetup | None = None) -> tuple[dict, Node, bytes, _RawOffsets | None]:
+def scan(suffix: str, source: bytes, *, setup: ScanSetup | None = None) -> tuple[dict, Node, bytes, RawOffsets | None]:
     """Return evidence, syntax tree, and decoded input for a language adapter."""
     parser, parser_info = (setup or ScanSetup()).get(suffix)
     parse_bytes, encoding, offsets = (python_input(source) if suffix == ".py"
