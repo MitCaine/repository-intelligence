@@ -72,6 +72,8 @@ class JavaScriptTypeScriptTests(unittest.TestCase):
         self.assertEqual(result["mapping_status"], "navigation_only")
         self.assertEqual({entry["qualified_name"] for entry in result["functions"]},
                          {"N.f", "N.M.g"})
+        self.assertEqual([entry["owner"] for entry in result["module_bindings"]["exports"]],
+                         ["N", "N", "N.M"])
         self._exact(result, namespace)
         commonjs = b"module.exports = function(){}; exports.run = () => 1;\n"
         result = self._index(".cjs", commonjs)
@@ -81,6 +83,33 @@ class JavaScriptTypeScriptTests(unittest.TestCase):
         self.assertEqual({item["kind"] for item in result["module_bindings"]["exports"]},
                          {"commonjs"})
         self._exact(result, commonjs)
+
+    def test_class_field_ambient_and_merged_declarations(self):
+        source = (b"declare function load(x: number): void;\n"
+                  b"interface M { run(): void }\n"
+                  b"namespace M { export function run(){} }\n"
+                  b"class C { field = () => 1; }\n"
+                  b"export { run as renamed } from 'pkg';\n")
+        result = self._index(".ts", source)
+        self.assertEqual(result["mapping_status"], "navigation_only")
+        self.assertEqual(result["adapter_coverage"]["bodyless_excluded_count"], 2)
+        self.assertEqual({entry["qualified_name"] for entry in result["functions"]},
+                         {"M.run", "C.field"})
+        exports = result["module_bindings"]["exports"]
+        self.assertEqual([(item["owner"], item["source"]) for item in exports],
+                         [("M", None), (None, "'pkg'")])
+        self._exact(result, source)
+
+    def test_merged_namespaces_keep_distinct_callable_identities(self):
+        source = (b"namespace M { export function f(){} }\n"
+                  b"namespace M { export function f(){} }\n"
+                  b"export async function* stream(){ yield 1; }\n")
+        result = self._index(".ts", source)
+        self.assertEqual(result["mapping_status"], "navigation_only")
+        self.assertEqual([item["qualified_name"] for item in result["functions"]],
+                         ["M.f", "M.f", "stream"])
+        self.assertEqual(len({item["declaration_id"] for item in result["functions"]}), 3)
+        self._exact(result, source)
 
     def test_typescript_bodyless_overloads_interface_abstract_and_default_arrow(self):
         source = (b"export interface I { run(x: number): void; get value(): number }\n"
