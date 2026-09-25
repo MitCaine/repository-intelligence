@@ -50,9 +50,20 @@ bodyless, not implementations. Source ranges are exact UTF-8 byte ranges.
 lexical, not resolved. `ERROR`, `MISSING`, and unhandled promised nodes make
 the result incomplete.
 
+For pinned Java, `.java` promises every body-bearing `method_declaration`,
+`constructor_declaration`, `compact_constructor_declaration`, and
+`lambda_expression` node. Classes, interfaces, records, enums, annotation
+types, enum-constant class bodies, local classes, and anonymous classes provide
+qualified ownership. Bodyless interface/abstract methods and annotation-type
+members are counted separately, not mapped as executable callables. Static
+and instance initializer blocks are deliberately not callables. Their source
+bytes still change the containing file hash, so inventory comparison reports
+the file as modified even if no callable declaration changes.
+
 Pinned package versions in `pyproject.toml` are `tree-sitter==0.25.0`,
 `tree-sitter-python==0.25.0`, `tree-sitter-rust==0.24.2`,
-`tree-sitter-javascript==0.25.0`, and `tree-sitter-typescript==0.23.2`. Results record
+`tree-sitter-javascript==0.25.0`, `tree-sitter-typescript==0.23.2`, and
+`tree-sitter-java==0.23.5`. Results record
 actual installed distribution versions, grammar ABI, and adapter version 1.
 Changing a grammar pin requires reviewing that grammar's upstream generated
 `node-types.json` for changed declaration nodes/fields, then running the

@@ -17,8 +17,8 @@ from .source import SCHEMA_VERSION, git_object_format
 from .structural import probe
 
 
-INVENTORY_SCHEMA_VERSION = 2
-MAPPING_CONTRACT = "python-rust-javascript-typescript-source-callables-v1"
+INVENTORY_SCHEMA_VERSION = 3
+MAPPING_CONTRACT = "python-rust-javascript-typescript-java-source-callables-v1"
 
 
 def _digest(scope: dict, files: list[dict]) -> str:

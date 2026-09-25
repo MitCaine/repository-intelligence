@@ -77,7 +77,7 @@ class LocatorTests(unittest.TestCase):
             self.assertEqual(result["mapping_status"], "incomplete")
             self.assertGreater(result["structural_error_count"], 0)
             self.assertEqual(result["scan_scope"]["extensions"],
-                             [".cjs", ".js", ".jsx", ".mjs", ".py", ".rs", ".ts", ".tsx"])
+                             [".cjs", ".java", ".js", ".jsx", ".mjs", ".py", ".rs", ".ts", ".tsx"])
             self.assertEqual(result["scan_scope"]["source_kind"], "working_tree_non_atomic")
             self.assertIn("INCOMPLETE", format_tree_compact(result))
             self.assertEqual(result["total_matches"], 2)
@@ -207,13 +207,13 @@ class LocatorTests(unittest.TestCase):
 
     def test_unsupported_file_is_explicit(self):
         with tempfile.TemporaryDirectory() as raw:
-            path = Path(raw) / "unknown.java"
+            path = Path(raw) / "unknown.go"
             source = b"class Unknown {}"
             path.write_bytes(source)
             result = query_path(path, "unknown")
             self.assertEqual(result["schema_version"], SCHEMA_VERSION)
             self.assertEqual(result["mapping_status"], "unsupported")
-            self.assertEqual(result["source_identity"]["relative_path"], "unknown.java")
+            self.assertEqual(result["source_identity"]["relative_path"], "unknown.go")
             self.assertEqual(result["source_identity"]["raw_sha256"],
                              hashlib.sha256(source).hexdigest())
             self.assertEqual(result["matches"], [])
