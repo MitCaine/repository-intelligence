@@ -14,14 +14,18 @@ from .source import SCHEMA_VERSION, git_object_format, identify_bytes
 
 
 PARSERS = {".py": python_tree_index.index_source, ".rs": rust_tree_index.index_source}
+LANGUAGE_SUFFIX = {"python": ".py", "rust": ".rs"}
 MAX_PARSE_BYTES = 4_000_000
 PARSE_FAILURES = (OSError, ValueError, SyntaxError, UnicodeError)
 _AUTO_FORMAT = object()
 
 
 def index_file(path: Path, *, root: Path | None = None,
-               object_format: str | None | object = _AUTO_FORMAT) -> dict:
+               object_format: str | None | object = _AUTO_FORMAT,
+               language: str | None = None) -> dict:
     """Identify one file's bytes, then attempt structural navigation if supported."""
+    if language is not None and language not in LANGUAGE_SUFFIX:
+        raise ValueError(f"Unsupported language: {language}")
     root = root or path.parent
     excluded_reason = ("symlink_path" if path.is_symlink() else
                        "outside_root" if not path.resolve().is_relative_to(root.resolve())
@@ -50,14 +54,21 @@ def index_file(path: Path, *, root: Path | None = None,
              "function_count": 0, "parse_error_count": 0, "functions": [],
              "relationship_kind": "lexical call candidates only; not resolved call graph",
              "failures": []}
-    parser = PARSERS.get(path.suffix.lower())
+    extension = path.suffix.lower()
+    if language is not None and extension in PARSERS \
+            and extension != LANGUAGE_SUFFIX[language]:
+        return {**basic, "mapping_status": "unsupported", "parser": None,
+                "unsupported_reason": "language_extension_mismatch"}
+    parser_suffix = LANGUAGE_SUFFIX[language] if language is not None else extension
+    parser = PARSERS.get(parser_suffix)
     if parser is None:
-        return {**basic, "mapping_status": "unsupported", "parser": None}
+        return {**basic, "mapping_status": "unsupported", "parser": None,
+                "unsupported_reason": "no_language_adapter_selected"}
     if len(source) > MAX_PARSE_BYTES:
         return {**basic, "mapping_status": "incomplete", "parser": None,
                 "failures": [{"error": "SourceLimitExceeded", "limit_bytes": MAX_PARSE_BYTES}]}
     try:
-        syntax, tree, parse_bytes, offsets = structural.scan(path.suffix.lower(), source)
+        syntax, tree, parse_bytes, offsets = structural.scan(parser_suffix, source)
     except (OSError, ValueError, UnicodeError, ImportError, SyntaxError, LookupError) as error:
         return {**basic, "mapping_status": "incomplete", "parser": None,
                 "structural": None,
@@ -66,7 +77,7 @@ def index_file(path: Path, *, root: Path | None = None,
                    "runtime": "tree-sitter"}
     try:
         indexed = (parser(path, source, tree=tree, parse_bytes=parse_bytes,
-                          offsets=offsets) if path.suffix.lower() == ".py"
+                          offsets=offsets) if parser_suffix == ".py"
                    else parser(path, source, tree=tree))
     except PARSE_FAILURES as error:
         return {**basic, "mapping_status": "incomplete", "parser": parser_info,
@@ -80,16 +91,19 @@ def index_file(path: Path, *, root: Path | None = None,
             "failures": []}
 
 
-def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = None) -> dict:
+def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = None,
+               language: str | None = None) -> dict:
     words = validate_query(terms, limit)
     if source.is_symlink():
-        return query(index_file(source, root=root), terms, limit)
+        return query(index_file(source, root=root, language=language), terms, limit)
     if source.is_file():
-        return query(index_file(source, root=root), terms, limit)
+        return query(index_file(source, root=root, language=language), terms, limit)
     if not source.is_dir():
         raise ValueError("Source must be an existing file or directory")
     if root is not None:
         raise ValueError("Explicit root applies only to a direct file query")
+    if language is not None:
+        raise ValueError("Explicit language applies only to a direct file query")
     candidates: list[dict] = []
     failures: list[dict] = []
     excluded_paths: list[dict] = []
@@ -187,9 +201,12 @@ def main() -> None:
     parser.add_argument("--query", required=True)
     parser.add_argument("--limit", type=int, default=8)
     parser.add_argument("--root", type=Path, help="allowed root for a direct file query")
+    parser.add_argument("--language", choices=sorted(LANGUAGE_SUFFIX),
+                        help="explicit parser for a direct file with an ambiguous extension")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-    result = query_path(args.source, args.query, args.limit, root=args.root)
+    result = query_path(args.source, args.query, args.limit, root=args.root,
+                        language=args.language)
     print(json.dumps(result, indent=2) if args.json else
           (format_tree_compact(result) if "scan_scope" in result else format_compact(result)))
 

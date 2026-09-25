@@ -28,7 +28,7 @@ preserved in Git history but is not part of the current package.
 ## Use
 
 Python 3.12 or 3.13 is required. The package pins the Tree-sitter runtime
-and Python/Rust grammar wheels. Ordinary Rust navigation now uses Tree-sitter
+and Python/Rust grammar wheels. Ordinary Python and Rust navigation use Tree-sitter
 without `rust-analyzer`. The analyzer remains available as an opt-in Rust
 source and metadata route when needed. No hosted service is needed. From this
 repository:
@@ -41,8 +41,12 @@ PYTHONPATH=src python3.13 -m repository_intelligence.locator \
 Pass one file instead of a directory to narrow the scan. Add `--json` for
 structured output. For a direct file, `--root /path/to/project` confines
 identity to that root; a path outside it or a symlink is reported as excluded
-without reading bytes. An unsupported file still returns its byte identity, marked
-`unsupported`. Directory results report files that could not be indexed and
+without reading bytes. An ambiguous direct file (for example, `snippet.h`)
+stays `unsupported` unless `--language python` or `--language rust` explicitly
+selects a shipped adapter. This selects a parser, not a C or C++ adapter;
+conflicting selections for known `.py`/`.rs` extensions are rejected. An
+unsupported file still returns its byte identity, marked `unsupported`.
+Directory results report files that could not be indexed and
 explicit scan exclusions. A directory scan covers supported files only, so no
 result is **not** proof that an unsupported language has no relevant function.
 The raw SHA-256 identifies
