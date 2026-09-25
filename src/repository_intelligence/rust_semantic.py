@@ -36,7 +36,8 @@ def _snapshot(root: Path) -> dict:
                for path in sorted(set(files))]
     digest = _sha(json.dumps(records, separators=(",", ":")).encode())
     return {"digest_sha256": digest, "file_count": len(records),
-            "materialization": "non_atomic_working_tree"}
+            "materialization": "non_atomic_working_tree",
+            "_covered_hashes": dict(records)}
 
 
 class _RustAnalyzer:
@@ -151,7 +152,8 @@ def resolve_definition(project_root: Path, source_path: Path, line: int, column:
                             "line": line, "column": column, "raw_sha256": _sha(source)},
               "provider": {"name": "rust-analyzer", "version": version},
               "configuration": configuration,
-              "source_snapshot": before,
+              "source_snapshot": {key: value for key, value in before.items()
+                                  if key != "_covered_hashes"},
               "limitations": ["Workspace reads are non-atomic; pre/post local checksums are not attestation",
                               "External dependencies and sysroot are not included in the local digest",
                               "Build scripts and procedural macros are disabled",
@@ -199,9 +201,15 @@ def resolve_definition(project_root: Path, source_path: Path, line: int, column:
     after = _snapshot(root)
     if before != after or _sha(source_path.read_bytes()) != _sha(source):
         return {**packet, "status": "incomplete_changed_source",
-                "source_snapshot_after": after}
+                "source_snapshot_after": {key: value for key, value in after.items()
+                                          if key != "_covered_hashes"}}
     for item in packet["targets"]:
-        if item["source_identity"] is not None and item["source_identity"]["within_project"]:
+        parsed = urlparse(item["uri"])
+        target_path = Path(unquote(parsed.path)) if parsed.scheme == "file" else None
+        if (target_path is not None and target_path.is_relative_to(root)
+                and item["source_identity"] is not None
+                and after["_covered_hashes"].get(target_path.relative_to(root).as_posix())
+                == item["source_identity"]["raw_sha256"]):
             item["byte_binding"] = "checked_against_final_local_snapshot"
     packet["status"] = "resolved" if packet["targets"] else "unresolved"
     return packet

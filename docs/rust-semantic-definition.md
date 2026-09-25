@@ -30,7 +30,10 @@ and `incomplete_changed_source` if checked local inputs changed during the
 question. An analyzer failure raises an exception; it is not an absence proof.
 Target bytes are captured before the final local checksum. A local target's
 `byte_binding` says `checked_against_final_local_snapshot` only after that
-check passes. External or unreadable targets remain
+check passes **and** the target path and observed bytes match a file included
+in the final snapshot. Project-local targets omitted by the snapshot (for
+example under `target/` or through a symlink) remain
+`post_analysis_observation`. External or unreadable targets also remain
 `post_analysis_observation`: their bytes, if available, are not verified to
 match what the analyzer used. None of these checks makes the working tree
 atomic.

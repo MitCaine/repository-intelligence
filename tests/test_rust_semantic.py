@@ -113,6 +113,46 @@ class RustSemanticTests(unittest.TestCase):
             self.assertEqual(result["targets"][0]["byte_binding"],
                              "post_analysis_observation")
 
+    def test_excluded_local_target_is_not_bound_to_snapshot(self):
+        with tempfile.TemporaryDirectory(prefix="ri-semantic-") as raw:
+            root = Path(raw)
+            (root / "Cargo.toml").write_text('[package]\nname="x"\nversion="0.1.0"\n')
+            source = root / "lib.rs"
+            source.write_text("fn caller() { target(); }\n")
+            generated = root / "target/generated.rs"
+            generated.parent.mkdir()
+            generated.write_text("fn target() {}\n")
+
+            class FakeAnalyzer:
+                def __init__(self, *args):
+                    self.last_status = {"health": "ok", "quiescent": True}
+
+                def request(self, request_id, method, params):
+                    if method == "textDocument/definition":
+                        return {"uri": generated.resolve().as_uri(), "range": {
+                            "start": {"line": 0, "character": 3},
+                            "end": {"line": 0, "character": 9}}}
+                    return {}
+
+                def send(self, message):
+                    pass
+
+                def wait_ready(self):
+                    pass
+
+                def close(self):
+                    pass
+
+            with patch.object(rust_semantic, "_RustAnalyzer", FakeAnalyzer), \
+                    patch.object(rust_semantic.subprocess, "run") as version:
+                version.return_value.stdout = "rust-analyzer test"
+                result = resolve_definition(root, source, 1, 15, features=(),
+                                            no_default_features=False, target="test-target")
+            self.assertEqual(result["status"], "resolved")
+            self.assertTrue(result["targets"][0]["source_identity"]["within_project"])
+            self.assertEqual(result["targets"][0]["byte_binding"],
+                             "post_analysis_observation")
+
     def test_missing_configuration_is_rejected(self):
         with tempfile.TemporaryDirectory(prefix="ri-semantic-") as raw:
             root = Path(raw)
