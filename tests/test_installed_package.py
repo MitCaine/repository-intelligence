@@ -59,6 +59,7 @@ class InstalledPackageTests(unittest.TestCase):
                                        "repository_intelligence/python_index.py",
                                        "repository_intelligence/python_tree_index.py",
                                        "repository_intelligence/js_tree_index.py",
+                                       "repository_intelligence/java_tree_index.py",
                                        "repository_intelligence/search.py",
                                        "repository_intelligence/source.py",
                                        "repository_intelligence/declarations.py",
@@ -76,6 +77,7 @@ class InstalledPackageTests(unittest.TestCase):
             (consumer / "fixture.js").write_text("export function calculate_total(){ return 1; }\n")
             (consumer / "fixture.ts").write_text("export const calculate_total = (x: number) => x;\n")
             (consumer / "fixture.tsx").write_text("export const View = () => <div/>;\n")
+            (consumer / "fixture.java").write_text("class C { int total(){ return 1; } }\n")
             script = temp / "smoke.py"
             script.write_text(
                 "import json\n"
@@ -99,6 +101,7 @@ class InstalledPackageTests(unittest.TestCase):
                 "assert query_path(Path('fixture.js'), 'calculate total')['matches'][0]['name'] == 'calculate_total'\n"
                 "assert query_path(Path('fixture.ts'), 'calculate total')['matches'][0]['name'] == 'calculate_total'\n"
                 "assert query_path(Path('fixture.tsx'), 'view')['matches'][0]['name'] == 'View'\n"
+                "assert query_path(Path('fixture.java'), 'total')['matches'][0]['name'] == 'total'\n"
                 "print(json.dumps(sorted(item['path'] for item in result['matches'])))\n")
             consumer_environment = {**environment, "PATH": str(install / "bin")}
             result = run(installed_python, "-I", script, cwd=consumer, env=consumer_environment)

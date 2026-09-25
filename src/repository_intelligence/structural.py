@@ -18,6 +18,7 @@ import tree_sitter_python
 import tree_sitter_rust
 import tree_sitter_javascript
 import tree_sitter_typescript
+import tree_sitter_java
 
 from .source import physical_lines
 
@@ -34,6 +35,7 @@ GRAMMARS = {
     ".cjs": ("JavaScript", "tree-sitter-javascript", tree_sitter_javascript.language),
     ".ts": ("TypeScript", "tree-sitter-typescript", tree_sitter_typescript.language_typescript),
     ".tsx": ("TSX", "tree-sitter-typescript", tree_sitter_typescript.language_tsx),
+    ".java": ("Java", "tree-sitter-java", tree_sitter_java.language),
 }
 
 JS_CALLABLES = {"function_declaration", "generator_function_declaration",
@@ -154,10 +156,16 @@ def scan(suffix: str, source: bytes) -> tuple[dict, Node, bytes, _RawOffsets | N
                 and node.type in JS_CALLABLES:
             selected = node
             name_node = node.child_by_field_name("name")
+        elif suffix == ".java" and node.type in {"method_declaration", "constructor_declaration",
+                                                  "compact_constructor_declaration",
+                                                  "lambda_expression"} \
+                and node.child_by_field_name("body") is not None:
+            selected = node
+            name_node = node.child_by_field_name("name")
         if selected is not None:
             declaration_count += 1
             if len(declarations) < MAX_DECLARATION_DETAILS:
-                kind = ("lambda" if suffix == ".py" and selected.type == "lambda"
+                kind = ("lambda" if selected.type in {"lambda", "lambda_expression"}
                         else "closure" if selected.type == "closure_expression"
                         else "arrow" if selected.type == "arrow_function" else "function")
                 start = raw(_rust_start(node, source) if suffix == ".rs"
