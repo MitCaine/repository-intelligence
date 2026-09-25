@@ -167,9 +167,9 @@ class JavaScriptTypeScriptTests(unittest.TestCase):
             (c / "main.ts").write_text("export function total(){ return 2; }\n")
             self.assertEqual(query_path(c / "main.ts", "total")["matches"][0]["name"], "total")
             before, after = inventory_tree(p, stable=True), inventory_tree(c, stable=True)
-            self.assertEqual(before["inventory_schema_version"], 7)
+            self.assertEqual(before["inventory_schema_version"], 8)
             self.assertEqual(before["scope"]["extensions"],
-                             [".c", ".cc", ".cjs", ".cpp", ".cs", ".cxx", ".go", ".hh", ".hpp", ".hxx", ".java", ".js", ".jsx", ".mjs", ".py", ".rs", ".ts", ".tsx"])
+                             [".c", ".cc", ".cjs", ".cpp", ".cs", ".cts", ".cxx", ".go", ".hh", ".hpp", ".hxx", ".java", ".js", ".jsx", ".mjs", ".mts", ".py", ".rs", ".ts", ".tsx"])
             delta = compare_inventories(before, after)
             self.assertEqual(delta["status"], "comparable_candidate_delta")
             self.assertEqual(len(delta["declaration_changes"]["modified"]), 1)

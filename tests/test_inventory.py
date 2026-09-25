@@ -77,12 +77,12 @@ class InventoryTests(unittest.TestCase):
             snapshot = inventory_tree(root, stable=True)
             self.assertEqual(snapshot["status"], "incomplete")
             self.assertTrue(snapshot["failures"])
-            self.assertIn("symlink_file", {item["reason"] for item in snapshot["scope"]["excluded_paths"]})
-            self.assertIn("nested_repository", {item["reason"] for item in snapshot["scope"]["excluded_paths"]})
+            self.assertIn("symlink_file", {item["reason"] for item in snapshot["observed_exclusions"]})
+            self.assertIn("nested_repository", {item["reason"] for item in snapshot["observed_exclusions"]})
             blocked = compare_inventories(snapshot, snapshot)
             self.assertIsNone(blocked["declaration_changes"])
             self.assertEqual(len(blocked["planning"]["files"]), 3)
-            self.assertTrue(blocked["planning"]["scope"]["excluded_paths"])
+            self.assertTrue(blocked["planning"]["observed_exclusions"])
             live = inventory_tree(root)
             self.assertIn("working_tree_non_atomic", live["incomplete_reasons"])
 
@@ -104,8 +104,8 @@ class InventoryTests(unittest.TestCase):
                           compare_inventories(complete, repeated)["mismatches"])
             os.link(original, root / "b.py")
             duplicate = inventory_tree(root, stable=True)
-            self.assertEqual(duplicate["status"], "incomplete")
-            self.assertIn("DuplicatePhysicalFile", {item["error"] for item in duplicate["failures"]})
+            self.assertEqual(duplicate["status"], "complete")
+            self.assertEqual([item["path"] for item in duplicate["files"]], ["a.py", "b.py"])
 
     def test_forged_complete_flag_cannot_override_file_evidence(self):
         with tempfile.TemporaryDirectory() as raw:

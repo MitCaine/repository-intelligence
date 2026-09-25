@@ -77,7 +77,7 @@ class LocatorTests(unittest.TestCase):
             self.assertEqual(result["mapping_status"], "incomplete")
             self.assertGreater(result["structural_error_count"], 0)
             self.assertEqual(result["scan_scope"]["extensions"],
-                             [".c", ".cc", ".cjs", ".cpp", ".cs", ".cxx", ".go", ".hh", ".hpp", ".hxx", ".java", ".js", ".jsx", ".mjs", ".py", ".rs", ".ts", ".tsx"])
+                             [".c", ".cc", ".cjs", ".cpp", ".cs", ".cts", ".cxx", ".go", ".hh", ".hpp", ".hxx", ".java", ".js", ".jsx", ".mjs", ".mts", ".py", ".rs", ".ts", ".tsx"])
             self.assertEqual(result["scan_scope"]["source_kind"], "working_tree_non_atomic")
             self.assertIn("INCOMPLETE", format_tree_compact(result))
             self.assertEqual(result["total_matches"], 2)
@@ -162,13 +162,13 @@ class LocatorTests(unittest.TestCase):
             (nested / ".git").mkdir()
             (nested / "other.py").write_text("def calculate_total(): return 2\n")
             result = query_path(root, "calculate total")
-            self.assertEqual(result["scanned_files"], 1)
-            self.assertEqual(result["total_matches"], 1)
+            self.assertEqual(result["scanned_files"], 2)
+            self.assertEqual(result["total_matches"], 2)
             excluded = {item["path"]: item["reason"]
                         for item in result["scan_scope"]["excluded_paths"]}
             self.assertEqual(excluded["link.py"], "symlink_file")
             self.assertEqual(excluded["nested"], "nested_repository")
-            self.assertEqual(excluded["z.py"], "duplicate_physical_file")
+            self.assertNotIn("z.py", excluded)
 
     def test_ranking_preserves_terms_beyond_display_limits(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -219,8 +219,10 @@ class LocatorTests(unittest.TestCase):
             self.assertEqual(result["matches"], [])
             with self.assertRaisesRegex(ValueError, "existing file or directory"):
                 query_path(Path(raw) / "missing", "unknown")
-            with self.assertRaisesRegex(ValueError, "No supported"):
-                query_path(Path(raw), "unknown")
+            directory = query_path(Path(raw), "unknown")
+            self.assertEqual(directory["mapping_status"], "unsupported")
+            self.assertEqual(directory["scan_scope"]["unsupported_paths"][0]["path"],
+                             "unknown.swift")
 
     def test_direct_files_outside_root_or_symlinked_are_excluded_without_reading(self):
         with tempfile.TemporaryDirectory() as raw:

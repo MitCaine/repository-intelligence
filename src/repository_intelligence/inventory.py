@@ -12,12 +12,12 @@ import json
 import sys
 from pathlib import Path
 
-from .locator import PARSERS, SUFFIX_LANGUAGE, index_file, walk_supported_paths
+from .locator import PARSERS, SUFFIX_LANGUAGE, index_file, parse_language_choices, walk_supported_paths
 from .source import SCHEMA_VERSION, git_object_format
 from .structural import probe
 
 
-INVENTORY_SCHEMA_VERSION = 7
+INVENTORY_SCHEMA_VERSION = 8
 MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v2"
 
 
@@ -33,7 +33,8 @@ def _digest(scope: dict, files: list[dict]) -> str:
 
 
 def inventory_tree(root: Path, *, stable: bool = False,
-                   logical_root: str = ".") -> dict:
+                   logical_root: str = ".", language_choices: dict[str, str] | None = None,
+                   excluded_directories: tuple[str, ...] = ()) -> dict:
     """Inventory supported in-scope files; `stable` is a caller assertion."""
     if root.is_symlink() or not root.is_dir():
         raise ValueError("Inventory root must be a real directory")
@@ -43,20 +44,19 @@ def inventory_tree(root: Path, *, stable: bool = False,
     parser_contract = {suffix: probe(suffix, b"")["parser"] for suffix in sorted(PARSERS)}
     object_format = git_object_format(root)
     files: list[dict] = []
-    paths, exclusions, failures, other_files = walk_supported_paths(root)
-    # Navigation merely reports hardlink exclusions; a complete inventory
-    # cannot omit a second in-scope relative source path.
-    failures.extend({"path": item["path"], "error": "DuplicatePhysicalFile"}
-                    for item in exclusions if item["reason"] == "duplicate_physical_file")
+    paths, exclusions, failures, other_files, unsupported = walk_supported_paths(
+        root, language_choices=language_choices, excluded_directories=excluded_directories)
     for path in paths:
         relative = path.relative_to(root).as_posix()
         suffix = path.suffix.lower()
         try:
-            indexed = index_file(path, root=root, object_format=object_format)
+            choice = (language_choices or {}).get(relative)
+            indexed = index_file(path, root=root, object_format=object_format,
+                                 language=choice)
         except (OSError, ValueError) as error:
             failures.append({"path": relative, "error": type(error).__name__})
             continue
-        files.append({"path": relative, "language": SUFFIX_LANGUAGE[suffix],
+        files.append({"path": relative, "language": choice or SUFFIX_LANGUAGE[suffix],
                       "source_identity": indexed.get("source_identity"),
                       "parser": indexed.get("parser"),
                       "mapping_status": indexed["mapping_status"],
@@ -73,8 +73,10 @@ def inventory_tree(root: Path, *, stable: bool = False,
     failures.sort(key=lambda item: (item["path"], item["error"]))
     scope = {"logical_root": logical_root, "extensions": sorted(PARSERS),
              "exclusion_rules": ["hidden_names", "target", "__pycache__", "venv",
-                                 "symlinks", "nested_repositories", "duplicate_physical_files"],
-             "excluded_paths": exclusions, "configuration": None}
+                                 "node_modules", "symlinks", "nested_repositories"],
+             "language_choices": dict(sorted((language_choices or {}).items())),
+             "excluded_directories": sorted(set(excluded_directories)),
+             "configuration": None}
     return {"inventory_schema_version": INVENTORY_SCHEMA_VERSION,
             "navigation_schema_version": SCHEMA_VERSION,
             "mapping_contract": MAPPING_CONTRACT, "parser_contract": parser_contract,
@@ -84,6 +86,7 @@ def inventory_tree(root: Path, *, stable: bool = False,
             "incomplete_reasons": (["working_tree_non_atomic"] if not stable else [])
                                   + (["file_or_scan_failure"] if failures else []),
             "files": files, "failures": failures,
+            "observed_exclusions": exclusions, "observed_unsupported_paths": unsupported,
             "other_file_types_skipped": other_files,
             "inventory_digest": _digest(scope, files)}
 
@@ -127,6 +130,8 @@ def _summary(inventory: dict) -> dict:
             "incomplete_reasons": inventory.get("incomplete_reasons"),
             "digest": inventory.get("inventory_digest"), "scope": inventory.get("scope"),
             "failures": inventory.get("failures"),
+            "observed_exclusions": inventory.get("observed_exclusions"),
+            "observed_unsupported_paths": inventory.get("observed_unsupported_paths"),
             "files": [{"path": file.get("path"), "source_identity": file.get("source_identity"),
                        "mapping_status": file.get("mapping_status"),
                        "adapter_coverage": file.get("adapter_coverage")}
@@ -155,8 +160,11 @@ def _complete_packet_errors(inventory: dict) -> list[str]:
         structural = file.get("structural")
         coverage = file.get("adapter_coverage")
         declarations = file.get("declarations")
-        expected = parser_contract.get(suffix)
-        if (suffix not in PARSERS or file.get("language") != SUFFIX_LANGUAGE.get(suffix) or
+        chosen_language = (inventory.get("scope") or {}).get("language_choices", {}).get(path)
+        expected = parser_contract.get({"c": ".c", "cpp": ".cpp"}.get(chosen_language, suffix))
+        expected_language = chosen_language or SUFFIX_LANGUAGE.get(suffix)
+        if ((suffix not in PARSERS and path not in (inventory.get("scope") or {}).get("language_choices", {}))
+                or file.get("language") != expected_language or
                 not isinstance(identity, dict) or identity.get("relative_path") != path or
                 not isinstance(identity.get("raw_sha256"), str) or
                 len(identity["raw_sha256"]) != 64 or
@@ -214,6 +222,9 @@ def compare_inventories(planning: dict, candidate: dict) -> dict:
                 "file_changes": None, "declaration_changes": None}
     planning_files = {file["path"]: file for file in planning["files"]}
     candidate_files = {file["path"]: file for file in candidate["files"]}
+    candidate_exclusions = {item["path"] for item in candidate.get("observed_exclusions", [])}
+    mismatches.extend(f"coverage_lost:{path}" for path in sorted(
+        planning_files.keys() & candidate_exclusions))
     for path in sorted(planning_files.keys() & candidate_files.keys()):
         prior, current = planning_files[path], candidate_files[path]
         if (prior["source_identity"]["raw_sha256"] ==
@@ -264,7 +275,9 @@ def format_inventory_compact(inventory: dict, *, limit: int = 8) -> str:
              f"digest={inventory['inventory_digest']}",
              f"schema={inventory['inventory_schema_version']} contract={inventory['mapping_contract']} "
              f"logical_root={scope['logical_root']} materialization={inventory['materialization']}",
-             f"excluded={len(scope['excluded_paths'])} failures={len(inventory['failures'])} "
+             f"excluded={len(inventory['observed_exclusions'])} "
+             f"unsupported={len(inventory['observed_unsupported_paths'])} "
+             f"failures={len(inventory['failures'])} "
              f"other_types={inventory['other_file_types_skipped']}"]
     lines.extend(f"  {file['path']} {file['mapping_status']} "
                  f"sha256={file['source_identity']['raw_sha256'] if file['source_identity'] else 'unread'} "
@@ -286,7 +299,7 @@ def format_delta_compact(delta: dict, *, limit: int = 8) -> str:
              f"digest={delta['candidate']['digest']}",
              f"logical_root={delta['planning']['scope']['logical_root']} "
              f"extensions={','.join(delta['planning']['scope']['extensions'])} "
-             f"excluded={len(delta['planning']['scope']['excluded_paths'])} "
+             f"excluded={len(delta['planning']['observed_exclusions'])} "
              f"mismatches={len(delta['mismatches'])}"]
     if delta["mismatches"]:
         lines.extend(f"  mismatch: {reason}" for reason in delta["mismatches"][:limit])
@@ -325,6 +338,8 @@ def main(argv: list[str] | None = None) -> int:
     compare.add_argument("candidate", type=Path)
     for command in (scan, compare):
         command.add_argument("--logical-root", default=".")
+        command.add_argument("--header-language", action="append", default=[], metavar="PATH=c|cpp")
+        command.add_argument("--exclude-directory", action="append", default=[], metavar="NAME")
         command.add_argument("--assert-stable-materialization", action="store_true",
                              help="caller asserts supplied source roots remain stable for this scan")
         command.add_argument("--json", action="store_true", help="print full unbounded evidence")
@@ -336,17 +351,22 @@ def main(argv: list[str] | None = None) -> int:
     if args.assert_stable_materialization:
         print("WARNING: stability is asserted by the caller; RI does not attest source snapshots",
               file=sys.stderr)
+    choices = parse_language_choices(args.header_language)
+    excluded_directories = tuple(args.exclude_directory)
     if args.command == "scan":
         result = inventory_tree(args.root, stable=args.assert_stable_materialization,
-                                logical_root=args.logical_root)
+                                logical_root=args.logical_root, language_choices=choices,
+                                excluded_directories=excluded_directories)
         output = json.dumps(result, indent=2) if args.json else format_inventory_compact(
             result, limit=args.limit)
         status = result["status"]
     else:
         planning = inventory_tree(args.planning, stable=args.assert_stable_materialization,
-                                  logical_root=args.logical_root)
+                                  logical_root=args.logical_root, language_choices=choices,
+                                  excluded_directories=excluded_directories)
         candidate = inventory_tree(args.candidate, stable=args.assert_stable_materialization,
-                                   logical_root=args.logical_root)
+                                   logical_root=args.logical_root, language_choices=choices,
+                                   excluded_directories=excluded_directories)
         result = compare_inventories(planning, candidate)
         output = json.dumps(result, indent=2) if args.json else format_delta_compact(
             result, limit=args.limit)

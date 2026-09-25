@@ -20,12 +20,12 @@ PARSERS = {".py": python_tree_index.index_source, ".rs": rust_tree_index.index_s
            **{suffix: c_family_tree_index.index_source for suffix in
               (".c", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".hxx")},
            **{suffix: js_tree_index.index_source for suffix in
-              (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx")}}
+              (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")}}
 LANGUAGE_SUFFIX = {"python": ".py", "rust": ".rs", "javascript": ".js",
                    "typescript": ".ts", "tsx": ".tsx", "java": ".java", "go": ".go",
                    "csharp": ".cs", "c": ".c", "cpp": ".cpp"}
 SUFFIX_LANGUAGE = {suffix: ("javascript" if suffix in {".js", ".jsx", ".mjs", ".cjs"}
-                            else "typescript" if suffix == ".ts" else "tsx"
+                            else "typescript" if suffix in {".ts", ".mts", ".cts"} else "tsx"
                             if suffix == ".tsx" else "python" if suffix == ".py"
                             else "java" if suffix == ".java" else "go" if suffix == ".go"
                             else "csharp" if suffix == ".cs" else "c" if suffix == ".c"
@@ -35,7 +35,36 @@ SUFFIX_LANGUAGE = {suffix: ("javascript" if suffix in {".js", ".jsx", ".mjs", ".
 MAX_PARSE_BYTES = 4_000_000
 PARSE_FAILURES = (OSError, ValueError, SyntaxError, UnicodeError)
 _AUTO_FORMAT = object()
-EXCLUDED_DIRECTORIES = {"target", "__pycache__", "venv"}
+EXCLUDED_DIRECTORIES = {"target", "__pycache__", "venv", "node_modules"}
+SOURCE_LIKE_SUFFIXES = {".h", ".m", ".mm", ".swift", ".kt", ".kts", ".rb",
+                        ".php", ".scala", ".sc", ".vue", ".svelte", ".zig"}
+
+
+def validate_scan_choices(language_choices: dict[str, str] | None,
+                          excluded_directories: tuple[str, ...]) -> dict[str, str]:
+    """Keep caller selection small: exact relative .h paths and directory names."""
+    choices = language_choices or {}
+    for path, language in choices.items():
+        parts = Path(path).parts
+        if (not path or Path(path).is_absolute() or ".." in parts or path != Path(path).as_posix()
+                or Path(path).suffix.lower() != ".h" or language not in {"c", "cpp"}):
+            raise ValueError("Language choices must map relative .h paths to c or cpp")
+    for name in excluded_directories:
+        if not name or name in {".", ".."} or "/" in name or "\\" in name:
+            raise ValueError("Excluded directories must be simple directory names")
+    return choices
+
+
+def parse_language_choices(values: list[str]) -> dict[str, str]:
+    """Parse repeatable PATH=c|cpp CLI choices without a config language."""
+    choices = {}
+    for value in values:
+        path, separator, language = value.partition("=")
+        if not separator or path in choices:
+            raise ValueError("Expected unique PATH=c or PATH=cpp")
+        choices[path] = language
+    validate_scan_choices(choices, ())
+    return choices
 
 
 def index_file(path: Path, *, root: Path | None = None,
@@ -109,13 +138,15 @@ def index_file(path: Path, *, root: Path | None = None,
             "failures": []}
 
 
-def walk_supported_paths(root: Path) -> tuple[list[Path], list[dict], list[dict], int]:
+def walk_supported_paths(root: Path, *, language_choices: dict[str, str] | None = None,
+                         excluded_directories: tuple[str, ...] = ()) -> tuple[list[Path], list[dict], list[dict], int, list[dict]]:
     """Share only traversal/exclusion facts; consumers choose failure policy."""
     paths: list[Path] = []
     exclusions: list[dict] = []
     failures: list[dict] = []
     other_files = 0
-    seen_physical: set[tuple[int, int]] = set()
+    unsupported: list[dict] = []
+    choices = validate_scan_choices(language_choices, excluded_directories)
     resolved_root = root.resolve()
 
     def walk_error(error: OSError) -> None:
@@ -128,7 +159,8 @@ def walk_supported_paths(root: Path) -> tuple[list[Path], list[dict], list[dict]
         for name in sorted(directories):
             path = parent / name
             relative = path.relative_to(root).as_posix()
-            reason = ("excluded_directory" if name.startswith(".") or name in EXCLUDED_DIRECTORIES
+            reason = ("caller_excluded_directory" if name in excluded_directories
+                      else "excluded_directory" if name.startswith(".") or name in EXCLUDED_DIRECTORIES
                       else "symlink_directory" if path.is_symlink()
                       else "nested_repository" if (path / ".git").exists() else None)
             if reason is None:
@@ -138,10 +170,12 @@ def walk_supported_paths(root: Path) -> tuple[list[Path], list[dict], list[dict]
         directories[:] = kept
         for name in sorted(filenames):
             path = parent / name
-            if path.suffix.lower() not in PARSERS:
-                other_files += 1
-                continue
             relative = path.relative_to(root).as_posix()
+            if path.suffix.lower() not in PARSERS and relative not in choices:
+                other_files += 1
+                if path.suffix.lower() in SOURCE_LIKE_SUFFIXES:
+                    unsupported.append({"path": relative, "reason": "no_language_adapter_selected"})
+                continue
             if name.startswith(".") or path.is_symlink():
                 exclusions.append({"path": relative,
                                    "reason": "symlink_file" if path.is_symlink() else "hidden_file"})
@@ -150,21 +184,15 @@ def walk_supported_paths(root: Path) -> tuple[list[Path], list[dict], list[dict]
                 if not path.resolve().is_relative_to(resolved_root):
                     exclusions.append({"path": relative, "reason": "outside_root"})
                     continue
-                stat = path.stat()
-                physical = stat.st_dev, stat.st_ino
-                if stat.st_ino and physical in seen_physical:
-                    exclusions.append({"path": relative, "reason": "duplicate_physical_file"})
-                    continue
-                if stat.st_ino:
-                    seen_physical.add(physical)
                 paths.append(path)
             except (OSError, ValueError) as error:
                 failures.append({"path": relative, "error": type(error).__name__})
-    return paths, exclusions, failures, other_files
+    return paths, exclusions, failures, other_files, unsupported
 
 
 def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = None,
-               language: str | None = None) -> dict:
+               language: str | None = None, language_choices: dict[str, str] | None = None,
+               excluded_directories: tuple[str, ...] = ()) -> dict:
     words = validate_query(terms, limit)
     if source.is_symlink():
         return query(index_file(source, root=root, language=language), terms, limit)
@@ -175,16 +203,19 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
     if root is not None:
         raise ValueError("Explicit root applies only to a direct file query")
     if language is not None:
-        raise ValueError("Explicit language applies only to a direct file query")
+        raise ValueError("Explicit language applies only to a direct file query; use language_choices for a directory")
     candidates: list[dict] = []
-    paths, excluded_paths, failures, out_of_scope = walk_supported_paths(source)
+    paths, excluded_paths, failures, out_of_scope, unsupported = walk_supported_paths(
+        source, language_choices=language_choices, excluded_directories=excluded_directories)
     scanned = 0
     parse_errors = 0
     structural_errors = 0
     object_format = git_object_format(source)
     for path in paths:
         try:
-            indexed = index_file(path, root=source, object_format=object_format)
+            choice = (language_choices or {}).get(path.relative_to(source).as_posix())
+            indexed = index_file(path, root=source, object_format=object_format,
+                                 language=choice)
         except (OSError, ValueError) as error:
             failures.append({"path": str(path), "error": type(error).__name__})
             continue
@@ -202,7 +233,7 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
                            "source_identity": indexed["source_identity"],
                            "parse_error_count": indexed["parse_error_count"]}
                           for entry in indexed["functions"])
-    if not paths:
+    if not paths and not unsupported:
         raise ValueError("No supported source files found in directory")
     ranked = rank(candidates, words)
     return {"schema_version": SCHEMA_VERSION, "root": str(source), "query": terms,
@@ -210,9 +241,10 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
                            "extensions": sorted(PARSERS),
                            "source_kind": "working_tree_non_atomic",
                            "excluded_paths": excluded_paths,
+                           "unsupported_paths": unsupported,
                            "other_file_types_skipped": out_of_scope},
             "mapping_status": ("incomplete" if failures or parse_errors or structural_errors
-                               else "navigation_only"),
+                               else "unsupported" if not paths else "navigation_only"),
             "scanned_files": scanned,
             "parse_error_count": parse_errors, "structural_error_count": structural_errors,
             "failures": failures,
@@ -228,10 +260,15 @@ def main() -> None:
     parser.add_argument("--root", type=Path, help="allowed root for a direct file query")
     parser.add_argument("--language", choices=sorted(LANGUAGE_SUFFIX),
                         help="explicit parser for a direct file with an ambiguous extension")
+    parser.add_argument("--header-language", action="append", default=[], metavar="PATH=c|cpp",
+                        help="select a relative .h path for directory navigation")
+    parser.add_argument("--exclude-directory", action="append", default=[], metavar="NAME")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
     result = query_path(args.source, args.query, args.limit, root=args.root,
-                        language=args.language)
+                        language=args.language,
+                        language_choices=parse_language_choices(args.header_language),
+                        excluded_directories=tuple(args.exclude_directory))
     print(json.dumps(result, indent=2) if args.json else
           (format_tree_compact(result) if "scan_scope" in result else format_compact(result)))
 
