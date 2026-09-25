@@ -94,6 +94,8 @@ def format_compact(result: dict) -> str:
         lines.append(f"EXCLUDED: {result['excluded_reason']}; source was not read")
     elif result.get("mapping_status") == "incomplete":
         lines.append("INCOMPLETE: source could not be fully parsed; no absence claim is valid")
+    if result.get("preprocessing"):
+        lines.append("C/C++ RAW SOURCE: preprocessing is unexpanded; no effective-program claim")
     return "\n".join(lines)
 
 

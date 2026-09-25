@@ -62,6 +62,7 @@ class InstalledPackageTests(unittest.TestCase):
                                        "repository_intelligence/java_tree_index.py",
                                        "repository_intelligence/go_tree_index.py",
                                        "repository_intelligence/csharp_tree_index.py",
+                                       "repository_intelligence/c_family_tree_index.py",
                                        "repository_intelligence/search.py",
                                        "repository_intelligence/source.py",
                                        "repository_intelligence/declarations.py",
@@ -82,6 +83,8 @@ class InstalledPackageTests(unittest.TestCase):
             (consumer / "fixture.java").write_text("class C { int total(){ return 1; } }\n")
             (consumer / "fixture.go").write_text("package x\nfunc total() int { return 1 }\n")
             (consumer / "fixture.cs").write_text("class C { int Total(){ return 1; } }\n")
+            (consumer / "fixture.c").write_text("int total(){ return 1; }\n")
+            (consumer / "fixture.cpp").write_text("int total(){ return 1; }\n")
             script = temp / "smoke.py"
             script.write_text(
                 "import json\n"
@@ -108,6 +111,8 @@ class InstalledPackageTests(unittest.TestCase):
                 "assert query_path(Path('fixture.java'), 'total')['matches'][0]['name'] == 'total'\n"
                 "assert query_path(Path('fixture.go'), 'total')['matches'][0]['name'] == 'total'\n"
                 "assert query_path(Path('fixture.cs'), 'total')['matches'][0]['name'] == 'Total'\n"
+                "assert query_path(Path('fixture.c'), 'total')['matches'][0]['name'] == 'total'\n"
+                "assert query_path(Path('fixture.cpp'), 'total')['matches'][0]['name'] == 'total'\n"
                 "print(json.dumps(sorted(item['path'] for item in result['matches'])))\n")
             consumer_environment = {**environment, "PATH": str(install / "bin")}
             result = run(installed_python, "-I", script, cwd=consumer, env=consumer_environment)

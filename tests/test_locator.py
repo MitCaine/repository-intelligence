@@ -77,7 +77,7 @@ class LocatorTests(unittest.TestCase):
             self.assertEqual(result["mapping_status"], "incomplete")
             self.assertGreater(result["structural_error_count"], 0)
             self.assertEqual(result["scan_scope"]["extensions"],
-                             [".cjs", ".cs", ".go", ".java", ".js", ".jsx", ".mjs", ".py", ".rs", ".ts", ".tsx"])
+                             [".c", ".cc", ".cjs", ".cpp", ".cs", ".cxx", ".go", ".hh", ".hpp", ".hxx", ".java", ".js", ".jsx", ".mjs", ".py", ".rs", ".ts", ".tsx"])
             self.assertEqual(result["scan_scope"]["source_kind"], "working_tree_non_atomic")
             self.assertIn("INCOMPLETE", format_tree_compact(result))
             self.assertEqual(result["total_matches"], 2)
