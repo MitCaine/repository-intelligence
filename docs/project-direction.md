@@ -67,7 +67,12 @@ Parser success alone cannot prove adapter coverage: Tree-sitter `ERROR` and
 `MISSING` nodes, unhandled promised syntax, failed or oversized files, and
 scan exclusions must be visible. Partial results remain useful for navigation;
 an incomplete supported-source inventory cannot qualify a candidate delta.
-RI may be ignorant, but it must never be **unknowingly incomplete**.
+Avoiding unknowingly incomplete mapping is an engineering goal, not a proven
+guarantee from counters alone. The declared contract and adapter fixtures need
+review: a wrong owner or kind can preserve perfect counts. A controller must
+also review the full source/file diff beside RI's declaration delta, since
+imports, initializers, configuration, and unsupported source can change with
+no declaration changes.
 
 Mappings are generated from source, never manually maintained. The controller
 or reviewer can compare `RI(P)` and `RI(C)` to see added, removed, modified,

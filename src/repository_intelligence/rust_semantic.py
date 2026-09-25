@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+from .source import physical_lines
+
 
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -131,7 +133,7 @@ def resolve_definition(project_root: Path, source_path: Path, line: int, column:
         raise ValueError("Explicit Cargo features, default-feature choice, target, and position are required")
     source = source_path.read_bytes()
     decoded = source.decode("utf-8")
-    lines = decoded.splitlines()
+    lines = physical_lines(decoded)
     if line > len(lines) or column > len(lines[line - 1]) + 1:
         raise ValueError("Reference position is outside source")
     lsp_character = len(lines[line - 1][:column - 1].encode("utf-16-le")) // 2
@@ -178,10 +180,6 @@ def resolve_definition(project_root: Path, source_path: Path, line: int, column:
                                  "position": {"line": line - 1, "character": lsp_character}})
     finally:
         client.close()
-    after = _snapshot(root)
-    if before != after or _sha(source_path.read_bytes()) != _sha(source):
-        return {**packet, "status": "incomplete_changed_source",
-                "source_snapshot_after": after}
     locations = answer if isinstance(answer, list) else [answer] if answer else []
     for location in locations:
         uri = location.get("uri") or location.get("targetUri")
@@ -196,6 +194,14 @@ def resolve_definition(project_root: Path, source_path: Path, line: int, column:
             identity = {"raw_sha256": _sha(target_bytes),
                         "byte_count": len(target_bytes),
                         "within_project": target_path.is_relative_to(root)}
-        packet["targets"].append({"uri": uri, "range": span, "source_identity": identity})
+        packet["targets"].append({"uri": uri, "range": span, "source_identity": identity,
+                                  "byte_binding": "post_analysis_observation"})
+    after = _snapshot(root)
+    if before != after or _sha(source_path.read_bytes()) != _sha(source):
+        return {**packet, "status": "incomplete_changed_source",
+                "source_snapshot_after": after}
+    for item in packet["targets"]:
+        if item["source_identity"] is not None and item["source_identity"]["within_project"]:
+            item["byte_binding"] = "checked_against_final_local_snapshot"
     packet["status"] = "resolved" if packet["targets"] else "unresolved"
     return packet
