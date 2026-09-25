@@ -133,6 +133,20 @@ class InventoryTests(unittest.TestCase):
                     self.assertIsNone(delta["file_changes"])
                     self.assertIsNone(delta["declaration_changes"])
 
+    def test_identical_file_bytes_cannot_have_changed_declaration_evidence(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "one.py").write_text("def one(): return 1\n")
+            valid = inventory_tree(root, stable=True)
+            changed = copy.deepcopy(valid)
+            changed["files"][0]["declarations"][0]["declaration_sha256"] = "0" * 64
+            self.assertEqual(valid["inventory_digest"], changed["inventory_digest"])
+            delta = compare_inventories(valid, changed)
+            self.assertEqual(delta["status"], "incompatible")
+            self.assertIn("unchanged_file_evidence:one.py", delta["mismatches"])
+            self.assertIsNone(delta["file_changes"])
+            self.assertIsNone(delta["declaration_changes"])
+
     def test_anonymous_movement_is_reported_as_add_and_remove(self):
         with tempfile.TemporaryDirectory() as raw:
             left, right = (Path(raw) / name for name in ("left", "right"))

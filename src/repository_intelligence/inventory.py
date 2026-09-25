@@ -175,6 +175,14 @@ def _complete_packet_errors(inventory: dict) -> list[str]:
     return errors
 
 
+def _unchanged_file_evidence_matches(prior: dict, current: dict) -> bool:
+    """Identical bytes under one parser contract must yield identical mapping."""
+    return (prior["adapter_coverage"] == current["adapter_coverage"]
+            and prior["structural"] == current["structural"]
+            and sorted(prior["declarations"], key=lambda item: item["declaration_id"])
+            == sorted(current["declarations"], key=lambda item: item["declaration_id"]))
+
+
 def compare_inventories(planning: dict, candidate: dict) -> dict:
     """Return factual deltas only for compatible, caller-stable complete scans."""
     contract_fields = ("inventory_schema_version", "navigation_schema_version",
@@ -194,6 +202,17 @@ def compare_inventories(planning: dict, candidate: dict) -> dict:
                 "file_changes": None, "declaration_changes": None}
     if planning.get("status") != "complete" or candidate.get("status") != "complete":
         return {**basic, "status": "incomplete", "mismatches": [],
+                "file_changes": None, "declaration_changes": None}
+    planning_files = {file["path"]: file for file in planning["files"]}
+    candidate_files = {file["path"]: file for file in candidate["files"]}
+    for path in sorted(planning_files.keys() & candidate_files.keys()):
+        prior, current = planning_files[path], candidate_files[path]
+        if (prior["source_identity"]["raw_sha256"] ==
+                current["source_identity"]["raw_sha256"] and
+                not _unchanged_file_evidence_matches(prior, current)):
+            mismatches.append(f"unchanged_file_evidence:{path}")
+    if mismatches:
+        return {**basic, "status": "incompatible", "mismatches": mismatches,
                 "file_changes": None, "declaration_changes": None}
     file_changes = _changes(planning["files"], candidate["files"], "path")
     before = _declarations(planning)

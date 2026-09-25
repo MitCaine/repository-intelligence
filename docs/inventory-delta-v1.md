@@ -37,6 +37,9 @@ source identity, parser contract, callable accounting, structural diagnostics,
 and the normalized inventory checksum; a contradictory packet is incompatible
 even if its top-level status says `complete`. Comparison never authorizes edits
 or qualifies a candidate on behalf of a controller.
+Across sides, an unchanged raw file hash under the same parser contract must
+also have identical normalized declaration and coverage evidence. A mismatch
+is incompatible, not a declaration modification inside an unchanged file.
 
 Comparable results classify files by relative path and raw file hash as added,
 removed, modified, or unchanged, including zero-callable files. Declarations
