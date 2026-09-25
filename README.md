@@ -60,7 +60,9 @@ navigation, not candidate-change qualification.
 The query-independent [structural inventory and candidate delta](docs/inventory-delta-v1.md)
 records all supported in-scope source files, including zero-callable files.
 Planning-to-candidate comparison requires compatible, caller-supplied stable
-materializations; RI reports factual changes and does not authorize them.
+materializations; RI reports factual changes and does not authorize them. The
+`python3.13 -m repository_intelligence.inventory` command provides bounded
+compact or full JSON output for controller inspection.
 
 The Rust-only analyzer command remains available as an opt-in escalation,
 `python3.13 -m repository_intelligence.rust_index`. Its output uses a distinct

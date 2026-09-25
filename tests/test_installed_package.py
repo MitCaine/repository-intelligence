@@ -96,6 +96,10 @@ class InstalledPackageTests(unittest.TestCase):
             consumer_environment = {**environment, "PATH": str(install / "bin")}
             result = run(installed_python, "-I", script, cwd=consumer, env=consumer_environment)
             self.assertEqual(json.loads(result), ["src/lib.rs", "src/orders.py"])
+            inventory_output = run(installed_python, "-m", "repository_intelligence.inventory",
+                                   "scan", "src", "--assert-stable-materialization", "--json",
+                                   cwd=consumer, env=consumer_environment)
+            self.assertEqual(json.loads(inventory_output)["status"], "complete")
 
 
 if __name__ == "__main__":
