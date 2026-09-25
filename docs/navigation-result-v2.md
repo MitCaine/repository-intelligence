@@ -79,6 +79,12 @@ and Rust navigation use the same Tree-sitter parse as this structural evidence.
 The adapters report promised Python function/lambda and Rust
 `function_item`/`closure_expression` nodes they cannot handle as incomplete.
 This remains navigation evidence, not complete coverage.
+Successfully parsed supported direct-file `adapter_coverage` reports
+`promised_node_count`, `mapped_node_count`,
+`unhandled_node_count`, and `bodyless_excluded_count` for the documented
+source-level contract. Rust trait and foreign bodyless signatures are excluded;
+unhandled promised nodes make the mapping incomplete. See
+`docs/tree-sitter-baseline.md` for the exact syntax families and policy.
 
 Parsed callable entries include a `declaration_id` synthesized from kind and
 qualified name. Named functions also carry a source-order ordinal among

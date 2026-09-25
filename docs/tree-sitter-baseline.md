@@ -1,4 +1,4 @@
-# Tree-sitter baseline: first #8 slice
+# Tree-sitter baseline and callable coverage contract
 
 The shared locator runs a small structural probe. Ordinary Python and Rust
 navigation now come from the same Tree-sitter parse as the probe. The Python
@@ -6,6 +6,37 @@ standard-library AST adapter remains available directly as a reference or
 fallback; the separate rust-analyzer route is
 preserved as an opt-in escalation for richer source/metadata questions. No
 exhaustive language coverage is claimed.
+
+## Promised source-level forms
+
+For the pinned Python grammar, the navigation adapter promises every
+`function_definition` and `lambda` node that Tree-sitter exposes, including
+top-level, class methods, nested/local functions, decorated and async functions,
+and nested/assigned lambdas. A `decorated_definition` contributes its attached
+decorator bytes to the function range; the underlying function maps once, not
+twice. Classes and decorators themselves are containers or attachments, not
+callables. Python has no bodyless declaration in this contract. An absent or
+zero-width function/lambda body, missing name, or missing function-header colon
+is adapter-unhandled, not a successful map.
+
+For the pinned Rust grammar, the adapter promises every `function_item` and
+`closure_expression` node exposed by Tree-sitter, including top-level, nested,
+trait default and impl methods, generic functions, and nested closures.
+Immediately attached outer attributes and doc comments are included in named
+function source ranges. `function_signature_item` is intentionally bodyless:
+inside a `trait_item` or `foreign_mod_item` it is counted as excluded from the
+callable map. Elsewhere it is treated as adapter-unhandled and makes the result
+incomplete. Missing/zero-width bodies or names on promised nodes do likewise.
+
+Each successfully parsed supported direct-file result's `adapter_coverage`
+counts promised syntax nodes, mapped entries,
+adapter-unhandled nodes, and explicitly excluded bodyless signatures. The first
+count must equal mapped plus unhandled; a duplicate mapped source range is a
+failure, not a second callable. Unhandled detail is bounded to 50 entries, while
+counts remain exact. `ERROR` and `MISSING` syntax diagnostics independently
+make a result incomplete, even when valid neighboring declarations are mapped.
+These are commitments over the grammar's recognized node kinds, not proof that
+every possible language construct or generated macro expansion was inventoried.
 
 Pinned package versions in `pyproject.toml` are `tree-sitter==0.25.0`,
 `tree-sitter-python==0.25.0`, and `tree-sitter-rust==0.24.2`. Results record
@@ -27,10 +58,9 @@ lexical call candidates. Python Tree-sitter navigation is fixture-compared with
 the standard-library AST adapter for signatures, docs, calls, and raw-byte
 ranges, including declared Latin-1 source.
 
-Remaining #8 work: enumerate every promised body-bearing syntax form across
-both languages, broaden parity fixtures, verify behavior on grammar upgrades,
-and support
-explicit language selection for ambiguous extensions. Rust `function_item`
-and `closure_expression` nodes are handled or visibly marked incomplete, but
-this is not proof of exhaustive Rust syntax coverage. #9 owns repository-wide
-complete inventories and candidate deltas.
+Remaining #8 work: broaden parity against more real-world syntax, verify
+declaration-node changes against upstream generated `node-types.json` during
+grammar upgrades, and support explicit language selection for ambiguous
+extensions. This contract still is not proof of exhaustive Python or Rust
+language coverage. #9 owns repository-wide complete inventories and candidate
+deltas.
