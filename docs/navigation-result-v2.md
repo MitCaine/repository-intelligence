@@ -1,3 +1,7 @@
+# Superseded by [navigation result v3](navigation-result-v3.md)
+
+This file documents historical version 2 packets. Keep using this contract only to interpret already-produced v2 results.
+
 # Navigation result v2
 
 `repository_intelligence.locator.index_file(path, root=..., language=...)` identifies one

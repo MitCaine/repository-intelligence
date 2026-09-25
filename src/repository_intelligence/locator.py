@@ -132,11 +132,13 @@ def index_file(path: Path, *, root: Path | None = None,
         return {**basic, "mapping_status": "incomplete", "parser": parser_info,
                 "structural": syntax,
                 "failures": [{"error": type(error).__name__}]}
+    syntax = structural.with_mapping(syntax, indexed)
     return {**indexed, "schema_version": SCHEMA_VERSION, "source_identity": identity,
             "raw_sha256": identity["raw_sha256"],
             "git_blob_sha1": legacy_git_blob_sha1(source),
             "parser": parser_info, "structural": syntax,
             "mapping_status": ("incomplete" if indexed["parse_error_count"]
+                               or indexed["adapter_coverage"]["unhandled_node_count"]
                                or syntax["error_count"] or syntax["missing_count"]
                                else "navigation_only"),
             "failures": []}
@@ -215,6 +217,7 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
     scanned = 0
     parse_errors = 0
     structural_errors = 0
+    incomplete_files = 0
     object_format = git_object_format(source)
     scan_setup = structural.ScanSetup()
     for path in paths:
@@ -233,6 +236,7 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
                              **failure} for failure in indexed["failures"])
             continue
         scanned += 1
+        incomplete_files += indexed["mapping_status"] == "incomplete"
         parse_errors += indexed["parse_error_count"]
         structural_errors += (indexed["structural"]["error_count"]
                               + indexed["structural"]["missing_count"])
@@ -253,6 +257,7 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
                            "unsupported_paths": unsupported,
                            "other_file_types_skipped": out_of_scope},
             "mapping_status": ("incomplete" if failures or parse_errors or structural_errors
+                               or incomplete_files
                                else "unsupported" if not paths else "navigation_only"),
             "scanned_files": scanned,
             "files": files,

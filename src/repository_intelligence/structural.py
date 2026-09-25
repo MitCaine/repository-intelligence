@@ -7,7 +7,6 @@ to UTF-8 for Tree-sitter.
 
 from __future__ import annotations
 
-import hashlib
 import io
 import tokenize
 from bisect import bisect_right
@@ -27,7 +26,7 @@ import tree_sitter_cpp
 from .source import physical_lines
 
 
-ADAPTER_VERSION = 1
+ADAPTER_VERSION = 2
 MAX_DECLARATION_DETAILS = 100
 MAX_DIAGNOSTIC_DETAILS = 50
 GRAMMARS = {
@@ -53,9 +52,6 @@ GRAMMARS = {
     ".hxx": ("C++", "tree-sitter-cpp", tree_sitter_cpp.language),
 }
 
-JS_CALLABLES = {"function_declaration", "generator_function_declaration",
-                "function_expression", "generator_function", "arrow_function",
-                "method_definition"}
 
 
 class _RawOffsets:
@@ -111,11 +107,6 @@ def rust_attachments(node, source: bytes) -> list:
     return list(reversed(attached_nodes))
 
 
-def _rust_start(node, source: bytes) -> int:
-    attachments = rust_attachments(node, source)
-    return attachments[0].start_byte if attachments else node.start_byte
-
-
 class ScanSetup:
     """Reuse immutable grammar metadata and parsers only within one scan call."""
 
@@ -151,9 +142,7 @@ def scan(suffix: str, source: bytes, *, setup: ScanSetup | None = None) -> tuple
     def raw(offset: int) -> int:
         return offsets.raw(offset) if offsets is not None else offset
 
-    declarations = []
     diagnostics = []
-    declaration_count = 0
     error_count = 0
     missing_count = 0
 
@@ -170,89 +159,44 @@ def scan(suffix: str, source: bytes, *, setup: ScanSetup | None = None) -> tuple
                                     "node_type": node.type,
                                     "byte_range": {"start": raw(node.start_byte),
                                                    "end": raw(node.end_byte)}})
-        selected = None
-        name_node = None
-        if suffix == ".py":
-            if node.type == "decorated_definition":
-                selected = next((child for child in node.named_children
-                                 if child.type == "function_definition"), None)
-                if selected is not None:
-                    name_node = selected.child_by_field_name("name")
-            elif node.type == "function_definition" and node.parent.type != "decorated_definition":
-                selected = node
-                name_node = node.child_by_field_name("name")
-            elif node.type == "lambda" and node.is_named:
-                selected = node
-        elif node.type in {"function_item", "closure_expression"}:
-            selected = node
-            if node.type == "function_item":
-                name_node = node.child_by_field_name("name")
-        elif suffix in {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"} \
-                and node.type in JS_CALLABLES:
-            selected = node
-            name_node = node.child_by_field_name("name")
-        elif suffix == ".java" and node.type in {"method_declaration", "constructor_declaration",
-                                                  "compact_constructor_declaration",
-                                                  "lambda_expression"} \
-                and node.child_by_field_name("body") is not None:
-            selected = node
-            name_node = node.child_by_field_name("name")
-        elif suffix == ".go" and node.type in {"function_declaration", "method_declaration",
-                                                "func_literal"}:
-            selected = node
-            name_node = node.child_by_field_name("name")
-        elif suffix == ".cs" and node.type in {"method_declaration", "constructor_declaration",
-                                                "destructor_declaration", "operator_declaration",
-                                                "conversion_operator_declaration",
-                                                "local_function_statement", "lambda_expression",
-                                                "anonymous_method_expression",
-                                                "accessor_declaration", "property_declaration",
-                                                "indexer_declaration"} \
-                and (node.child_by_field_name("body") is not None or
-                     (node.type == "anonymous_method_expression" and any(
-                         child.type == "block" for child in node.named_children)) or
-                     (node.type in {"property_declaration", "indexer_declaration"} and
-                      node.child_by_field_name("value") is not None and
-                      node.child_by_field_name("value").type == "arrow_expression_clause")):
-            selected = node
-            name_node = node.child_by_field_name("name")
-        elif suffix in {".c", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".hxx"} \
-                and node.type in {"function_definition", "lambda_expression"}:
-            selected = node
-            name_node = None
-        if selected is not None:
-            declaration_count += 1
-            if len(declarations) < MAX_DECLARATION_DETAILS:
-                kind = ("lambda" if selected.type in {"lambda", "lambda_expression", "func_literal",
-                                                       "anonymous_method_expression"}
-                        else "closure" if selected.type == "closure_expression"
-                        else "arrow" if selected.type == "arrow_function" else "function")
-                start_node = (node.parent if suffix in {".c", ".cc", ".cpp", ".cxx",
-                                                        ".hpp", ".hh", ".hxx"}
-                              and node.parent is not None
-                              and node.parent.type in {"template_declaration", "friend_declaration"}
-                              else node)
-                start = raw(_rust_start(node, source) if suffix == ".rs"
-                            and kind == "function" else start_node.start_byte)
-                end = raw(node.end_byte)
-                name = (parse_bytes[name_node.start_byte:name_node.end_byte].decode("utf-8")
-                        if name_node is not None else None)
-                declarations.append({"kind": kind, "name": name,
-                                     "byte_range": {"start": start, "end": end},
-                                     "declaration_sha256": hashlib.sha256(source[start:end]).hexdigest()})
         pending.extend(reversed(node.children))
     result = {"parser": parser_info,
             "source_encoding": encoding, "coordinate_space": "raw_bytes",
             "error_count": error_count, "missing_count": missing_count,
             "diagnostic_count": error_count + missing_count,
-            "declaration_count": declaration_count,
-            "diagnostics": diagnostics, "declarations": declarations,
-            "details_truncated": (declaration_count > len(declarations)
-                                  or error_count + missing_count > len(diagnostics)),
-            "coverage": "partial_navigation_evidence"}
+            "declaration_count": None,
+            "diagnostics": diagnostics, "declarations": [],
+            "details_truncated": error_count + missing_count > len(diagnostics),
+            "coverage": "syntax_diagnostics_only"}
     return result, root, parse_bytes, offsets
 
 
+def with_mapping(syntax: dict, indexed: dict) -> dict:
+    """Present adapter-owned callable accounting beside independent syntax errors."""
+    coverage = indexed["adapter_coverage"]
+    promised = coverage["promised_node_count"]
+    entries = indexed["functions"]
+    declarations = [
+        {"kind": entry["declaration_kind"] if entry["declaration_kind"] in
+          {"lambda", "closure", "arrow"} else "function",
+         "name": (None if entry.get("anonymous") or entry["declaration_kind"] in
+                  {"lambda", "closure", "arrow"} else entry["name"]),
+         "byte_range": entry["byte_range"],
+         "declaration_sha256": entry["declaration_sha256"]}
+        for entry in entries[:MAX_DECLARATION_DETAILS]]
+    return {**syntax, "declaration_count": promised, "declarations": declarations,
+            "details_truncated": (syntax["details_truncated"] or
+                                  len(entries) > len(declarations)),
+            "coverage": "adapter_owned_callable_accounting"}
+
+
 def probe(suffix: str, source: bytes, *, setup: ScanSetup | None = None) -> dict:
-    """Return partial structural evidence without exposing parser objects."""
-    return scan(suffix, source, setup=setup)[0]
+    """Return syntax evidence and adapter-owned callable presentation."""
+    from pathlib import Path
+    from .locator import PARSERS
+    syntax, tree, parse_bytes, offsets = scan(suffix, source, setup=setup)
+    adapter = PARSERS[suffix]
+    indexed = (adapter(Path("probe" + suffix), source, tree=tree,
+                       parse_bytes=parse_bytes, offsets=offsets) if suffix == ".py"
+               else adapter(Path("probe" + suffix), source, tree=tree))
+    return with_mapping(syntax, indexed)

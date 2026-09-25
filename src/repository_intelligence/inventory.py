@@ -17,7 +17,7 @@ from .source import SCHEMA_VERSION, git_object_format
 from .structural import ScanSetup
 
 
-INVENTORY_SCHEMA_VERSION = 8
+INVENTORY_SCHEMA_VERSION = 9
 MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v2"
 
 
