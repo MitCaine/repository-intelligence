@@ -32,6 +32,7 @@ class RustIndexTests(unittest.TestCase):
             self.assertEqual(indexed["raw_sha256"], hashlib.sha256(self.SOURCE).hexdigest())
             award = query(indexed, "award pot", 1)["matches"][0]
             self.assertEqual(award["line"], 5)
+            self.assertEqual(award["column"], 12)
             self.assertEqual(award["qualified_name"], "table::impl Game::award_pot")
             self.assertIn("winning pot", award["docs"])
             self.assertIn("record_result", award["lexical_call_candidates"])
@@ -78,7 +79,7 @@ class RustIndexTests(unittest.TestCase):
             self.assertLessEqual(len(by_doc["matches"][0]["docs"]), 220)
             self.assertIn("call_19", by_call["matches"][0]["lexical_call_candidates"])
 
-    def test_inline_test_module_does_not_outrank_production_function(self):
+    def test_ranking_uses_relevance_without_project_specific_test_demotion(self):
         with tempfile.TemporaryDirectory() as directory:
             source_path = Path(directory) / "clock.rs"
             source_path.write_text(
@@ -88,11 +89,11 @@ class RustIndexTests(unittest.TestCase):
                 "    fn resume_clock() {}\n"
                 "}\n")
             matches = query(index_file(source_path), "pause resume clock", 2)["matches"]
-            self.assertEqual(matches[0]["qualified_name"], "resume_clock")
-            self.assertEqual(matches[1]["qualified_name"], "tests::resume_clock")
+            self.assertEqual(matches[0]["qualified_name"], "tests::resume_clock")
+            self.assertEqual(matches[1]["qualified_name"], "resume_clock")
             tree_matches = query_tree(Path(directory), "pause resume clock", 2)["matches"]
             self.assertEqual([item["qualified_name"] for item in tree_matches],
-                             ["resume_clock", "tests::resume_clock"])
+                             ["tests::resume_clock", "resume_clock"])
 
     def test_tree_query_is_source_bound_and_reports_incomplete_files(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -104,6 +105,7 @@ class RustIndexTests(unittest.TestCase):
             (root / "tests").mkdir()
             (root / "tests" / "game_contract.rs").write_text("fn award_pot() {}")
             result = query_tree(root, "award pot", 2)
+            self.assertEqual(result["result_kind"], "legacy_rust_query")
             self.assertEqual(result["scanned_files"], 2)
             self.assertEqual(result["total_matches"], 2)
             self.assertEqual(result["matches"][0]["path"], str(root / "src" / "game.rs"))

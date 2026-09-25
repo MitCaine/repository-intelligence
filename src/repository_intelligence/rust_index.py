@@ -24,6 +24,12 @@ def _slice(source: bytes, node: dict) -> str:
     return source[node["start"][0] : node["end"][0]].decode("utf-8", "replace")
 
 
+def _display_column(source: bytes, offset: int) -> int:
+    """One-based character column for navigation, not declaration identity."""
+    line_start = max(source.rfind(b"\n", 0, offset), source.rfind(b"\r", 0, offset)) + 1
+    return len(source[line_start:offset].decode("utf-8", "replace")) + 1
+
+
 def _walk(node: dict, source: bytes, owners: tuple[str, ...], output: list[dict]) -> None:
     kind = node["kind"]
     if kind == "MODULE":
@@ -69,6 +75,7 @@ def _walk(node: dict, source: bytes, owners: tuple[str, ...], output: list[dict]
                 "name": name,
                 "qualified_name": "::".join((*owners, name)),
                 "line": names[0]["start"][1] + 1,
+                "column": _display_column(source, names[0]["start"][0]),
                 "end_line": node["end"][1] + (node["end"][2] != 0),
                 "signature": source[signature_start:signature_end].decode("utf-8", "replace"),
                 "docs": " ".join(docs),
@@ -165,7 +172,7 @@ def _guidance_for(entry: dict, root: Path, records: dict[str, list[dict]]) -> li
 
 def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-analyzer",
                authority_dir: Path | None = None) -> dict:
-    """Query current Rust files without a second maintained function map."""
+    """Legacy Rust-only navigation; not the shared locator's v1 result contract."""
     words = validate_query(terms, limit)
     if not root.is_dir():
         raise ValueError("Rust query root must be an existing directory")
@@ -195,7 +202,8 @@ def query_tree(root: Path, terms: str, limit: int = 8, *, analyzer: str = "rust-
             guidance = _guidance_for(entry, root, records)
             entry["guidance_candidate_count"] = len(guidance)
             entry["guidance_candidates"] = guidance[:2]
-    return {"root": str(root), "query": terms, "scanned_files": scanned,
+    return {"result_kind": "legacy_rust_query", "root": str(root), "query": terms,
+            "scanned_files": scanned,
             "parse_error_count": parse_errors, "failures": failures,
             "total_matches": len(candidates), "matches": selected}
 
