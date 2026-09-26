@@ -165,7 +165,8 @@ class InventoryTests(unittest.TestCase):
             self.assertEqual(valid["inventory_digest"], changed["inventory_digest"])
             delta = compare_inventories(valid, changed)
             self.assertEqual(delta["status"], "incompatible")
-            self.assertIn("unchanged_file_evidence:one.py", delta["mismatches"])
+            self.assertIn("candidate_contradictory_structural_declarations:one.py",
+                          delta["mismatches"])
             self.assertIsNone(delta["file_changes"])
             self.assertIsNone(delta["declaration_changes"])
 
