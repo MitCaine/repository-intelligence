@@ -131,7 +131,7 @@ Pinned package versions in `pyproject.toml` are `tree-sitter==0.25.0`,
 `tree-sitter-java==0.23.5`, `tree-sitter-go==0.25.0`, and
 `tree-sitter-c-sharp==0.23.5`, `tree-sitter-c==0.24.2`, and
 `tree-sitter-cpp==0.23.4`. Results record
-actual installed distribution versions, grammar ABI, and adapter version 7.
+actual installed distribution versions, grammar ABI, and adapter version 8.
 Changing a grammar pin requires reviewing that grammar's upstream generated
 `node-types.json` for changed declaration nodes/fields, then running the
 language fixtures and installed-wheel check before adoption. The wheel

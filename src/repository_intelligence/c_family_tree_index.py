@@ -67,8 +67,20 @@ def _declared_function_declarator(node):
     while node is not None:
         if node.type == "function_declarator":
             selected = node
+        elif node.type == "operator_cast":
+            conversion = _declarator_child(node)
+            if conversion is not None and conversion.type == "abstract_function_declarator":
+                return conversion
         node = _declarator_child(node)
     return selected
+
+
+def _template_arguments(node):
+    while node is not None:
+        if node.type == "template_function":
+            return node.child_by_field_name("arguments")
+        node = _declarator_child(node)
+    return None
 
 
 def _calls(body, source: bytes) -> list[str]:
@@ -216,6 +228,9 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                                          if child.type in {"type_qualifier", "ref_qualifier"})
                     if qualifiers:
                         identity_signature += "|" + qualifiers
+                    arguments = _template_arguments(declarator)
+                    if arguments is not None:
+                        identity_signature += "|template=" + syntax_token_key(arguments, source)
                 functions.append({
                     "name": name, "qualified_name": qualified,
                     "line": node.start_point.row + 1,

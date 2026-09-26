@@ -15,11 +15,11 @@ from pathlib import Path
 
 from .scan import PARSERS, SUFFIX_LANGUAGE, index_file, parse_language_choices, walk_supported_paths
 from .source import SCHEMA_VERSION, git_object_format
-from .structural import ScanSetup
+from .structural import MAX_DECLARATION_DETAILS, ScanSetup
 
 
 INVENTORY_SCHEMA_VERSION = 11
-MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v7"
+MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v8"
 
 
 def _digest(scope: dict, files: list[dict]) -> str:
@@ -187,6 +187,21 @@ def _complete_packet_errors(inventory: dict) -> list[str]:
                 coverage.get("mapped_node_count") != len(declarations) or
                 structural.get("declaration_count") != coverage.get("promised_node_count")):
             errors.append(f"incomplete_file_packet:{path}")
+        summary = structural.get("declarations")
+        if (not isinstance(summary, list) or
+                len(summary) != min(len(declarations), MAX_DECLARATION_DETAILS) or
+                not all(isinstance(item, dict) for item in declarations)):
+            errors.append(f"invalid_structural_declarations:{path}")
+        else:
+            projected = [{"kind": item.get("declaration_kind") if item.get("declaration_kind")
+                          in {"lambda", "closure", "arrow"} else "function",
+                          "name": (None if item.get("anonymous") or item.get("declaration_kind")
+                                   in {"lambda", "closure", "arrow"} else item.get("name")),
+                          "byte_range": item.get("byte_range"),
+                          "declaration_sha256": item.get("declaration_sha256")}
+                         for item in declarations[:MAX_DECLARATION_DETAILS]]
+            if summary != projected:
+                errors.append(f"contradictory_structural_declarations:{path}")
         ids = [item.get("declaration_id") for item in declarations if isinstance(item, dict)]
         if (len(ids) != len(declarations) or not all(isinstance(item, str) for item in ids)
                 or len(ids) != len(set(ids))):

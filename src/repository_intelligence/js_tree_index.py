@@ -19,6 +19,13 @@ def _text(source: bytes, node) -> str:
     return source[node.start_byte:node.end_byte].decode("utf-8", "replace")
 
 
+def _class_member_flavor(node) -> str | None:
+    if (node.parent is None or node.parent.type != "class_body" or
+            node.type not in {"method_definition", "field_definition", "public_field_definition"}):
+        return None
+    return "static" if any(child.type == "static" for child in node.children) else "instance"
+
+
 def _name_from_assignment(node, source: bytes) -> str | None:
     parent = node.parent
     if parent is None or parent.type not in {"variable_declarator", "pair", "public_field_definition",
@@ -133,9 +140,10 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
     bodyless = []
     promised_count = 0
     unhandled_count = 0
-    pending = [(tree, ())]
+    pending = [(tree, (), ())]
     while pending:
-        node, owners = pending.pop()
+        node, owners, owner_identities = pending.pop()
+        member_flavor = _class_member_flavor(node)
         if node.type in {"class_declaration", "class", "abstract_class_declaration",
                          "interface_declaration", "internal_module", "module"}:
             name_node = node.child_by_field_name("name")
@@ -144,6 +152,12 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
         elif node.type in {"variable_declarator", "pair", "public_field_definition",
                           "field_definition"}:
             value = node.child_by_field_name("value")
+            if member_flavor is not None:
+                member_name = (node.child_by_field_name("name") or
+                               node.child_by_field_name("property"))
+                if member_name is not None:
+                    owner_identities = (*owner_identities,
+                                        f"{_text(source, member_name)}:{member_flavor}")
             if value is not None and value.type not in CALLABLES:
                 name_node = (node.child_by_field_name("name") or node.child_by_field_name("key")
                              or node.child_by_field_name("property"))
@@ -172,10 +186,10 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 qualified = ".".join((*owners, name))
                 method_tokens = tuple(child.type for child in node.children
                                       if name_node is not None and child.end_byte <= name_node.start_byte)
-                class_method = (node.type == "method_definition" and node.parent is not None
-                                and node.parent.type == "class_body")
-                identity_signature = (("static" if "static" in method_tokens else "instance")
-                                      if class_method else None)
+                identity_signature = member_flavor
+                if owner_identities:
+                    identity_signature = ("/".join(owner_identities) +
+                                          ("|" + identity_signature if identity_signature else ""))
                 kind = ("arrow" if node.type == "arrow_function" else
                         "constructor" if node.type == "method_definition" and name == "constructor"
                         and node.parent is not None and node.parent.type == "class_body"
@@ -198,7 +212,10 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 })
                 if node.type in CALLABLES:
                     owners = (*owners, name)
-        pending.extend((child, owners) for child in reversed(node.named_children))
+                    if member_flavor is not None:
+                        owner_identities = (*owner_identities, f"{name}:{member_flavor}")
+        pending.extend((child, owners, owner_identities)
+                       for child in reversed(node.named_children))
     assign_named_ids(functions)
     coverage = finalize_coverage(functions, promised_count, unhandled_count, len(bodyless))
     return {"path": str(path), "function_count": len(functions),
