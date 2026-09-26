@@ -76,6 +76,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
     """Extract useful Rust callables from the already parsed syntax tree."""
     if len(source) > 4_000_000:
         raise ValueError("Rust source exceeds the 4 MB per-file limit")
+    source.decode("utf-8")  # Match the exact-text contract of the other adapters.
     functions = []
     unhandled = []
     unhandled_count = 0
@@ -109,7 +110,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                 functions.append({
                     "name": name, "qualified_name": qualified,
                     "line": (name_node or node).start_point.row + 1,
-                    "column": utf8_display_column(source, position),
+                    "column": utf8_display_column(source, position, cr_is_newline=False),
                     "end_line": node.end_point.row + (node.end_point.column != 0),
                     "signature": source[node.start_byte:body.start_byte].decode("utf-8", "replace"),
                     "docs": _docs(attachments, source),

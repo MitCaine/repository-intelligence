@@ -1,82 +1,76 @@
 # Repository Intelligence
 
-Repository Intelligence (RI) is a local Python package for source navigation and structural change review. It reads current source, locates callables, and compares caller-supplied planning and candidate trees. It does not maintain a database, run a service, grant edit permission, or replace reading the source and full Git diff.
+Repository Intelligence (RI) is a local Python tool for finding relevant source
+and reviewing structural changes. It reads current files, locates callables,
+and compares caller-supplied planning and candidate trees. It keeps source hashes,
+locations, parser metadata, and coverage gaps with its results.
 
-Ordinary operation uses pinned Tree-sitter grammars for Python, Rust, JavaScript/JSX, TypeScript/TSX, Java, Go, C#, C, and C++. A separate, optional Rust API asks `rust-analyzer` to resolve one reference. Native analyzers are not required for ordinary navigation or inventories.
+Tree-sitter is the default parser for **Python, Rust, JavaScript/JSX,
+TypeScript/TSX, Java, Go, C#, C, and C++**. Native analyzers are optional.
+RI needs no service, database, or maintained symbol index. Task scope, capsule
+execution, and acceptance stay with the consumer project.
 
-## Current state
+## First query
 
-The current result contracts are navigation schema **5**, inventory schema **11**, adapter version **8**, and mapping contract `python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v8`. Package metadata remains version `0.1.0`; use the result contracts and a pinned RI revision, not the package version alone, to identify behavior.
-
-PR #64 records 146 passing pinned Python 3.13 tests, including the offline installed-wheel check. PR #61 separately records its earlier 139-test run and live Rust lookup. These are verification records for their respective revisions, not guarantees of exhaustive language coverage. The follow-up cases tracked by issue #63 have parser-integrated fixes; the deliberate boundaries in [known limitations](docs/known-limitations.md) still apply.
-
-## Install and navigate
-
-Python 3.12 or newer is required. The recorded exercised hosts are macOS ARM64 with Python 3.12 and 3.13; other platforms are not qualified merely because compatible wheels exist.
-
-From an unrelated consumer project, install one RI checkout into the consumer environment:
+Python 3.12+ is required. From the project you want to inspect, install a selected
+RI checkout into a virtual environment:
 
 ```sh
-python3.13 -m venv .venv
-.venv/bin/python -m pip install /path/to/repository-intelligence
-.venv/bin/python -m repository_intelligence.locator . \
-  --query 'calculate total' --limit 8 --json
+python3.13 -m venv .venv-ri
+.venv-ri/bin/python -m pip install "/path/to/Repository Intelligence"
+.venv-ri/bin/python -m repository_intelligence.locator . \
+  --query 'calculate total' --limit 8
 ```
 
-Installation may download pinned dependencies. [Install and verify](docs/install-and-verify.md) explains the offline path and recorded host details. A non-editable installation must be reinstalled after changing the RI checkout.
+Use a file path to narrow the question and `--json` to inspect full packet metadata.
+A direct ambiguous C/C++ header needs `--language c` or `--language cpp`;
+directory scans use repeatable `--header-language include/api.h=cpp`.
+[The consumer guide](docs/consumer-guide.md) covers installation, offline use,
+selection, and troubleshooting. Reinstall after intentionally updating a
+non-editable RI checkout; keep its revision fixed during a comparison.
 
-Pass a file to narrow a query. Use `--root` to set its identity root. Ambiguous C/C++ headers need an explicit parser:
+## Compare source trees
 
-```sh
-.venv/bin/python -m repository_intelligence.locator include/api.h \
-  --root . --language cpp --query 'calculate total'
-```
-
-For a directory, use repeatable `--header-language include/api.h=cpp` instead. Unselected `.h` files remain visible as unsupported. The locator emits useful partial results, but a zero-match result is not an absence proof. Read JSON status and failure fields; the locator does not encode mapping completeness in its exit status.
-
-## Compare planning and candidate source
-
-Supply stable source trees and the same scan policy on both sides:
+When the caller has prepared stable planning and candidate trees:
 
 ```sh
-.venv/bin/python -m repository_intelligence.inventory compare \
+.venv-ri/bin/python -m repository_intelligence.inventory compare \
   /snapshots/planning /snapshots/candidate \
   --assert-stable-materialization --compact-json
 ```
 
-The stability flag is the caller's assertion, not RI snapshot verification. Without it, inventories are marked non-atomic/incomplete and no comparable delta is emitted. The inventory command returns 0 for complete/comparable results, 2 for incomplete results, and 3 for incompatible results; argument or execution errors can fail separately.
+The stability flag is the caller's assertion. Without it, RI reports incomplete
+non-atomic scans and emits no comparable delta. Inspect file changes as well as
+declaration changes, then reconcile with the full Git diff. See the
+[inventory reference](docs/inventory.md) for compatibility and exit codes.
 
-Inventory includes supported in-scope files with zero callables. It reports file and declaration additions, removals, modifications, and unchanged entries. Anonymous positions can shift, and genuinely ambiguous named identities are compared conservatively. Always reconcile with the full changed-file list, including configuration, unsupported languages, imports, and initializers.
+## Use the right evidence
 
-## Limits and evidence
+Navigation is lexical: zero matches does not prove absence. Callable hashes
+also cannot show every effect of changed imports, types, configuration, or
+macros. Read [coverage limits](docs/limitations.md) when deciding what else to inspect.
 
-The shared scanner limits source acquisition to **32,000,000 bytes**. Larger files are incomplete without byte identity. Its separate **4,000,000-byte** parser-input limit means readable supported files above that limit retain byte identity but are not parsed. Non-regular files are not read. These limits describe the shared scanner, not every legacy/native API.
+For a parser gap or a Rust reference question, [native analysis](docs/native-analysis.md)
+provides explicit Python AST, native Rust syntax, and Rust definition interfaces.
+Keep the original structural evidence; the providers have different coverage.
+[Poker's capsule recipe](docs/poker-capsule-workflow.md) demonstrates the controller
+handoff through its existing context-page helper.
 
-Raw SHA-256 and declaration hashes identify observed bytes. Computed Git blob IDs do not prove commit membership. Directory reads are non-atomic. C/C++ uses unexpanded source; macro-generated and build-configured program coverage is not claimed. Lexical call candidates are not resolved calls.
+## Develop and verify
 
-## Verify
-
-With pinned dependencies installed, run from the RI checkout:
+From the RI checkout, with pinned dependencies installed in the chosen environment:
 
 ```sh
-PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 \
-  python3.13 -m unittest discover -s tests
+PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests
 ```
 
-The installed-wheel test requires local build wheels and a grammar wheelhouse:
+[Maintenance](docs/maintenance.md) covers required offline package verification,
+optional native tests, grammar upgrades, CI, and exercised hosts. Report skips.
+[Architecture](docs/architecture.md) describes module ownership and the small-design goals.
 
-```sh
-RI_SETUPTOOLS_WHEEL=/path/to/setuptools-79.0.1-py3-none-any.whl \
-RI_WHEEL_WHEEL=/path/to/wheel-0.47.0-py3-none-any.whl \
-RI_TREE_SITTER_WHEELHOUSE=/path/to/pinned-tree-sitter-wheels \
-RI_REQUIRE_STANDALONE=1 PYTHONDONTWRITEBYTECODE=1 \
-  python3.13 -m unittest discover -s tests -p test_installed_package.py
-```
-
-A green discovery run can contain skipped optional tests. [Maintenance](docs/maintenance.md) explains verification expectations and contract changes.
-
-## Documentation
-
-Start with the [documentation index](docs/README.md), [consumer guide](docs/consumer-guide.md), [navigation v5 reference](docs/navigation-result-v5.md), or [inventory/delta contract](docs/inventory-delta-v1.md). [Architecture](docs/architecture.md) describes implementation ownership; [callable contracts](docs/tree-sitter-baseline.md) define per-language promises.
-
-RI was extracted from [Poker App](https://github.com/MitCaine/poker-app). Project authority maps, capsule rules, and review decisions remain consumer-owned. The [project direction](docs/project-direction.md), [extraction decision](docs/standalone-core-seam.md), and [historical pilot](docs/rust-function-locator-pilot.md) explain the intent and history, not additional current capabilities. RI has no project license file yet; public redistribution requires a separate licensing decision.
+The [documentation index](docs/README.md) links all current guides.
+[Result contracts and compatibility](docs/navigation.md#current-result-contracts)
+identify behavior more precisely than package version `0.1.0`; pin the RI revision.
+RI originated in [Poker App](https://github.com/MitCaine/poker-app).
+[Historical measurements](docs/archive/README.md) retain their original scope.
+RI has no project license file yet; distribution notes are in maintenance.

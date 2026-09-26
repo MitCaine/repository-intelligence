@@ -40,13 +40,51 @@ class RustIndexTests(unittest.TestCase):
             self.assertEqual(missing["matches"], [])
             self.assertEqual(missing["total_matches"], 0)
             compact = format_compact(query(indexed, "award record", 1))
-            self.assertEqual(len(compact.splitlines()), 3)
+            self.assertEqual(len(compact.splitlines()), 4)
+            self.assertIn("PARTIAL DIAGNOSTICS", compact)
             self.assertIn(indexed["raw_sha256"], compact)
             self.assertIn("doc: Records a winning pot.", compact)
             self.assertIn("calls?: record_result", compact)
             self.assertIn("shown=1", compact)
             source_path.write_bytes(self.SOURCE + b"\n")
             self.assertNotEqual(indexed["raw_sha256"], index_file(source_path)["raw_sha256"])
+
+    @unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer not installed")
+    def test_native_error_node_count_is_not_syntax_validation(self):
+        # The native CLI drops parser diagnostics from its JSON tree. Missing
+        # delimiters and semicolons need not become ERROR nodes in that tree.
+        invalid_sources = (b"fn target() {", b"fn target( {}",
+                           b"fn target() { let x = 1 }")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "broken.rs"
+            for source in invalid_sources:
+                with self.subTest(source=source):
+                    path.write_bytes(source)
+                    indexed = index_file(path)
+                    self.assertEqual(indexed["parse_error_count"], 0)
+                    self.assertEqual(indexed["diagnostic_coverage"], "error_nodes_only")
+                    self.assertEqual(indexed["parse_error_count_kind"],
+                                     "error_node_lower_bound")
+                    self.assertEqual([item["name"] for item in indexed["functions"]],
+                                     ["target"])
+                    self.assertEqual(indexed["functions"][0]["byte_range"],
+                                     {"start": 0, "end": len(source)})
+                    self.assertIn("PARTIAL DIAGNOSTICS",
+                                  format_compact(query(indexed, "target")))
+                    tree = query_tree(Path(directory), "target")
+                    self.assertEqual(tree["diagnostic_coverage"], "error_nodes_only")
+                    self.assertEqual(tree["matches"][0]["parse_error_count_kind"],
+                                     "error_node_lower_bound")
+                    self.assertIn("PARTIAL DIAGNOSTICS", format_tree_compact(tree))
+
+    @unittest.skipUnless(shutil.which("rust-analyzer"), "rust-analyzer not installed")
+    def test_lone_cr_counts_as_whitespace_in_native_display_columns(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "source.rs"
+            path.write_bytes(b"fn target() {}\rfn caller() { target(); }\n")
+            self.assertEqual([(entry["name"], entry["line"], entry["column"])
+                              for entry in index_file(path)["functions"]],
+                             [("target", 1, 4), ("caller", 1, 19)])
 
     def test_query_rejects_unbounded_output(self):
         self.assertEqual(_tokens("TournamentTableSettlement::award_pot"),

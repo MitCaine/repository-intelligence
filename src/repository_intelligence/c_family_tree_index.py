@@ -123,9 +123,9 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                   "macro_invocation_count": 0, "include_count": 0,
                   "other_directive_count": 0,
                   "mode": "unexpanded_raw_source", "effective_program_claim": False}
-    pending = [(tree, ())]
+    pending = [(tree, (), ())]
     while pending:
-        node, owners = pending.pop()
+        node, owners, owner_identities = pending.pop()
         if node.type in {"macro_type_specifier", "preproc_call"}:
             preprocess["macro_invocation_count"] += 1
         elif (node.type == "expression_statement" and node.parent is not None
@@ -167,7 +167,8 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     bodyless.append({"syntax_kind": node.type,
                                      "byte_range": {"start": node.start_byte,
                                                     "end": node.end_byte}})
-                    pending.extend((child, owners) for child in reversed(node.named_children))
+                    pending.extend((child, owners, owner_identities)
+                       for child in reversed(node.named_children))
                     continue
             promised += 1
             declarator = node.child_by_field_name("declarator")
@@ -231,6 +232,9 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     arguments = _template_arguments(declarator)
                     if arguments is not None:
                         identity_signature += "|template=" + syntax_token_key(arguments, source)
+                own_signature = identity_signature
+                if owner_identities:
+                    identity_signature = "/".join(owner_identities) + ":" + (own_signature or "")
                 functions.append({
                     "name": name, "qualified_name": qualified,
                     "line": node.start_point.row + 1,
@@ -243,7 +247,9 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     **declaration(source, kind, qualified, start, node.end_byte),
                 })
                 owners = (*owners, ("callable", name))
-        pending.extend((child, owners) for child in reversed(node.named_children))
+                owner_identities = (*owner_identities, f"{name}({own_signature or ''})")
+        pending.extend((child, owners, owner_identities)
+                       for child in reversed(node.named_children))
     assign_named_ids(functions)
     coverage = finalize_coverage(functions, promised, unhandled_count, len(bodyless))
     return {"path": str(path), "function_count": len(functions),

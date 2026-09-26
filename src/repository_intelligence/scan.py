@@ -137,7 +137,8 @@ def index_file(path: Path, *, root: Path | None = None,
                    "runtime": "tree-sitter"}
     try:
         indexed = (parser(path, source, tree=tree, parse_bytes=parse_bytes,
-                          offsets=offsets) if parser_suffix == ".py"
+                          offsets=offsets, encoding=syntax["source_encoding"])
+                   if parser_suffix == ".py"
                    else parser(path, source, tree=tree))
     except PARSE_FAILURES as error:
         return {**basic, "mapping_status": "incomplete", "parser": parser_info,

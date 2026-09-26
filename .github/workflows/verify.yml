@@ -1,0 +1,68 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-15
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.12', '3.13']
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      RI_REQUIRE_STANDALONE: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Prepare pinned offline wheels
+        shell: bash
+        run: |
+          python - <<'PYTHON'
+          import os
+          import pathlib
+          import subprocess
+          import sys
+          import tomllib
+
+          project = tomllib.loads(pathlib.Path('pyproject.toml').read_text())
+          wheels = pathlib.Path(os.environ['RUNNER_TEMP']) / 'ri-wheels'
+          requirements = project['build-system']['requires'] + project['project']['dependencies']
+          subprocess.run([sys.executable, '-m', 'pip', 'download', '--only-binary=:all:',
+                          '--dest', str(wheels), *requirements], check=True)
+          with open(os.environ['GITHUB_ENV'], 'a') as environment:
+              for variable, pattern in [('RI_SETUPTOOLS_WHEEL', 'setuptools-*.whl'),
+                                        ('RI_WHEEL_WHEEL', 'wheel-*.whl')]:
+                  matches = list(wheels.glob(pattern))
+                  assert len(matches) == 1, (variable, matches)
+                  environment.write(f'{variable}={matches[0]}\n')
+              environment.write(f'RI_TREE_SITTER_WHEELHOUSE={wheels}\n')
+          subprocess.run([sys.executable, '-m', 'pip', 'install', '--no-index',
+                          '--find-links', str(wheels), *requirements], check=True)
+          PYTHON
+      - name: Verify source and installed consumer
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -v
+      - name: Check whitespace and tracked source cleanliness
+        run: |
+          git diff --check
+          git diff --exit-code

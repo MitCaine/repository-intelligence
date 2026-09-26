@@ -11,8 +11,6 @@ import time
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from .source import physical_lines
-
 
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -132,7 +130,8 @@ class _RustAnalyzer:
 
 def resolve_definition(project_root: Path, source_path: Path, line: int, column: int, *,
                        features: tuple[str, ...], no_default_features: bool,
-                       target: str, analyzer: str = "rust-analyzer", timeout: float = 45) -> dict:
+                       target: str, test_mode: bool = False,
+                       analyzer: str = "rust-analyzer", timeout: float = 45) -> dict:
     """Resolve one 1-based source position under caller-specified Cargo settings.
 
     Native analysis is optional and never used by ordinary structural scans.
@@ -143,24 +142,34 @@ def resolve_definition(project_root: Path, source_path: Path, line: int, column:
             or not source_path.is_file() or not source_path.is_relative_to(root):
         raise ValueError("Provide a Rust file inside a Cargo project")
     if (not isinstance(features, tuple) or not all(isinstance(f, str) for f in features)
-            or type(no_default_features) is not bool or not isinstance(target, str)
+            or type(no_default_features) is not bool or type(test_mode) is not bool
+            or not isinstance(target, str)
             or not target or line < 1 or column < 1):
         raise ValueError("Explicit Cargo features, default-feature choice, target, and position are required")
     source = source_path.read_bytes()
     decoded = source.decode("utf-8")
-    lines = physical_lines(decoded)
-    if line > len(lines) or column > len(lines[line - 1]) + 1:
+    # rust-analyzer's line index advances on LF only. A lone CR is Rust
+    # whitespace within the line; a CR directly before LF belongs to CRLF.
+    lines = decoded.split("\n")
+    if line > len(lines):
         raise ValueError("Reference position is outside source")
-    lsp_character = len(lines[line - 1][:column - 1].encode("utf-16-le")) // 2
+    reference_line = lines[line - 1]
+    if line < len(lines):
+        reference_line = reference_line.removesuffix("\r")
+    if column > len(reference_line) + 1:
+        raise ValueError("Reference position is outside source")
+    lsp_character = len(reference_line[:column - 1].encode("utf-16-le")) // 2
     before = _snapshot(root)
     version = subprocess.run([analyzer, "--version"], text=True, capture_output=True,
                              timeout=10, check=True).stdout.strip()
     configuration = {"cargo": {"features": list(features),
                                "noDefaultFeatures": no_default_features,
                                "target": target, "allTargets": False, "noDeps": True,
+                               "cfgs": [],
                                "buildScripts": {"enable": False}},
-                     "procMacro": {"enable": False}, "checkOnSave": False}
-    packet = {"result_kind": "rust_semantic_definition_v1",
+                     "procMacro": {"enable": False}, "cfg": {"setTest": test_mode},
+                     "checkOnSave": False}
+    packet = {"result_kind": "rust_semantic_definition_v2",
               "question": "definition_of_reference",
               "reference": {"path": source_path.relative_to(root).as_posix(),
                             "line": line, "column": column, "raw_sha256": _sha(source)},
@@ -171,6 +180,7 @@ def resolve_definition(project_root: Path, source_path: Path, line: int, column:
               "limitations": ["Workspace reads are non-atomic; pre/post local checksums are not attestation",
                               "External dependencies and sysroot are not included in the local digest",
                               "Build scripts and procedural macros are disabled",
+                              "Analyzer cfg and toolchain environment do not prove compiler-build equivalence",
                               "A resolved target does not imply global semantic completeness"],
               "targets": []}
     client = _RustAnalyzer(analyzer, root, configuration, timeout)

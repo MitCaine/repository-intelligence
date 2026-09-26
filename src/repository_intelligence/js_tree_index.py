@@ -214,6 +214,8 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     owners = (*owners, name)
                     if member_flavor is not None:
                         owner_identities = (*owner_identities, f"{name}:{member_flavor}")
+                    if kind in {"getter", "setter"}:
+                        owner_identities = (*owner_identities, f"accessor={kind}")
         pending.extend((child, owners, owner_identities)
                        for child in reversed(node.named_children))
     assign_named_ids(functions)

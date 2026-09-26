@@ -6,11 +6,12 @@ import codecs
 import hashlib
 import re
 import subprocess
+import tokenize
 from array import array
 from pathlib import Path
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 class RawOffsets:
@@ -43,6 +44,22 @@ class RawOffsets:
         return self.positions[offset]
 
 
+def python_source_encoding(source: bytes) -> str:
+    """Apply Python's coding-cookie rules to CR, CRLF, or LF physical lines."""
+    newline = re.compile(rb"\r\n|\r|\n")
+    position = 0
+
+    def readline() -> bytes:
+        nonlocal position
+        match = newline.search(source, position)
+        end = match.end() if match is not None else len(source)
+        line = source[position:end]
+        position = end
+        return line
+
+    return tokenize.detect_encoding(readline)[0]
+
+
 def legacy_git_blob_sha1(source: bytes) -> str:
     """Compatibility field for parsed results; not checkout attestation."""
     return hashlib.sha1(f"blob {len(source)}\0".encode() + source).hexdigest()
@@ -61,10 +78,10 @@ def physical_lines(value: bytes | str) -> list[bytes] | list[str]:
     return lines
 
 
-def utf8_display_column(source: bytes, offset: int) -> int:
+def utf8_display_column(source: bytes, offset: int, *, cr_is_newline: bool = True) -> int:
     """One-based character column for a UTF-8 byte offset; never an identity."""
     last_lf = source.rfind(b"\n", 0, offset)
-    last_cr = source.rfind(b"\r", last_lf + 1, offset)
+    last_cr = source.rfind(b"\r", last_lf + 1, offset) if cr_is_newline else -1
     line_start = max(last_lf, last_cr) + 1
     return len(source[line_start:offset].decode("utf-8", "replace")) + 1
 

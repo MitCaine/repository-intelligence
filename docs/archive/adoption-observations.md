@@ -1,5 +1,9 @@
 # Cross-project navigation observations
 
+Historical record. Commands, capabilities, counts, and source locations below
+describe the recorded revision. Use the [current documentation](../README.md)
+for operation; these observations do not establish current qualification.
+
 These are read-only, non-atomic working-tree observations from 2026-09-25,
 using RI's local Tree-sitter locator. They are practical orientation examples,
 not benchmarks, checkout attestations, or proof of a complete behavior path.

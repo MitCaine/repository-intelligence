@@ -124,7 +124,7 @@ finally:
                                         features=(), no_default_features=False, target=target,
                                         timeout=60)
             self.assertEqual(result["status"], "resolved")
-            self.assertEqual(result["result_kind"], "rust_semantic_definition_v1")
+            self.assertEqual(result["result_kind"], "rust_semantic_definition_v2")
             self.assertEqual(result["reference"]["raw_sha256"], hashlib.sha256(source).hexdigest())
             self.assertEqual(result["configuration"]["cargo"]["target"], target)
             self.assertEqual(result["provider_status"]["health"], "ok")
@@ -134,6 +134,111 @@ finally:
             self.assertEqual(result["targets"][0]["byte_binding"],
                              "checked_against_final_local_snapshot")
             self.assertEqual(result["source_snapshot"]["file_count"], 2)
+
+    @unittest.skipUnless(shutil.which("rust-analyzer") and shutil.which("rustc"),
+                         "rust-analyzer and rustc required for optional semantic proof")
+    def test_definition_selects_explicit_normal_or_test_configuration(self):
+        with tempfile.TemporaryDirectory(prefix="ri-semantic-cfg-") as raw:
+            root = Path(raw)
+            (root / "src").mkdir()
+            (root / "Cargo.toml").write_text(
+                '[package]\nname="ri_cfg_fixture"\nversion="0.1.0"\nedition="2021"\n')
+            path = root / "src/lib.rs"
+            path.write_text(
+                "#[cfg(test)]\nfn target() -> i32 { 1 }\n"
+                "#[cfg(not(test))]\nfn target() -> i32 { 2 }\n"
+                "fn caller() -> i32 { target() }\n")
+            target = next(line.split(": ", 1)[1] for line in
+                          subprocess.check_output(["rustc", "-vV"], text=True).splitlines()
+                          if line.startswith("host: "))
+            for test_mode, expected_line in ((False, 3), (True, 1)):
+                with self.subTest(test_mode=test_mode):
+                    result = resolve_definition(
+                        root, path, 5, 24, features=(), no_default_features=False,
+                        target=target, test_mode=test_mode, timeout=60)
+                    self.assertEqual(result["status"], "resolved")
+                    self.assertEqual(result["configuration"]["cfg"],
+                                     {"setTest": test_mode})
+                    self.assertEqual([item["range"] for item in result["targets"]],
+                                     [{"start": {"line": expected_line, "character": 3},
+                                       "end": {"line": expected_line, "character": 9}}])
+                    self.assertEqual(result["targets"][0]["byte_binding"],
+                                     "checked_against_final_local_snapshot")
+
+    @unittest.skipUnless(shutil.which("rust-analyzer") and shutil.which("rustc"),
+                         "rust-analyzer and rustc required for optional semantic proof")
+    def test_definition_does_not_inject_miri_configuration(self):
+        with tempfile.TemporaryDirectory(prefix="ri-semantic-miri-") as raw:
+            root = Path(raw)
+            (root / "src").mkdir()
+            (root / "Cargo.toml").write_text(
+                '[package]\nname="ri_miri_fixture"\nversion="0.1.0"\nedition="2021"\n')
+            path = root / "src/lib.rs"
+            path.write_text(
+                "#[cfg(miri)]\nfn target() -> i32 { 1 }\n"
+                "#[cfg(not(miri))]\nfn target() -> i32 { 2 }\n"
+                "fn caller() -> i32 { target() }\n")
+            target = next(line.split(": ", 1)[1] for line in
+                          subprocess.check_output(["rustc", "-vV"], text=True).splitlines()
+                          if line.startswith("host: "))
+            result = resolve_definition(root, path, 5, 24, features=(),
+                                        no_default_features=False, target=target, timeout=60)
+            self.assertEqual(result["status"], "resolved")
+            self.assertEqual([item["range"] for item in result["targets"]],
+                             [{"start": {"line": 3, "character": 3},
+                               "end": {"line": 3, "character": 9}}])
+            self.assertEqual(result["configuration"]["cargo"]["cfgs"], [])
+            self.assertEqual(result["configuration"]["cfg"], {"setTest": False})
+
+    @unittest.skipUnless(shutil.which("rust-analyzer") and shutil.which("rustc"),
+                         "rust-analyzer and rustc required for optional semantic proof")
+    def test_definition_uses_rust_lf_lines_and_counts_lone_cr_as_whitespace(self):
+        with tempfile.TemporaryDirectory(prefix="ri-semantic-newlines-") as raw:
+            root = Path(raw)
+            (root / "src").mkdir()
+            (root / "Cargo.toml").write_text(
+                '[package]\nname="ri_newline_fixture"\nversion="0.1.0"\nedition="2021"\n')
+            path = root / "src/lib.rs"
+            target = next(line.split(": ", 1)[1] for line in
+                          subprocess.check_output(["rustc", "-vV"], text=True).splitlines()
+                          if line.startswith("host: "))
+            for separator, line, column in ((b"\n", 2, 18), (b"\r\n", 2, 18),
+                                             (b"\r", 1, 33)):
+                with self.subTest(separator=separator):
+                    path.write_bytes(b"fn target() {}" + separator +
+                                     b"fn caller() { target(); }\n")
+                    result = resolve_definition(root, path, line, column, features=(),
+                                                no_default_features=False,
+                                                target=target, timeout=60)
+                    self.assertEqual(result["status"], "resolved")
+                    self.assertEqual([item["range"] for item in result["targets"]],
+                                     [{"start": {"line": 0, "character": 3},
+                                       "end": {"line": 0, "character": 9}}])
+
+    def test_native_position_bounds_exclude_crlf_but_include_empty_final_line(self):
+        class ProviderReached(Exception):
+            pass
+
+        with tempfile.TemporaryDirectory(prefix="ri-semantic-bounds-") as raw:
+            root = Path(raw)
+            (root / "Cargo.toml").write_text('[package]\nname="x"\nversion="0.1.0"\n')
+            path = root / "lib.rs"
+            source = b"fn f() {}\r\n"
+            valid = ((source, 1, 10), (source, 2, 1), (b"fn f() {}\r", 1, 11))
+            for content, line, column in valid:
+                with self.subTest(valid=(content, line, column)):
+                    path.write_bytes(content)
+                    with patch.object(rust_semantic.subprocess, "run",
+                                      side_effect=ProviderReached):
+                        with self.assertRaises(ProviderReached):
+                            resolve_definition(root, path, line, column, features=(),
+                                               no_default_features=False, target="test-target")
+            path.write_bytes(source)
+            for line, column in ((1, 11), (2, 2), (3, 1)):
+                with self.subTest(invalid=(line, column)):
+                    with self.assertRaisesRegex(ValueError, "outside source"):
+                        resolve_definition(root, path, line, column, features=(),
+                                           no_default_features=False, target="test-target")
 
     def test_unicode_separator_is_not_a_physical_line_boundary(self):
         with tempfile.TemporaryDirectory(prefix="ri-semantic-") as raw:
@@ -244,6 +349,58 @@ finally:
             self.assertTrue(result["targets"][0]["source_identity"]["within_project"])
             self.assertEqual(result["targets"][0]["byte_binding"],
                              "post_analysis_observation")
+
+    def test_location_links_preserve_all_targets_and_utf16_reference_position(self):
+        with tempfile.TemporaryDirectory(prefix="ri-semantic-links-") as raw:
+            root = Path(raw).resolve()
+            (root / "Cargo.toml").write_text('[package]\nname="x"\nversion="0.1.0"\n')
+            source = root / "lib.rs"
+            source.write_text('fn caller() { let _ = "😀"; target(); }\n')
+            target = root / "other file é.rs"
+            target_bytes = b"fn first() {}\nfn second() {}\n"
+            target.write_bytes(target_bytes)
+            spans = [{"start": {"line": line, "character": 3},
+                      "end": {"line": line, "character": end}}
+                     for line, end in ((0, 8), (1, 9))]
+            observed = []
+
+            class FakeAnalyzer:
+                def __init__(self, *args):
+                    self.last_status = {"health": "ok", "quiescent": True}
+
+                def request(self, request_id, method, params):
+                    if method == "textDocument/definition":
+                        observed.append(params["position"])
+                        return [{"targetUri": target.as_uri(),
+                                 "targetSelectionRange": span,
+                                 "targetRange": {"start": {"line": index, "character": 0},
+                                                 "end": {"line": index, "character": 13 + index}}}
+                                for index, span in enumerate(spans)]
+                    return {}
+
+                def send(self, message):
+                    pass
+
+                def wait_ready(self):
+                    pass
+
+                def close(self):
+                    pass
+
+            with patch.object(rust_semantic, "_RustAnalyzer", FakeAnalyzer), \
+                    patch.object(rust_semantic.subprocess, "run") as version:
+                version.return_value.stdout = "rust-analyzer test"
+                result = resolve_definition(root, source, 1, 31, features=(),
+                                            no_default_features=False, target="test-target")
+            # One astral character before the reference adds a UTF-16 code unit.
+            self.assertEqual(observed, [{"line": 0, "character": 31}])
+            self.assertEqual([item["range"] for item in result["targets"]], spans)
+            self.assertEqual([item["uri"] for item in result["targets"]],
+                             [target.as_uri(), target.as_uri()])
+            for item in result["targets"]:
+                self.assertEqual(item["source_identity"]["raw_sha256"],
+                                 hashlib.sha256(target_bytes).hexdigest())
+                self.assertEqual(item["byte_binding"], "checked_against_final_local_snapshot")
 
     def test_missing_configuration_is_rejected(self):
         with tempfile.TemporaryDirectory(prefix="ri-semantic-") as raw:

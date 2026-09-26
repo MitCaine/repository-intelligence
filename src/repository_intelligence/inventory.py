@@ -18,8 +18,8 @@ from .source import SCHEMA_VERSION, git_object_format
 from .structural import MAX_DECLARATION_DETAILS, ScanSetup
 
 
-INVENTORY_SCHEMA_VERSION = 11
-MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v8"
+INVENTORY_SCHEMA_VERSION = 13
+MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v10"
 
 
 def _digest(scope: dict, files: list[dict]) -> str:
@@ -104,7 +104,7 @@ def _declarations(inventory: dict) -> dict[tuple[str, str], dict]:
     return found
 
 
-def _changes(planning: dict, candidate: dict, key: str) -> dict:
+def _changes(planning: list[dict], candidate: list[dict], key: str) -> dict:
     before = {item[key]: item for item in planning}
     after = {item[key]: item for item in candidate}
     result = {status: [] for status in ("added", "removed", "modified", "unchanged")}
@@ -244,6 +244,15 @@ def _unchanged_file_evidence_matches(prior: dict, current: dict) -> bool:
             == sorted(current["declarations"], key=lambda item: item["declaration_id"]))
 
 
+def _overlaps_exclusion(path: str, exclusions: set[str]) -> bool:
+    """Check exact POSIX path ancestors without scanning every excluded entry."""
+    while path:
+        if path in exclusions:
+            return True
+        path = path.rpartition("/")[0]
+    return False
+
+
 def compare_inventories(planning: dict, candidate: dict) -> dict:
     """Return factual deltas only for compatible, caller-stable complete scans."""
     contract_fields = ("inventory_schema_version", "navigation_schema_version",
@@ -267,9 +276,11 @@ def compare_inventories(planning: dict, candidate: dict) -> dict:
     planning_files = {file["path"]: file for file in planning["files"]}
     candidate_files = {file["path"]: file for file in candidate["files"]}
     candidate_exclusions = {item["path"] for item in candidate.get("observed_exclusions", [])}
+    planning_exclusions = {item["path"] for item in planning.get("observed_exclusions", [])}
     mismatches.extend(f"coverage_lost:{path}" for path in sorted(planning_files)
-                      if any(path == excluded or path.startswith(excluded + "/")
-                             for excluded in candidate_exclusions))
+                      if _overlaps_exclusion(path, candidate_exclusions))
+    mismatches.extend(f"planning_coverage_missing:{path}" for path in sorted(candidate_files)
+                      if _overlaps_exclusion(path, planning_exclusions))
     for path in sorted(planning_files.keys() & candidate_files.keys()):
         prior, current = planning_files[path], candidate_files[path]
         if (prior["source_identity"]["raw_sha256"] ==

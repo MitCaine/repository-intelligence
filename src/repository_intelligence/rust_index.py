@@ -16,6 +16,12 @@ from .search import (compact as _compact, display_entry, format_compact,
                      validate_query)
 
 
+# The native CLI serializes syntax nodes but omits parser diagnostics.
+# ERROR nodes are evidence of some errors, never an exhaustive error count.
+_NATIVE_DIAGNOSTICS = {"diagnostic_coverage": "error_nodes_only",
+                       "parse_error_count_kind": "error_node_lower_bound"}
+
+
 def _children(node: dict, kind: str) -> list[dict]:
     return [child for child in node.get("children", []) if child["kind"] == kind]
 
@@ -69,7 +75,8 @@ def _walk(node: dict, source: bytes, owners: tuple[str, ...], output: list[dict]
                 "name": name,
                 "qualified_name": "::".join((*owners, name)),
                 "line": names[0]["start"][1] + 1,
-                "column": utf8_display_column(source, names[0]["start"][0]),
+                "column": utf8_display_column(source, names[0]["start"][0],
+                                              cr_is_newline=False),
                 "end_line": node["end"][1] + (node["end"][2] != 0),
                 "signature": source[signature_start:signature_end].decode("utf-8", "replace"),
                 "docs": " ".join(docs),
@@ -103,7 +110,7 @@ def index_source(path: Path, source: bytes, *, analyzer: str = "rust-analyzer") 
     blob = hashlib.sha1(f"blob {len(source)}\0".encode() + source).hexdigest()
     return {"path": str(path), "raw_sha256": hashlib.sha256(source).hexdigest(),
             "git_blob_sha1": blob, "function_count": len(functions),
-            "parse_error_count": error_count(tree), "functions": functions,
+            "parse_error_count": error_count(tree), **_NATIVE_DIAGNOSTICS, "functions": functions,
             "relationship_kind": "lexical call candidates only; not resolved call graph"}
 
 
@@ -130,12 +137,13 @@ def query_tree(root: Path, terms: str, limit: int = 8, *,
         for entry in index["functions"]:
             candidates.append({**entry, "path": str(path), "raw_sha256": index["raw_sha256"],
                                "git_blob_sha1": index["git_blob_sha1"],
-                               "parse_error_count": index["parse_error_count"]})
+                               "parse_error_count": index["parse_error_count"],
+                               **_NATIVE_DIAGNOSTICS})
     candidates = rank(candidates, words)
     selected = [display_entry(entry, words) for entry in candidates[:limit]]
     return {"result_kind": "legacy_rust_query", "root": str(root), "query": terms,
             "scanned_files": scanned,
-            "parse_error_count": parse_errors, "failures": failures,
+            "parse_error_count": parse_errors, **_NATIVE_DIAGNOSTICS, "failures": failures,
             "total_matches": len(candidates), "matches": selected}
 
 

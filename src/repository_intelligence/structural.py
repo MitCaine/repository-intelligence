@@ -7,8 +7,7 @@ to UTF-8 for Tree-sitter.
 
 from __future__ import annotations
 
-import io
-import tokenize
+import re
 from importlib.metadata import version
 
 from tree_sitter import Language, Node, Parser
@@ -23,10 +22,10 @@ import tree_sitter_c
 import tree_sitter_cpp
 
 from .adapters import PARSERS
-from .source import RawOffsets
+from .source import RawOffsets, python_source_encoding
 
 
-ADAPTER_VERSION = 8
+ADAPTER_VERSION = 10
 MAX_DECLARATION_DETAILS = 100
 MAX_DIAGNOSTIC_DETAILS = 50
 GRAMMARS = {
@@ -53,14 +52,26 @@ GRAMMARS = {
 }
 
 
+# These grammars accept CR as a line terminator. Rust and Go use LF instead.
+_CR_NEWLINE_GRAMMARS = {"Python", "JavaScript", "TypeScript", "TSX", "Java",
+                        "CSharp", "C", "C++"}
+
+
+def _normalize_lone_cr(source: bytes) -> bytes:
+    """Give Tree-sitter LF rows without changing a raw byte boundary."""
+    return re.sub(rb"\r(?!\n)", b"\n", source) if b"\r" in source else source
+
 
 def python_input(source: bytes) -> tuple[bytes, str, RawOffsets | None]:
     """Tree-sitter UTF-8 input and an optional map back to encoded source bytes."""
-    encoding, _ = tokenize.detect_encoding(io.BytesIO(source).readline)
+    encoding = python_source_encoding(source)
     decoded = source.decode(encoding)
     utf8 = decoded.encode("utf-8")
-    return utf8, encoding, (RawOffsets(source, decoded, encoding)
-                            if utf8 != source else None)
+    # Python accepts lone CR as a physical newline; Tree-sitter counts only LF.
+    # Replacing only lone CR preserves byte widths and the existing CRLF fast path.
+    parse_bytes = _normalize_lone_cr(utf8)
+    return parse_bytes, encoding, (RawOffsets(source, decoded, encoding)
+                                  if utf8 != source else None)
 
 
 class ScanSetup:
@@ -100,8 +111,10 @@ class ScanSetup:
 def scan(suffix: str, source: bytes, *, setup: ScanSetup | None = None) -> tuple[dict, Node, bytes, RawOffsets | None]:
     """Return evidence, syntax tree, and decoded input for a language adapter."""
     parser, parser_info = (setup or ScanSetup()).get(suffix)
-    parse_bytes, encoding, offsets = (python_input(source) if suffix == ".py"
-                                      else (source, "utf-8", None))
+    parse_bytes, encoding, offsets = (
+        python_input(source) if suffix == ".py" else
+        (_normalize_lone_cr(source) if parser_info["grammar"] in _CR_NEWLINE_GRAMMARS
+         else source, "utf-8", None))
     root = parser.parse(parse_bytes).root_node
 
     def raw(offset: int) -> int:
@@ -114,6 +127,10 @@ def scan(suffix: str, source: bytes, *, setup: ScanSetup | None = None) -> tuple
     pending = [root]
     while pending:
         node = pending.pop()
+        # Tree-sitter propagates syntax errors (including missing nodes) to ancestors.
+        # Clean subtrees need no diagnostic traversal; callable extraction is separate.
+        if not node.has_error and not node.is_missing:
+            continue
         if node.type == "ERROR" or node.is_missing:
             if node.is_missing:
                 missing_count += 1
@@ -161,6 +178,7 @@ def probe(suffix: str, source: bytes, *, setup: ScanSetup | None = None) -> dict
     syntax, tree, parse_bytes, offsets = scan(suffix, source, setup=setup)
     adapter = PARSERS[suffix]
     indexed = (adapter(Path("probe" + suffix), source, tree=tree,
-                       parse_bytes=parse_bytes, offsets=offsets) if suffix == ".py"
+                       parse_bytes=parse_bytes, offsets=offsets,
+                       encoding=syntax["source_encoding"]) if suffix == ".py"
                else adapter(Path("probe" + suffix), source, tree=tree))
     return with_mapping(syntax, indexed)

@@ -6,16 +6,17 @@ import ast
 import hashlib
 import io
 import tokenize
+import unicodedata
 from pathlib import Path
 
 from .declarations import declaration
 from .declarations import assign_named_ids
-from .source import RawOffsets, physical_lines
+from .source import RawOffsets, physical_lines, python_source_encoding
 
 
 def _signatures(source: bytes) -> dict[tuple[int, str], str]:
     """Locate Python headers with tokenizer coordinates, including inline bodies."""
-    encoding, _ = tokenize.detect_encoding(io.BytesIO(source).readline)
+    encoding = python_source_encoding(source)
     text = source.decode(encoding)
     lines = physical_lines(text)
     starts = [0]
@@ -46,7 +47,7 @@ def _signatures(source: bytes) -> dict[tuple[int, str], str]:
             elif part.string == ":" and depth == 0:
                 begin = starts[first.start[0] - 1] + first.start[1]
                 end = starts[part.end[0] - 1] + part.end[1]
-                signatures[(first.start[0], name.string)] = text[begin:end]
+                signatures[(first.start[0], unicodedata.normalize("NFKC", name.string))] = text[begin:end]
                 break
     return signatures
 
@@ -62,7 +63,7 @@ def index_source(path: Path, source: bytes) -> dict:
     tree = ast.parse(source, filename=str(path))
     signatures = _signatures(source)
     functions: list[dict] = []
-    encoding, _ = tokenize.detect_encoding(io.BytesIO(source).readline)
+    encoding = python_source_encoding(source)
     decoded = source.decode(encoding)
     offsets = RawOffsets(source, decoded, encoding)
     raw_lines = physical_lines(source)

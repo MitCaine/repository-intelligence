@@ -1,0 +1,21 @@
+# Working on Repository Intelligence
+
+This is the standalone RI package. Poker App and Nutrition App capsules,
+session scripts, database rules, and consumer-specific authority maps do not
+apply here. The current user request defines the task scope.
+
+- Inspect the checkout status and preserve unrelated changes before editing.
+- Read README.md and docs/architecture.md; use docs/README.md for current contracts.
+- Keep scanning, source identity, adapter semantics, ranking, and comparison at
+  their existing seams. Ordinary operations remain language-neutral and local;
+  native Rust analysis remains a separate optional operation.
+- Add independently expected source slices, names, kinds, or deltas for defects.
+  Counts agreeing with other production counters alone do not prove correctness.
+- Do not weaken incomplete/unsupported/excluded results to make tests pass.
+- Review compatibility versions when source identity, classification, coverage,
+  or comparison behavior changes. Update current docs and package assertions.
+- Follow docs/maintenance.md for pinned dependencies, tests, and offline wheel
+  verification. Run git diff --check and report skips and unavailable checks.
+- Keep source acquisition bounded and read-only. Avoid new services, registries,
+  persistent indexes, or consumer permission policy without a concrete need.
+- Do not commit, push, merge, or change repository settings unless requested.

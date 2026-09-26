@@ -46,7 +46,7 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
             failures.append({"path": str(path), "error": type(error).__name__})
             continue
         files[str(path)] = {key: indexed.get(key) for key in
-                            ("source_identity", "parser", "structural", "preprocessing",
+                            ("source_identity", "parser", "structural", "preprocessing", "module_bindings",
                              "adapter_coverage", "mapping_status", "parse_error_count")}
         if indexed["failures"]:
             failures.extend({"path": str(path), "source_identity": indexed["source_identity"],
@@ -67,7 +67,7 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
                            "source_identity": indexed["source_identity"],
                            "parse_error_count": indexed["parse_error_count"]}
                           for entry in indexed["functions"])
-    if not paths and not unsupported and not failures:
+    if not paths and not unsupported and not failures and not excluded_paths:
         raise ValueError("No supported source files found in directory")
     ranked = rank(candidates, words)
     return {"schema_version": SCHEMA_VERSION, "root": str(source), "query": terms,
@@ -79,7 +79,8 @@ def query_path(source: Path, terms: str, limit: int = 8, *, root: Path | None = 
                            "other_file_types_skipped": out_of_scope},
             "mapping_status": ("incomplete" if failures or parse_errors or structural_errors
                                or incomplete_files
-                               else "unsupported" if not paths else "navigation_only"),
+                               else "unsupported" if not paths and unsupported
+                               else "excluded" if not paths else "navigation_only"),
             "scanned_files": scanned,
             "files": files,
             "parse_error_count": parse_errors, "structural_error_count": structural_errors,

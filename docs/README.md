@@ -1,15 +1,21 @@
-# RI documentation
+# Documentation
 
-These guides describe the current implementation. The contracts are navigation v5, inventory schema 11, mapping contract v8, and adapter version 8. Follow the [known limitations](known-limitations.md) alongside the intended callable contract; a passing counter is not proof that an adapter has no logic defect.
+Start with the [repository README](../README.md) for a first query, then choose
+the guide for your next action. Each topic has one current owner; result
+versions are tracked inside the references rather than in parallel filenames.
 
-## Using RI
+| Need | Read |
+| --- | --- |
+| Install, navigate, compare, troubleshoot | [Consumer guide](consumer-guide.md) |
+| Interpret file/directory JSON, statuses, identity, limits, or older versions | [Navigation reference](navigation.md) |
+| Compare planning and candidate source; interpret compact deltas and exits | [Inventory reference](inventory.md) |
+| Know exactly which callables each language maps | [Language support](language-support.md) |
+| Hand off to Python AST, native Rust syntax, or Rust definition lookup | [Native analysis](native-analysis.md) |
+| Prepare Poker capsule context without changing its workflow | [Poker capsule integration](poker-capsule-workflow.md) |
+| Decide whether more evidence is needed | [Limitations](limitations.md) |
+| Change a module or add a language | [Architecture and ownership](architecture.md) |
+| Verify, upgrade grammars, maintain docs, or package RI | [Maintenance](maintenance.md) |
 
-[Install and verify](install-and-verify.md) covers environment setup, offline packaging, and recorded hosts. The [consumer guide](consumer-guide.md) covers navigation, stable source comparison, result handling, and troubleshooting. The [navigation v5 reference](navigation-result-v5.md) describes the current file/directory packets without requiring readers to reconstruct several historical versions. [Inventory and delta](inventory-delta-v1.md) specifies comparison and compact output. [Optional Rust definition lookup](rust-semantic-definition.md) describes the separate native API.
-
-## Maintaining RI
-
-[Architecture](architecture.md) assigns implementation responsibilities. [Maintenance](maintenance.md) describes regression design, pinned grammar upgrades, packaging checks, and version changes. [Tree-sitter callable contracts](tree-sitter-baseline.md) enumerate promised language forms. [Known limitations](known-limitations.md) separates deliberate boundaries from outstanding correctness findings.
-
-## Direction and historical material
-
-[Project direction](project-direction.md) describes the intended controller workflow and non-goals. [Extraction decision](standalone-core-seam.md), [pilot report](rust-function-locator-pilot.md), and [adoption observations](adoption-observations.md) record prior evidence with its original scope. Navigation v1-v4 documents remain historical references; do not use them as the current packet specification.
+[Historical records](archive/README.md) retain extraction decisions, pilot/adoption
+observations, and measured audit results. They are not current setup instructions,
+provider promises, or capsule authority.

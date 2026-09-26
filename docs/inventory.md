@@ -1,15 +1,15 @@
-# Structural inventory and candidate delta v1
+# Inventory and comparison reference
 
 `repository_intelligence.inventory.inventory_tree(root, stable=False,
 logical_root=".")` scans supported Python, Rust, JavaScript, JSX, TypeScript,
 TSX, Java, Go, C#, C, and C++ source without query terms. The current inventory
-schema is version 11; older packets are incompatible with it. `.mts` and `.cts`
+schema is version 13; older packets are incompatible with it. `.mts` and `.cts`
 use the TypeScript adapter. Ambiguous `.h` files are not guessed: pass
 `language_choices={"include/api.h": "cpp"}` (or `"c"`) for exact relative
 header paths in both directory queries and inventories. Unselected `.h` files
 are listed in `observed_unsupported_paths`.
-Mapping contract v8 carries the corrected declaration identity, source-range,
-and classification semantics documented in [navigation result v5](navigation-result-v5.md).
+Mapping contract v10 carries the corrected declaration identity, source-range,
+and classification semantics documented in [navigation reference](navigation.md).
 Every supported in-scope file appears in `files`, including files with zero
 mapped callables. Each file carries its exact `source_identity`, parser and
 adapter coverage, structural diagnostics, mapping status, and contracted
@@ -18,7 +18,7 @@ repositories are reported in `observed_exclusions`; two distinct relative paths
 hardlinked to the same bytes are both included. Source-like unsupported paths
 are named in `observed_unsupported_paths`; other file types are counted.
 This is source-level coverage
-for the [current callable contract](tree-sitter-baseline.md), not compiled
+for the [current callable contract](language-support.md), not compiled
 program, generated macro, or semantic-call completeness.
 
 The default working-tree walk is `incomplete` because it is not atomic. Pass
@@ -29,19 +29,26 @@ the checkout. Read/parse/size/adapter failures
 remain incomplete even with that assertion. Explicit exclusions bound the
 logical scan scope and are not silently counted as mapped source.
 
+## Identity and scan policy
+
 An inventory includes schema and mapping-contract versions, pinned parser
 contract, logical root, relative scan policy, materialization
 state, failures, and a deterministic SHA-256 `inventory_digest` over normalized
 policy plus relative file paths, byte counts, and raw-byte hashes. Observed
-exclusions are separate scan evidence and do not affect compatibility or the
-digest. The digest is
+exclusions are separate scan evidence and do not affect the digest. They
+block comparison when they overlap files mapped on the opposite side. The digest is
 a reproducibility checksum, not a signature or source authenticity proof.
 Different absolute checkout paths can have the same logical root and digest.
 The policy includes selected header languages and caller-selected excluded
 directory names; the default excluded names include `target`, `node_modules`,
 `venv`, and `__pycache__`. A file that becomes excluded at the same relative
 path blocks comparison with `coverage_lost`, rather than looking like a normal
-source deletion.
+source deletion. Conversely, a candidate file hidden by a planning-side
+exclusion blocks comparison with `planning_coverage_missing`; missing baseline
+coverage is not proof that the file was added. Checks include excluded parent
+directories and exact file paths, without confusing sibling path prefixes.
+
+## Comparison results
 
 `compare_inventories(planning, candidate)` returns
 `comparable_candidate_delta` only when both sides have compatible schema,
@@ -88,6 +95,8 @@ if delta["status"] == "comparable_candidate_delta":
     print(delta["file_changes"], delta["declaration_changes"])
 ```
 
+## Command-line output
+
 The installed package also exposes a controller-facing command. From a
 directory where the two roots are separately materialized:
 
@@ -107,6 +116,8 @@ and underlying comparison always use the full inventories. `--json` prints
 full evidence without display truncation. Exit code 0 means a complete scan or
 comparable factual delta; 2 means incomplete; 3 means incompatible. These
 codes do not signify review approval or edit authority.
+
+## Compact JSON
 
 For machine consumers that need a smaller comparison packet,
 `compare --compact-json` projects the same completed comparison into shared per-file

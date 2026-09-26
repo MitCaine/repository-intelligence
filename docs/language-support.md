@@ -1,4 +1,4 @@
-# Tree-sitter baseline and callable coverage contract
+# Language support and callable contracts
 
 The shared locator runs a small structural probe. Ordinary Python and Rust
 navigation now come from the same Tree-sitter parse as the probe. The Python
@@ -13,7 +13,26 @@ details are a bounded presentation of adapter entries, not a second independent
 classifier. Fixed expected-source fixtures, not agreement between two counters,
 test the mapping promise.
 
-## Promised source-level forms
+## Shared accounting
+
+Each successfully parsed supported direct-file result's `adapter_coverage`
+counts promised syntax nodes, mapped entries,
+adapter-unhandled nodes, and explicitly excluded bodyless signatures. The first
+count must equal mapped plus unhandled; a duplicate mapped source range is a
+failure, not a second callable. Unhandled detail is bounded to 50 entries, while
+counts remain exact. `ERROR` and `MISSING` syntax diagnostics independently
+make a result incomplete, even when valid neighboring declarations are mapped.
+These are commitments over the grammar's recognized node kinds, not proof that
+every possible language construct or generated macro expansion was inventoried.
+
+CR/LF handling follows each language. Python, JavaScript/TypeScript, Java,
+C#, and C/C++ treat lone CR as a line terminator; RI normalizes it to LF only in
+the parse input, retaining the same byte width and the original source slices.
+Rust and Go retain lone CR as whitespace rather than a line break, including in
+display columns. CRLF and LF retain their normal line behavior. This does not
+expand Java Unicode escapes, C/C++ preprocessing, or generated source.
+
+## Python
 
 For the pinned Python grammar, the navigation adapter promises every
 `function_definition` and `lambda` node that Tree-sitter exposes, including
@@ -28,6 +47,15 @@ Declared encodings are decoded into Tree-sitter input with raw-byte positions
 mapped from the actual decoder output. Ambiguous character boundaries make the
 file incomplete rather than assigning an approximate declaration slice.
 
+Python identifiers follow the interpreter's NFKC normalization, including
+containing class names; raw spelling is retained in signatures and source bytes.
+LF, CRLF, and lone CR physical lines are supported, including coding cookies on
+the second physical line. Parsing normalization never rewrites the identified
+source or its declaration hashes. The native AST handoff uses the same encoding
+rules while keeping its distinct source-envelope contract.
+
+## Rust
+
 For the pinned Rust grammar, the adapter promises every `function_item` and
 `closure_expression` node exposed by Tree-sitter, including top-level, nested,
 trait default and impl methods, generic functions, and nested closures.
@@ -37,16 +65,10 @@ function source ranges. `function_signature_item` is intentionally bodyless:
 inside a `trait_item` or `foreign_mod_item` it is counted as excluded from the
 callable map. Elsewhere it is treated as adapter-unhandled and makes the result
 incomplete. Missing/zero-width bodies or names on promised nodes do likewise.
+Rust, like the other non-Python adapters, requires valid UTF-8; invalid bytes
+make mapping incomplete while the scanner retains exact raw-byte identity.
 
-Each successfully parsed supported direct-file result's `adapter_coverage`
-counts promised syntax nodes, mapped entries,
-adapter-unhandled nodes, and explicitly excluded bodyless signatures. The first
-count must equal mapped plus unhandled; a duplicate mapped source range is a
-failure, not a second callable. Unhandled detail is bounded to 50 entries, while
-counts remain exact. `ERROR` and `MISSING` syntax diagnostics independently
-make a result incomplete, even when valid neighboring declarations are mapped.
-These are commitments over the grammar's recognized node kinds, not proof that
-every possible language construct or generated macro expansion was inventoried.
+## JavaScript and TypeScript
 
 For pinned JavaScript and TypeScript grammars, `.js`, `.jsx`, `.mjs`, `.cjs`,
 `.ts`, `.mts`, `.cts`, and `.tsx` promise every body-bearing `function_declaration`,
@@ -55,7 +77,9 @@ For pinned JavaScript and TypeScript grammars, `.js`, `.jsx`, `.mjs`, `.cjs`,
 anonymous functions, class/object methods, true non-static class constructors,
 and accessors. Object methods and static methods named `constructor` remain
 ordinary methods. Callable export labels describe direct syntactic bindings,
-not nested methods or callbacks.
+not nested methods or callbacks. Nested helpers inherit class-member static/instance
+ownership and getter/setter kind, so a valid accessor pair does not make its
+separate helpers ambiguous.
 Anonymous functions get source-position-based structural IDs; overload and
 interface/abstract signatures without bodies are separately counted as
 bodyless, not implementations. Source ranges are exact UTF-8 byte ranges.
@@ -64,6 +88,8 @@ lexical, not resolved. `ERROR`, `MISSING`, and unhandled promised nodes make
 the result incomplete.
 Nearby syntactic comments are small search hints for callable terms; they are
 not authority metadata or resolved documentation links.
+
+## Java
 
 For pinned Java, `.java` promises every body-bearing `method_declaration`,
 `constructor_declaration`, `compact_constructor_declaration`, and
@@ -80,6 +106,8 @@ Varargs local parameter names do not contribute to identity. Members in local
 classes inside overloaded methods retain display ownership but include the
 enclosing overload discriminator in their internal identity.
 
+## Go
+
 For pinned Go, `.go` promises body-bearing `function_declaration`,
 `method_declaration`, and `func_literal` nodes, including `init`, generic
 functions, pointer/value receiver methods, and nested anonymous literals.
@@ -88,6 +116,8 @@ anonymous literals receive source-position-based IDs. Interface `method_elem`
 nodes and valid bodyless external function declarations are counted as
 bodyless, not as executable functions. Interface entries retain their owner.
 This is syntax coverage, not Go type/package resolution.
+
+## C#
 
 For pinned C#, `.cs` promises body-bearing methods, constructors (including
 static), destructors, operators/conversions, local functions, lambdas,
@@ -98,12 +128,17 @@ containers contribute ownership. Bodyless interface/abstract methods and
 semicolon accessors are counted separately, not as executable declarations.
 Attributes and modifiers within each callable node's source range affect its
 hash. This is syntax navigation, not Roslyn semantic resolution.
-C# syntactic identity includes method generic arity; explicit indexer accessor
-owners include indexer parameter types, and nested local callables inherit an
-enclosing method discriminator. Parameter keys preserve `ref` and `out` token
+C# syntactic identity includes method and containing-type generic arity.
+Explicit interface properties, indexers, and events retain their interface
+discriminator. Indexer accessor owners include parameter types, and nested local
+callables inherit every enclosing callable owner, including getters/setters,
+operators, and anonymous bodies. Generic parameter names and comments do not
+change the arity discriminator. Parameter keys preserve `ref` and `out` token
 boundaries for syntactic identity; RI does not determine whether a pair of
 overloads is legal C#. Conversion labels come from the
 actual `implicit` or `explicit` token rather than annotation/comment text.
+
+## C and C++
 
 For pinned C/C++, the source-level contract promises every Tree-sitter
 body-bearing `function_definition`, plus C++ `lambda_expression`;
@@ -116,8 +151,11 @@ RI does not guess. `.c` uses C;
 template and friend wrappers are included in declaration byte ranges; container
 class/namespace bytes are not. Namespace/class owners
 locate C++ members. `preprocessing` reports directives in unexpanded raw text.
-Member cv/ref qualifiers distinguish syntactic overload identities, while
-out-of-class constructor, destructor, and operator kinds use their terminal
+Member cv/ref qualifiers distinguish syntactic overload identities. Members of
+local classes inside callable bodies also inherit their enclosing callable's
+parameter, cv/ref, and template-specialization discriminator. An unrelated edit
+does not turn those distinct nested members into removals and additions.
+Out-of-class constructor, destructor, and operator kinds use their terminal
 declarator nodes. Parameter keys preserve syntax-token boundaries and omit
 local parameter names; they do not resolve compiler types.
 Conditional branches, macros that generate declarations, includes, and build
@@ -125,18 +163,14 @@ flags mean this is **not** a claim about the effective compiled program. Ask
 Clang with the actual flags/includes when effective declarations are needed;
 ordinary structural navigation does not require Clang.
 
-Pinned package versions in `pyproject.toml` are `tree-sitter==0.25.0`,
-`tree-sitter-python==0.25.0`, `tree-sitter-rust==0.24.2`,
-`tree-sitter-javascript==0.25.0`, `tree-sitter-typescript==0.23.2`, and
-`tree-sitter-java==0.23.5`, `tree-sitter-go==0.25.0`, and
-`tree-sitter-c-sharp==0.23.5`, `tree-sitter-c==0.24.2`, and
-`tree-sitter-cpp==0.23.4`. Results record
-actual installed distribution versions, grammar ABI, and adapter version 8.
-Changing a grammar pin requires reviewing that grammar's upstream generated
-`node-types.json` for changed declaration nodes/fields, then running the
-language fixtures and installed-wheel check before adoption. The wheel
-distributions do not ship `node-types.json`; this is an upgrade review step,
-not a runtime registry.
+## Grammar maintenance
+
+[`pyproject.toml`](../pyproject.toml) is the authoritative dependency pin list.
+Results record actual installed runtime/grammar/ABI versions and the current
+adapter version. Grammar upgrades require reviewing the exact upstream
+`node-types.json` and relevant grammar rules, then running language fixtures
+and the installed-wheel check. Wheels do not ship `node-types.json`; this is
+maintainer work, not a runtime registry. See [maintenance](maintenance.md).
 
 For that review, download the generated files from the exact pinned grammar
 tags ([Python 0.25.0](https://raw.githubusercontent.com/tree-sitter/tree-sitter-python/v0.25.0/src/node-types.json),
@@ -169,5 +203,5 @@ Explicit language selection is available for ambiguous direct files. The pinned 
 checked with the documented maintainer command; future grammar upgrades must
 repeat that review and fixtures. Broader consumer-project parity may still find
 unhandled syntax. This contract is not proof of exhaustive Python or Rust
-language coverage. #9 owns repository-wide complete inventories and candidate
-deltas.
+language coverage. The [inventory/delta contract](inventory.md)
+describes the implemented query-independent comparison workflow.

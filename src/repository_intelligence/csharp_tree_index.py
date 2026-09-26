@@ -49,6 +49,22 @@ def _owner(node, source: bytes) -> str | None:
     return None
 
 
+def _owner_identity(node, source: bytes) -> str | None:
+    """Distinguish owners whose display name alone is not a source identity."""
+    if node.type in OWNERS:
+        parameters = next((child for child in node.named_children
+                           if child.type == "type_parameter_list"), None)
+        if parameters is not None:
+            arity = sum(child.type == "type_parameter" for child in parameters.named_children)
+            return f"type={_owner(node, source)}|arity={arity}"
+    if node.type in {"property_declaration", "indexer_declaration", "event_declaration"}:
+        interface = next((child for child in node.named_children
+                          if child.type == "explicit_interface_specifier"), None)
+        if interface is not None:
+            return "interface=" + syntax_token_key(interface, source)
+    return None
+
+
 def _parameter_identity(parameter, source: bytes) -> str:
     name = parameter.child_by_field_name("name")
     equals = next((i for i, child in enumerate(parameter.children)
@@ -135,6 +151,9 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
         owner = _owner(node, source)
         if owner is not None:
             owners = (*owners, owner)
+        owner_identity = _owner_identity(node, source)
+        if owner_identity is not None:
+            owner_identities = (*owner_identities, owner_identity)
         value = node.child_by_field_name("value")
         is_expression_property = (node.type in {"property_declaration", "indexer_declaration"}
                                   and value is not None and value.type == "arrow_expression_clause")
@@ -188,11 +207,11 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                         "identity_signature": identity_signature,
                         **declaration(source, kind, qualified, node.start_byte, node.end_byte),
                     })
-                    if node.type in {"method_declaration", "constructor_declaration",
-                                     "local_function_statement"}:
-                        owners = (*owners, name)
-                        owner_identities = (*owner_identities,
-                                            f"{name}({own_signature or ''})")
+                    # Every callable owns its descendants, including accessors,
+                    # operators, and anonymous bodies with nested local functions.
+                    owners = (*owners, name)
+                    owner_identities = (*owner_identities,
+                                        f"{name}({own_signature or ''})")
         pending.extend((child, owners, owner_identities)
                        for child in reversed(node.named_children))
     assign_named_ids(functions)

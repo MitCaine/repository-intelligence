@@ -1,5 +1,13 @@
 # Standalone orientation core: retention decision
 
+Historical record. Commands, capabilities, counts, and source locations below
+describe the recorded revision. Use the [current documentation](../README.md)
+for operation; these observations do not establish current qualification.
+
+Historical extraction record: this describes the #391 decision at that revision,
+not the current package inventory. See [architecture](../architecture.md) for the
+current shared scanner and language adapters.
+
 This records the #391 scope decision and its implementation. The working tree
 now retains only the Rust locator in the Python package. Historical pilot code,
 security modules, and extraction ledgers remain recoverable from Git history.

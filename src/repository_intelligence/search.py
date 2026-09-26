@@ -81,6 +81,9 @@ def format_compact(result: dict) -> str:
         f"query={result['query']!r} matches={result['total_matches']} "
         f"shown={len(result['matches'])}; calls are lexical candidates, not a call graph",
     ]
+    if result.get("diagnostic_coverage") == "error_nodes_only":
+        lines.append("PARTIAL DIAGNOSTICS: native Rust reports ERROR nodes only; "
+                     "zero does not establish valid syntax")
     terms = set(tokens(result["query"]))
     for entry in result["matches"]:
         line = f"L{entry['line']}-{entry['end_line']} {entry['qualified_name']}"
@@ -112,6 +115,9 @@ def format_tree_compact(result: dict) -> str:
              f"status={result.get('mapping_status', 'unknown')}",
              f"query={result['query']!r} matches={result['total_matches']} "
              f"shown={len(result['matches'])}; calls are lexical candidates, not a call graph"]
+    if result.get("diagnostic_coverage") == "error_nodes_only":
+        lines.append("PARTIAL DIAGNOSTICS: native Rust reports ERROR nodes only; "
+                     "zero does not establish valid syntax")
     for entry in result["matches"]:
         lines.append(f"{entry['path']}:{entry['line']}-{entry['end_line']} "
                      f"{entry['qualified_name']} sha256={entry['raw_sha256']}")

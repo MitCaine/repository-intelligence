@@ -1,5 +1,9 @@
 # Source-derived Rust function locator pilot
 
+Historical record. Commands, capabilities, counts, and source locations below
+describe the recorded revision. Use the [current documentation](../README.md)
+for operation; these observations do not establish current qualification.
+
 ## Post-cleanup usability smoke (2026-09-24)
 
 Two current-source navigation questions still resolved to narrow production

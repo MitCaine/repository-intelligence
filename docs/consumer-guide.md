@@ -2,14 +2,42 @@
 
 RI supplies source evidence. The caller owns source materialization, full diff review, project policy, and acceptance. Use a separate installed RI package rather than copying its modules into each consumer repository. Pin the checkout revision and keep the emitted parser and contract metadata with saved observations.
 
-## Navigate before expanding scope
+## Install into a consumer environment
 
-Run the examples with the Python interpreter into which RI was installed. Replace the example paths and query words with the consumer's paths and task terms.
+Python 3.12 or newer is required. From the project being inspected:
 
 ```sh
-python3.13 -m repository_intelligence.locator /path/to/project \
+python3.13 -m venv .venv-ri
+.venv-ri/bin/python -m pip install "/path/to/Repository Intelligence"
+.venv-ri/bin/python -m repository_intelligence.locator . --query 'calculate total'
+```
+
+The pinned Tree-sitter runtime and nine grammar distributions are normal
+installation dependencies. Native analyzers are optional. Keep one RI checkout
+and install it into each consumer environment instead of copying source modules.
+A non-editable install must be reinstalled after changing that checkout. Record
+the selected RI revision; keep it fixed during a planning/candidate comparison.
+
+For an offline install, provide a compatible RI wheel and its dependency wheels:
+
+```sh
+.venv-ri/bin/python -m pip install --no-index --find-links /path/to/wheelhouse \
+  /path/to/repository_intelligence-0.1.0-py3-none-any.whl
+```
+
+[Maintenance](maintenance.md#offline-package-verification) describes building and
+verifying that distribution offline. Its [host record](maintenance.md#verification-scope)
+distinguishes exercised environments from package metadata compatibility.
+
+## Navigate before expanding scope
+
+Below, `python` means the interpreter into which RI was installed (for example
+`.venv-ri/bin/python`); activate that environment or substitute its full path. Replace the example paths and query words with the consumer's paths and task terms.
+
+```sh
+python -m repository_intelligence.locator /path/to/project \
   --query 'pause resume clock' --limit 8
-python3.13 -m repository_intelligence.locator /path/to/project/src/clock.py \
+python -m repository_intelligence.locator /path/to/project/src/clock.py \
   --root /path/to/project --query 'pause resume clock' --json
 ```
 
@@ -23,7 +51,7 @@ from repository_intelligence.locator import index_file, query_path
 
 root = Path('/path/to/project')
 packet = index_file(root / 'src/clock.py', root=root)
-assert packet['schema_version'] == 5
+assert packet['schema_version'] == 6
 if packet['mapping_status'] == 'navigation_only':
     for entry in packet['functions']:
         print(entry['qualified_name'], entry['byte_range'])
@@ -32,14 +60,14 @@ result = query_path(root, 'pause resume clock', limit=8)
 # Inspect mapping_status, failures, scan_scope, and each matched file's metadata.
 ```
 
-Do not use the bounded `structural.declarations` array as a full inventory. Directory query JSON also contains per-file evidence for the scan, so a small match limit does not impose a small total JSON size. The [v5 reference](navigation-result-v5.md) explains these shapes.
+Do not use the bounded `structural.declarations` array as a full inventory. Directory query JSON also contains per-file evidence for the scan, so a small match limit does not impose a small total JSON size. The [navigation reference](navigation.md) explains these shapes.
 
 ## Choose headers and exclusions deliberately
 
 A direct header query accepts `--language c` or `--language cpp`. A directory scan accepts exact relative header paths instead:
 
 ```sh
-python3.13 -m repository_intelligence.locator /path/to/project \
+python -m repository_intelligence.locator /path/to/project \
   --header-language include/api.h=cpp \
   --exclude-directory generated --query 'calculate total' --json
 ```
@@ -53,15 +81,16 @@ Unsupported source-like paths are reported for the recognized suffix set; other 
 Prepare planning and candidate trees through the consumer's existing workflow. Keep both stable for the entire scan. RI does not create or lock those snapshots.
 
 ```sh
-python3.13 -m repository_intelligence.inventory scan /snapshots/planning \
+python -m repository_intelligence.inventory scan /snapshots/planning \
   --logical-root app --assert-stable-materialization --json
-python3.13 -m repository_intelligence.inventory compare \
+python -m repository_intelligence.inventory compare \
   /snapshots/planning /snapshots/candidate --logical-root app \
   --header-language include/api.h=cpp --exclude-directory generated \
   --assert-stable-materialization --compact-json
 ```
 
-The compare command applies the selected policy to both roots. Absolute paths may differ; logical scope, contracts, and parser metadata must agree. Actual observed excluded directories can differ without changing the policy. A previously included source becoming excluded at the same path blocks comparison instead of masquerading as ordinary deletion.
+The compare command applies the selected policy to both roots. Absolute paths may differ; logical scope, contracts, and parser metadata must agree. Actual observed excluded directories can differ without changing the policy. Exclusions overlapping mapped files on the opposite side block comparison in
+either direction, so unobserved source is not treated as an addition or deletion.
 
 The library equivalent is:
 
@@ -74,8 +103,8 @@ policy = dict(stable=True, logical_root='app',
               excluded_directories=('generated',))
 planning = inventory_tree(Path('/snapshots/planning'), **policy)
 candidate = inventory_tree(Path('/snapshots/candidate'), **policy)
-assert planning['inventory_schema_version'] == 11
-assert candidate['inventory_schema_version'] == 11
+assert planning['inventory_schema_version'] == 13
+assert candidate['inventory_schema_version'] == 13
 delta = compare_inventories(planning, candidate)
 if delta['status'] != 'comparable_candidate_delta':
     raise RuntimeError((delta['status'], delta['mismatches']))
@@ -90,6 +119,25 @@ The locator's successful process exit means it emitted a packet, not that the pa
 
 A supported file larger than 4,000,000 but no larger than 32,000,000 bytes retains identity and reports `SourceLimitExceeded`. A file beyond 32,000,000 bytes reports `SourceReadLimitExceeded` without identity. Non-regular files report `NonRegularFile` when that check is reached. Read failures also have no byte identity. Unsupported files receive identity only when acquisition succeeds within its limit.
 
-A source root with no selected supported paths, no recognized unsupported paths, and no traversal failures raises `ValueError`; do not interpret that as proof of absent functionality. Invalid paths, query terms, limits, or selection configuration may also raise. The API is not a universal malformed-input-to-JSON converter.
+A source root with no selected supported paths, recognized unsupported paths, traversal failures, or exclusions raises `ValueError`; do not interpret that as proof of absent functionality. An exclusion-only root returns an `excluded` packet with its observed scope. Invalid paths, query terms, limits, or selection configuration may also raise. The API is not a universal malformed-input-to-JSON converter.
 
-Escalate to the [optional Rust lookup](rust-semantic-definition.md) only when a reference definition is needed. Supply Cargo features, the default-feature choice, and target explicitly. Its result and resource behavior are separate from the shared scanner, and ordinary navigation does not require it.
+For parser gaps, use the explicit [native syntax handoff](native-analysis.md) and
+retain the original structural result. Poker consumers can follow the
+[capsule integration recipe](poker-capsule-workflow.md).
+
+Escalate to the [optional Rust lookup](native-analysis.md) only when a reference definition is needed. Supply Cargo features, the default-feature choice, and target explicitly. Its result and resource behavior are separate from the shared scanner, and ordinary navigation does not require it.
+
+## Troubleshooting
+
+| Symptom | Next step |
+| --- | --- |
+| Command or field differs from this guide | Check which environment imports RI and its pinned checkout revision; reinstall an intentionally updated checkout |
+| Zero or irrelevant matches | Refine task terms or narrow to the owning source; inspect code rather than assuming absence |
+| Incomplete syntax with usable neighbors | Retain partial evidence; ask a specific native syntax or semantic question if needed |
+| Empty/no-source directory error | Inspect the selected root, supported suffixes, header choices, exclusions, and traversal failures |
+| Incompatible inventory pair | Compare the returned mismatch reasons; regenerate both sides with equal contracts and policy |
+| Outdated line locations after edits | Refresh the working-source result while retaining immutable planning observations |
+
+Poker's former `--authority-dir` example does not apply to the current shared
+locator. Authored authority remains a separate consumer input; see the
+[capsule recipe](poker-capsule-workflow.md).

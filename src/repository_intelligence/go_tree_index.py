@@ -99,7 +99,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                     "name": name, "qualified_name": qualified,
                     "receiver": receiver, "anonymous": anonymous,
                     "line": node.start_point.row + 1,
-                    "column": utf8_display_column(source, node.start_byte),
+                    "column": utf8_display_column(source, node.start_byte, cr_is_newline=False),
                     "end_line": node.end_point.row + (node.end_point.column != 0),
                     "signature": source[node.start_byte:body.start_byte].decode("utf-8"),
                     "docs": "", "lexical_call_candidates": _calls(body, source),

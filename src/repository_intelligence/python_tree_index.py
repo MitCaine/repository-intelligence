@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import ast
 import inspect
+import unicodedata
 from pathlib import Path
 
 from .declarations import assign_named_ids, declaration, finalize_coverage
-from .source import utf8_display_column
+from .source import python_source_encoding, utf8_display_column
 
 
 def _text(parse_bytes: bytes, node) -> str:
@@ -47,13 +48,17 @@ def _docs(body, parse_bytes: bytes) -> str:
     return inspect.cleandoc(value) if isinstance(value, str) else ""
 
 
-def index_source(path: Path, source: bytes, *, tree, parse_bytes: bytes, offsets) -> dict:
+def index_source(path: Path, source: bytes, *, tree, parse_bytes: bytes, offsets,
+                 encoding: str | None = None) -> dict:
     """Extract Python callables from an already parsed Tree-sitter syntax tree."""
     if len(source) > 4_000_000:
         raise ValueError("Python source exceeds the 4 MB per-file limit")
 
     def raw(offset: int) -> int:
         return offsets.raw(offset) if offsets is not None else offset
+
+    if encoding is None:
+        encoding = python_source_encoding(source)
 
     functions = []
     unhandled = []
@@ -76,7 +81,8 @@ def index_source(path: Path, source: bytes, *, tree, parse_bytes: bytes, offsets
         begin = raw(node.start_byte if start is None else start)
         end = raw(node.end_byte)
         kind = "lambda" if is_lambda else "function"
-        name = f"<lambda@{begin}>" if is_lambda else _text(parse_bytes, name_node)
+        name = (f"<lambda@{begin}>" if is_lambda else
+                unicodedata.normalize("NFKC", _text(parse_bytes, name_node)))
         qualified = ".".join((*owners, name))
         colon = next((child for child in node.children if child.type == ":"), None)
         if not is_lambda and colon is None:
@@ -86,7 +92,7 @@ def index_source(path: Path, source: bytes, *, tree, parse_bytes: bytes, offsets
                                   "byte_range": {"start": begin, "end": end}})
             return None
         signature = ("lambda" if is_lambda else
-                     parse_bytes[node.start_byte:colon.end_byte].decode("utf-8"))
+                     source[raw(node.start_byte):raw(colon.end_byte)].decode(encoding))
         functions.append({
             "name": name, "qualified_name": qualified,
             "line": node.start_point.row + 1,
@@ -113,7 +119,7 @@ def index_source(path: Path, source: bytes, *, tree, parse_bytes: bytes, offsets
         if node.type == "class_definition":
             name_node = node.child_by_field_name("name")
             if name_node is not None:
-                owners = (*owners, _text(parse_bytes, name_node))
+                owners = (*owners, unicodedata.normalize("NFKC", _text(parse_bytes, name_node)))
         elif node.type == "function_definition":
             if node.parent.type != "decorated_definition":
                 name = emit(node, owners)
