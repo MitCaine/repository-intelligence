@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -33,35 +34,17 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
           cache-dependency-path: pyproject.toml
-      - name: Prepare pinned offline wheels
-        shell: bash
+      - name: Prepare native test tools
         run: |
-          python - <<'PYTHON'
-          import os
-          import pathlib
-          import subprocess
-          import sys
-          import tomllib
-
-          project = tomllib.loads(pathlib.Path('pyproject.toml').read_text())
-          wheels = pathlib.Path(os.environ['RUNNER_TEMP']) / 'ri-wheels'
-          requirements = project['build-system']['requires'] + project['project']['dependencies']
-          subprocess.run([sys.executable, '-m', 'pip', 'download', '--only-binary=:all:',
-                          '--dest', str(wheels), *requirements], check=True)
-          with open(os.environ['GITHUB_ENV'], 'a') as environment:
-              for variable, pattern in [('RI_SETUPTOOLS_WHEEL', 'setuptools-*.whl'),
-                                        ('RI_WHEEL_WHEEL', 'wheel-*.whl')]:
-                  matches = list(wheels.glob(pattern))
-                  assert len(matches) == 1, (variable, matches)
-                  environment.write(f'{variable}={matches[0]}\n')
-              environment.write(f'RI_TREE_SITTER_WHEELHOUSE={wheels}\n')
-          subprocess.run([sys.executable, '-m', 'pip', 'install', '--no-index',
-                          '--find-links', str(wheels), *requirements], check=True)
-          PYTHON
+          rustup component add rust-analyzer rust-src
+          rustc --version
+          rust-analyzer --version
+      - name: Prepare pinned Python environment
+        run: |
+          python -m venv .venv
+          .venv/bin/python scripts/maintain.py prepare
       - name: Verify source and installed consumer
-        env:
-          PYTHONPATH: src
-        run: python -m unittest discover -s tests -v
+        run: .venv/bin/python scripts/maintain.py verify --require-native
       - name: Check whitespace and tracked source cleanliness
         run: |
           git diff --check

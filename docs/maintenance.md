@@ -2,44 +2,146 @@
 
 The source and current contract are the implementation authority. Package version `0.1.0` alone does not identify the semantics of the successive navigation/inventory revisions. Record the RI commit, Python/platform, installed dependency versions, test command, and skips when reporting verification.
 
-## Baseline tests
+## One local and CI path
 
-Install RI's pinned dependencies from `pyproject.toml` before running discovery:
+`pyproject.toml` is the only package-version list. The standard-library
+`scripts/maintain.py` reads its runtime and build pins; it works from any working
+directory and does not need RI installed to report the environment. From the RI
+checkout:
 
 ```sh
-PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 \
-  python3.13 -m unittest discover -s tests
+python3.13 -m venv .venv
+.venv/bin/python scripts/maintain.py status
+.venv/bin/python scripts/maintain.py prepare
+.venv/bin/python scripts/maintain.py verify
 ```
 
-Native tests depend on the required Rust tools being present; installed-wheel verification depends on its local wheel inputs. Report each outcome separately.
+On Windows use `.venv\Scripts\python.exe` instead. `status` prints installed
+versus pinned versions, Python/platform, and functional native-tool versions.
+It does not check the internet for newer releases. `prepare` downloads the
+pinned build/runtime wheels and installs them into the invoking virtual
+environment. It refuses a global interpreter. `verify` checks installed pins,
+then runs all tests with mandatory offline package verification. It does not
+update the invoking environment; the package test creates temporary build and
+consumer environments and installs only from the wheelhouse.
+
+Wheels default to ignored `.ri-cache/wheels`. Both commands accept
+`--wheelhouse /path/to/wheels`; old and new versions may coexist because pip
+resolves the exact manifest pins and compatible platform tags. Online preparation
+uses the configured package index. For a prepared offline wheelhouse:
+
+```sh
+.venv/bin/python scripts/maintain.py prepare --offline --wheelhouse /path/to/wheels
+.venv/bin/python scripts/maintain.py verify --wheelhouse /path/to/wheels --require-native
+```
+
+Offline installation disables inherited pip configuration, remote links, and
+extra requirements. `--require-native` fails early unless `rustc`, `cargo`, and
+`rust-analyzer` respond successfully. Without it, native tests keep their existing
+availability conditions; inspect skips. A rustup proxy on PATH is not evidence
+that its analyzer component is installed. RI does not update native tools as a
+side effect of these commands.
 
 ## Offline package verification
 
-The offline package check creates fresh build and consumer environments, builds the RI wheel, verifies shipped modules and pinned grammars, and exercises an unrelated mixed-language consumer:
+For an already prepared environment, direct discovery remains available:
 
 ```sh
-RI_SETUPTOOLS_WHEEL=/path/to/setuptools-79.0.1-py3-none-any.whl \
-RI_WHEEL_WHEEL=/path/to/wheel-0.47.0-py3-none-any.whl \
-RI_TREE_SITTER_WHEELHOUSE=/path/to/pinned-tree-sitter-wheels \
-RI_REQUIRE_STANDALONE=1 PYTHONDONTWRITEBYTECODE=1 \
-  python3.13 -m unittest discover -s tests -p test_installed_package.py
+PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests
 ```
 
-The wheelhouse must contain wheels compatible with the selected interpreter/platform. The nine grammar distributions plus Tree-sitter runtime are required dependencies. The `RI_REQUIRE_STANDALONE` flag makes missing package-test prerequisites fail rather than silently skip that check; it does not force unavailable native Rust tests to execute. See the [verification scope](#verification-scope) below for exercised hosts.
+Direct discovery may skip package verification unless wheel inputs are supplied.
+The preferred strict package-only invocation is:
 
-## Automated verification
+```sh
+RI_WHEELHOUSE=/path/to/wheels RI_REQUIRE_STANDALONE=1 \
+  PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -p test_installed_package.py
+```
 
-[The Verify workflow](../.github/workflows/verify.yml) runs on pull requests,
-main pushes, and manual dispatch with macOS 15 and Python 3.12/3.13. It reads
-build/runtime pins from `pyproject.toml`, downloads compatible wheels, then
-requires the offline installed-consumer test during full discovery. Missing
-package-test prerequisites fail CI. Native Rust tests retain their explicit
-tool-presence conditions; the verbose log records skips. A configured workflow
-is not evidence of a hosted pass or new platform qualification.
+The older `RI_SETUPTOOLS_WHEEL`, `RI_WHEEL_WHEEL`, and
+`RI_TREE_SITTER_WHEELHOUSE` inputs remain supported. Prefer `RI_WHEELHOUSE` for
+new automation: adding another build dependency then needs no extra environment
+variable. The test independently reads the manifest, verifies actual build-tool
+versions, builds RI, checks wheel dependency metadata, and exercises an unrelated
+mixed-language consumer without native tools on its PATH. Avoid running two
+package-building suites concurrently in the same checkout.
 
-Dependency caching follows the upstream [setup-python guidance](https://github.com/actions/setup-python#caching-packages-dependencies).
-The token has read-only contents access and checkout credentials are not retained.
-No workflow publishes packages, merges changes, or alters repository settings.
+## Updates and ownership
+
+[Dependabot](../.github/dependabot.yml) proposes updates weekly: Tree-sitter runtime
+and grammars together, packaging tools separately, and GitHub Actions together.
+It reads the existing `pyproject.toml` and workflow files; no duplicate requirements
+manifest or scheduled custom updater is needed. New ordinary dependencies remain
+eligible even when they match no group. Proposals require review and are not
+automatically merged. GitHub documents [manifest support](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories)
+and [grouping](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#groups).
+The Python updater also reads [build-system requirements](https://github.com/dependabot/dependabot-core/blob/main/python/lib/dependabot/python/file_parser/pyproject_files_parser.rb).
+
+| Technology | Change location | Verification before adoption |
+| --- | --- | --- |
+| Tree-sitter runtime and grammar packages | Exact pins in `pyproject.toml` | Grammar review below, language fixtures, full `verify` |
+| Python packaging/build dependencies | `build-system.requires`; runtime additions go in `project.dependencies` | `prepare`, then fresh offline build/consumer verification |
+| Python interpreter support | `requires-python` and Verify's Python matrix | Compatible wheels and complete tests for every added interpreter |
+| Native Rust analyzer/toolchain | Host's existing Rust installation; CI provisions required components | `status`, then `verify --require-native`; retain the reported versions |
+| GitHub Actions and runner images | `.github/workflows`; action updates are proposed by Dependabot | Review release notes and complete the hosted matrix |
+| RI instructions and optional external skills | Repository instructions in `AGENTS.md`; external skills/plugins stay with their owning installation/source | Keep instructions pointed at these shared commands and rerun the relevant verification |
+
+No personal Codex skill or plugin is vendored or versioned by RI. Update those
+through their owning installation or source repository; duplicating them into
+RI would create another stale copy. A skill that maintains RI should call these
+commands instead of embedding package pins or its own install/test procedure.
+Consumer capsules remain owned by their consumer project.
+
+For a routine package update, edit the exact `NAME==VERSION` pin (or review the
+proposed edit), run `prepare`, inspect `status`, and run `verify`. Keep independent
+behavior assertions: a parser upgrade that fixes a formerly unsupported construct
+needs a reviewed expectation change, not a blanket relaxation of failure tests.
+The current maintenance commands deliberately support exact, unmarked pins.
+If extras, URL requirements, or environment markers become necessary, extend
+that parsing and its tests explicitly. Adding an ordinary exact dependency or
+build requirement needs no change to the scripts or CI setup.
+
+Native Rust is optional for ordinary RI use. CI installs the analyzer and source
+components in its selected runner toolchain and records actual tool versions.
+To update a rustup-managed local stable toolchain deliberately:
+
+```sh
+rustup update stable
+rustup component add --toolchain stable rust-analyzer rust-src
+RUSTUP_TOOLCHAIN=stable .venv/bin/python scripts/maintain.py verify --require-native
+```
+
+Use the corresponding owner for other installations. Native tool/runner versions
+are reported rather than pinned by RI's Python manifest; a hosted run verifies
+that run's environment, not every future native release.
+
+## Automated and reusable verification
+
+[Verify](../.github/workflows/verify.yml) runs on pull requests, main pushes,
+manual dispatch, and reusable-workflow calls, on macOS 15 with Python 3.12/3.13.
+It provisions functional native tools and uses the same `prepare` and
+`verify --require-native` commands as local maintenance. Missing package/native
+prerequisites fail the job. Its Python environment and wheel cache are ignored
+workspace files. Action revisions remain SHA-pinned with version comments so
+[Dependabot can update them](https://docs.github.com/en/actions/reference/security/secure-use).
+
+For future orchestration **inside this repository**, reuse the existing job:
+
+```yaml
+name: Manual full verification
+on: workflow_dispatch
+jobs:
+  verify:
+    uses: ./.github/workflows/verify.yml
+```
+
+Add specialized checks as separate jobs when they establish something different;
+use the shared commands in jobs that need the same environment. A new language
+runtime/ecosystem also needs its own manifest, verification, and Dependabot entry.
+New Actions references under `.github/workflows` are [discovered automatically](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/auto-update-actions).
+Cross-repository workflow reuse is not promised: checkout and script paths here
+assume RI's own source tree. No workflow publishes packages or merges changes.
+A workflow edit is verified only after its hosted run completes successfully.
 
 ## Design regressions around invariants
 
@@ -57,7 +159,28 @@ The [navigation reference](navigation.md#current-result-contracts) owns the curr
 [navigation](navigation.md#compatibility-history); do not create another versioned
 copy of the full reference or reinterpret old packets under new semantics.
 
-A grammar-pin change requires reviewing upstream `node-types.json` and relevant grammar rules at the exact tags, not only incrementing a dependency string. The existing `scripts/check_grammar_nodes.py` covers its documented Python/Rust checks; it is not a complete all-language upgrade verifier. Run affected language fixtures, common navigation/inventory tests, and installed-wheel verification after an upgrade. Do not assume every declarator child has a field name or every named child is a parameter.
+A grammar-pin change requires reviewing upstream `node-types.json` and relevant
+grammar rules at the exact tags. The maintainer checker covers selected
+node/field-presence and requiredness assumptions for all ten parser variants,
+including separate TypeScript and TSX shapes. Print URLs derived from the
+current pins, download the relevant files, and check them locally:
+
+```sh
+python scripts/check_grammar_nodes.py --sources
+python scripts/check_grammar_nodes.py python=/tmp/python-node-types.json
+```
+
+Pass all `LANGUAGE=PATH` pairs with `--require-all` for a complete set (`python`,
+`rust`, `javascript`, `typescript`, `tsx`, `java`, `go`, `c-sharp`, `c`, `cpp`).
+The historical two-positional-file Python/Rust invocation still works. The
+checker never downloads or changes dependencies. Review its upstream repository
+paths if a project changes its tag or packaging convention.
+
+This checks selected assumptions, not new syntax, field types, or exhaustive
+classifier coverage. Keep the all-variant checker/test mapping current when
+adding a language. Run affected language fixtures, common navigation/inventory
+tests, and installed-wheel verification; do not assume every declarator child
+has a field name or every named child is a parameter.
 
 ## Acceptance and cleanup
 

@@ -3,6 +3,7 @@
 import hashlib
 import tempfile
 import unittest
+from importlib.metadata import version
 from pathlib import Path
 
 from repository_intelligence.locator import index_file
@@ -62,7 +63,7 @@ class PythonTreeNavigationTests(unittest.TestCase):
             current = index_file(path)
             reference = ast_index_source(path, source)
             self.assertEqual(current["parser"]["name"], "tree-sitter")
-            self.assertEqual(current["parser"]["grammar_version"], "0.25.0")
+            self.assertEqual(current["parser"]["grammar_version"], version("tree-sitter-python"))
             self.assertEqual(current["mapping_status"], "navigation_only")
             self.assertEqual(current["function_count"], reference["function_count"])
             fields = ("name", "qualified_name", "line", "column", "end_line",

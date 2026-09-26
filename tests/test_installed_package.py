@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 import zipfile
 
@@ -24,32 +26,68 @@ def run(*args: object, cwd: Path | None = None, env: dict[str, str] | None = Non
 class InstalledPackageTests(unittest.TestCase):
     def test_offline_wheel_works_outside_source_tree(self):
         required = os.environ.get("RI_REQUIRE_STANDALONE") == "1"
-        names = ("RI_SETUPTOOLS_WHEEL", "RI_WHEEL_WHEEL")
-        wheels = [Path(os.environ[name]).resolve() for name in names if os.environ.get(name)]
-        grammar_wheels = Path(os.environ.get("RI_TREE_SITTER_WHEELHOUSE", ""))
-        if (len(wheels) != 2 or not all(path.is_file() for path in wheels)
-                or not grammar_wheels.is_dir()):
+        combined = os.environ.get("RI_WHEELHOUSE")
+        if combined:
+            grammar_wheels = Path(combined).resolve()
+            wheels = []
+            ready = grammar_wheels.is_dir()
+            message = "RI_WHEELHOUSE must name the prepared offline wheel directory"
+        else:
+            # Preserve the original split-wheel inputs for existing maintainers.
+            names = ("RI_SETUPTOOLS_WHEEL", "RI_WHEEL_WHEEL")
+            wheels = [Path(os.environ[name]).resolve() for name in names if os.environ.get(name)]
+            grammar_input = os.environ.get("RI_TREE_SITTER_WHEELHOUSE")
+            grammar_wheels = Path(grammar_input).resolve() if grammar_input else None
+            ready = (len(wheels) == 2 and all(path.is_file() for path in wheels)
+                     and grammar_wheels is not None and grammar_wheels.is_dir())
             message = "offline build and Tree-sitter wheels are required"
+        if not ready:
             if required:
                 self.fail(message)
             self.skipTest(message)
 
-        environment = {key: value for key, value in os.environ.items() if key != "PYTHONPATH"}
-        environment.update(PIP_NO_INDEX="1", PIP_NO_CACHE_DIR="1",
+        # --no-index alone still permits inherited remote find-links, constraints,
+        # and extra requirement files. Keep this fresh-package check truly offline.
+        environment = {key: value for key, value in os.environ.items()
+                       if key != "PYTHONPATH" and not key.startswith("PIP_")}
+        environment.update(PIP_CONFIG_FILE=os.devnull, PIP_NO_INDEX="1", PIP_NO_CACHE_DIR="1",
                            PIP_DISABLE_PIP_VERSION_CHECK="1", PYTHONDONTWRITEBYTECODE="1")
-        expected_versions = {"tree-sitter": "0.25.0", "tree-sitter-python": "0.25.0",
-                             "tree-sitter-rust": "0.24.2", "tree-sitter-javascript": "0.25.0",
-                             "tree-sitter-typescript": "0.23.2", "tree-sitter-java": "0.23.5",
-                             "tree-sitter-go": "0.25.0", "tree-sitter-c-sharp": "0.23.5",
-                             "tree-sitter-c": "0.24.2", "tree-sitter-cpp": "0.23.4"}
+        # Read the package declaration independently of maintenance tooling, so a
+        # mistake in that tooling cannot silently redefine this installed oracle.
+        project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        build_requirements = project["build-system"]["requires"]
+        runtime_requirements = project["project"]["dependencies"]
+
+        def versions(requirements: list[str]) -> dict[str, str]:
+            result = {}
+            for requirement in requirements:
+                match = re.fullmatch(r"([A-Za-z0-9][A-Za-z0-9._-]*)==([^;\s]+)", requirement)
+                self.assertIsNotNone(match, f"expected an exact unmarked pin: {requirement}")
+                name = re.sub(r"[-_.]+", "-", match.group(1)).lower()
+                self.assertNotIn(name, result, f"duplicate package pin: {requirement}")
+                result[name] = match.group(2)
+            return result
+
+        expected_build_versions = versions(build_requirements)
+        expected_versions = versions(runtime_requirements)
         with tempfile.TemporaryDirectory(prefix="ri-installed-") as raw:
             temp = Path(raw)
             build, install, output = (temp / name for name in ("build", "install", "wheels"))
             consumer = temp / "neutral-consumer"
             run(sys.executable, "-m", "venv", build, env=environment)
             build_python = build / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-            run(build_python, "-m", "pip", "install", "--no-index", "--no-deps",
-                *wheels, env=environment)
+            if combined:
+                run(build_python, "-m", "pip", "install", "--no-index",
+                    "--find-links", grammar_wheels, *build_requirements, env=environment)
+            else:
+                run(build_python, "-m", "pip", "install", "--no-index", "--no-deps",
+                    *wheels, env=environment)
+            installed_build_versions = json.loads(run(
+                build_python, "-I", "-c",
+                "import json; from importlib.metadata import version; "
+                f"print(json.dumps({{name: version(name) for name in {list(expected_build_versions)!r}}}))",
+                env=environment))
+            self.assertEqual(installed_build_versions, expected_build_versions)
             output.mkdir()
             run(build_python, "-m", "pip", "wheel", "--no-index", "--no-build-isolation",
                 "--no-deps", "--wheel-dir", output, ROOT, cwd=temp, env=environment)
@@ -80,15 +118,20 @@ class InstalledPackageTests(unittest.TestCase):
             script = temp / "smoke.py"
             script.write_text(
                 "import json\n"
-                "from importlib.metadata import version\n"
+                "import re\n"
+                "from importlib.metadata import requires, version\n"
                 "from pathlib import Path\n"
                 "from repository_intelligence.locator import query_path\n"
                 "from repository_intelligence.inventory import inventory_tree, compare_inventories\n"
                 "from repository_intelligence.rust_semantic import resolve_definition\n"
+                f"expected_versions = {expected_versions!r}\n"
+                "actual_requirements = {re.sub(r'[-_.]+', '-', name.strip()).lower(): pin.strip() "
+                "for name, pin in (item.split('==', 1) for item in requires('repository-intelligence'))}\n"
+                "assert actual_requirements == expected_versions\n"
                 "result = query_path(Path('src'), 'calculate total')\n"
                 "assert result['structural_error_count'] == 0\n"
                 "single = query_path(Path('src/orders.py'), 'calculate total')\n"
-                "assert single['structural']['parser']['runtime_version'] == '0.25.0'\n"
+                "assert single['structural']['parser']['runtime_version'] == expected_versions['tree-sitter']\n"
                 "assert single['parser']['name'] == 'tree-sitter'\n"
                 "rust = query_path(Path('src/lib.rs'), 'calculate total')\n"
                 "assert rust['parser']['name'] == 'tree-sitter'\n"
@@ -107,7 +150,6 @@ class InstalledPackageTests(unittest.TestCase):
                 "assert query_path(Path('fixture.cs'), 'total')['matches'][0]['name'] == 'Total'\n"
                 "assert query_path(Path('fixture.c'), 'total')['matches'][0]['name'] == 'total'\n"
                 "assert query_path(Path('fixture.cpp'), 'total')['matches'][0]['name'] == 'total'\n"
-                f"expected_versions = {expected_versions!r}\n"
                 "assert {name: version(name) for name in expected_versions} == expected_versions\n"
                 "grammar_probes = {'src/orders.py': ('total', 'tree-sitter-python'), "
                 "'src/lib.rs': ('total', 'tree-sitter-rust'), "
@@ -137,7 +179,7 @@ class InstalledPackageTests(unittest.TestCase):
                 "assert len(delta['declaration_changes']['modified']) == 1\n"
                 "print(json.dumps({'matches': sorted(item['path'] for item in result['matches']), "
                 "'versions': {name: version(name) for name in expected_versions}}))\n")
-            consumer_environment = {**environment, "PATH": str(install / "bin")}
+            consumer_environment = {**environment, "PATH": str(installed_python.parent)}
             result = run(installed_python, "-I", script, cwd=consumer, env=consumer_environment)
             payload = json.loads(result)
             self.assertEqual(payload["matches"], ["src/lib.rs", "src/orders.py"])

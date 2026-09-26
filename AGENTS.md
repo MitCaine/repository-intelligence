@@ -14,8 +14,10 @@ apply here. The current user request defines the task scope.
 - Do not weaken incomplete/unsupported/excluded results to make tests pass.
 - Review compatibility versions when source identity, classification, coverage,
   or comparison behavior changes. Update current docs and package assertions.
-- Follow docs/maintenance.md for pinned dependencies, tests, and offline wheel
-  verification. Run git diff --check and report skips and unavailable checks.
+- Keep package pins only in pyproject.toml; use scripts/maintain.py for shared
+  environment preparation and verification. Follow docs/maintenance.md for
+  grammar updates, native tools, and offline wheel verification. Run git diff
+  --check and report skips and unavailable checks.
 - Keep source acquisition bounded and read-only. Avoid new services, registries,
   persistent indexes, or consumer permission policy without a concrete need.
 - Do not commit, push, merge, or change repository settings unless requested.

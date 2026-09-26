@@ -58,14 +58,18 @@ handoff through its existing context-page helper.
 
 ## Develop and verify
 
-From the RI checkout, with pinned dependencies installed in the chosen environment:
+From the RI checkout, prepare and verify a dedicated environment:
 
 ```sh
-PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests
+python3.13 -m venv .venv
+.venv/bin/python scripts/maintain.py prepare
+.venv/bin/python scripts/maintain.py verify
 ```
 
-[Maintenance](docs/maintenance.md) covers required offline package verification,
-optional native tests, grammar upgrades, CI, and exercised hosts. Report skips.
+Use `status` to inspect installed versions, `prepare --offline` to reuse local
+wheels, and `verify --require-native` when qualifying native Rust tools.
+[Maintenance](docs/maintenance.md) covers dependency update proposals, all-grammar
+upgrade checks, external tool/skill ownership, and reusable CI workflows.
 [Architecture](docs/architecture.md) describes module ownership and the small-design goals.
 
 The [documentation index](docs/README.md) links all current guides.

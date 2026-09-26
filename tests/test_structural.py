@@ -3,6 +3,7 @@
 import hashlib
 import tempfile
 import unittest
+from importlib.metadata import version
 from pathlib import Path
 
 from repository_intelligence.locator import index_file
@@ -45,8 +46,8 @@ class StructuralTests(unittest.TestCase):
             result = index_file(path)
             syntax = result["structural"]
             self.assertEqual(result["mapping_status"], "navigation_only")
-            self.assertEqual(syntax["parser"]["runtime_version"], "0.25.0")
-            self.assertEqual(syntax["parser"]["grammar_version"], "0.25.0")
+            self.assertEqual(syntax["parser"]["runtime_version"], version("tree-sitter"))
+            self.assertEqual(syntax["parser"]["grammar_version"], version("tree-sitter-python"))
             self.assertEqual(syntax["parser"]["adapter_version"], 10)
             self.assertEqual(syntax["coverage"], "adapter_owned_callable_accounting")
             self.assertEqual(syntax["error_count"], 0)
