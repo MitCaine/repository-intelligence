@@ -14,10 +14,14 @@ python3 scripts/update.py
 .venv/bin/python scripts/maintain.py status
 ```
 
-The updater uses the newest installed CI-supported Python (3.12, 3.13, or 3.14)
-and rebuilds `.venv` when that choice changes. It asks PyPI for the latest
-release of each exact pin in `pyproject.toml`, then tries changes one at a time
-with `prepare` and `verify`.
+The updater reuses the selected environment for ordinary start-of-work runs.
+On first setup, it creates `.venv` with the newest installed CI-supported Python
+(3.12, 3.13, or 3.14). `--migrate-python` prepares a separate permanent candidate
+environment under `.ri-cache/venvs`, verifies it, then selects it for future runs
+and VS Code. Failure leaves the former environment and selection in place.
+The updater asks PyPI for the latest stable release of each exact pin in
+`pyproject.toml`, ignores lower versions, then tries changes one at a time with
+`prepare` and `verify`.
 An available wheel on PyPI does not guarantee one for this host; preparation
 checks that. A failed candidate is restored and the full verification is rerun
 before the updater continues. Failed package releases are recorded in ignored
@@ -31,12 +35,15 @@ and 3.14. Comparisons across different installed parser versions remain
 incompatible; regenerate both observations with the same pinned environment.
 
 The updater also refreshes SHA-pinned GitHub Actions from their latest releases
-and writes `.vscode/settings.json` with the project interpreter. Codex and
-terminal commands use `.venv/bin/python`. It does not change the installed
-Python interpreter or CI runner image. Review grammar changes and hosted CI
+and writes `.vscode/settings.json` with the project interpreter when that file
+is JSON. JSONC settings are left untouched with a warning so an editor preference
+cannot invalidate package verification. Codex uses the interpreter printed by
+the updater. It does not install a new Python or CI runner image. Review grammar changes and hosted CI
 before adopting updates. Use `--offline` to reuse existing wheels without
 release checks, `--skip-actions` to defer Actions checks, and `--native` to
-update rustup stable plus analyzer/source components and run native verification.
+update rustup stable plus analyzer/source components and verify that same stable
+toolchain. `--offline --native` is rejected because the native update can use
+the network.
 Native updates are opt-in and cannot be rolled back by this script.
 
 For manual fixed-pin setup, create the environment and run `prepare` then
@@ -101,6 +108,30 @@ preparation and verification path. Dependency PR scheduling was removed because
 updates now start locally when the maintainer runs this command. The updater
 does not commit or push any changes.
 
+## Retained wheel bundles
+
+After preparing a clean committed checkout, retain a wheel bundle for one
+Python/platform combination:
+
+```sh
+.venv/bin/python scripts/maintain.py prepare
+.venv/bin/python scripts/maintain.py bundle --require-native \
+  --output .ri-cache/bundles/ri-macos-arm64-py314
+```
+
+After `--migrate-python`, substitute the selected interpreter path printed by
+the updater for `.venv/bin/python` in this recipe.
+
+`bundle` runs full verification, copies compatible pinned dependency wheels,
+builds an RI wheel, and installs that exact retained wheel into a temporary
+offline consumer environment for an import and `pip check`. The output includes
+`receipt.json` with the Git commit, clean-checkout flag, Python/platform,
+package pins, and SHA-256 of every wheel. The output directory must be empty.
+Keep only bundles whose receipt reports `clean_checkout: true` for consumer
+adoption; a dirty build identifies its base commit but does not bind the wheel
+to that commit. Build a separate bundle for each required Python/platform.
+The bundle is local and is not published or uploaded by CI.
+
 | Technology | Change location | Verification before adoption |
 | --- | --- | --- |
 | Tree-sitter runtime and grammar packages | Exact pins in `pyproject.toml`, refreshed by `scripts/update.py` | Grammar review below, language fixtures, full `verify` |
@@ -164,8 +195,9 @@ jobs:
 Add specialized checks as separate jobs when they establish something different;
 use the shared commands in jobs that need the same environment. A new language
 runtime/ecosystem also needs its own manifest and verification path.
-New SHA-pinned Actions references under `.github/workflows` are discovered by
-the updater when they use a `uses: owner/repo@SHA # vX` line.
+New SHA-pinned Actions references in `.yml` or `.yaml` files under
+`.github/workflows` are discovered by the updater when they use a
+`uses: owner/repo@SHA # vX` line, including named steps.
 Cross-repository workflow reuse is not promised: checkout and script paths here
 assume RI's own source tree. No workflow publishes packages or merges changes.
 A workflow edit is verified only after its hosted run completes successfully.

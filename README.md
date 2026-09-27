@@ -26,8 +26,8 @@ Use a file path to narrow the question and `--json` to inspect full packet metad
 A direct ambiguous C/C++ header needs `--language c` or `--language cpp`;
 directory scans use repeatable `--header-language include/api.h=cpp`.
 [The consumer guide](docs/consumer-guide.md) covers installation, offline use,
-selection, and troubleshooting. Reinstall after intentionally updating a
-non-editable RI checkout; keep its revision fixed during a comparison.
+upgrading an existing consumer, selection, and troubleshooting. Keep the RI
+revision fixed during a comparison.
 
 ## Compare source trees
 
@@ -77,6 +77,10 @@ python3.14 -m venv .venv
 
 `prepare` above downloads wheels. Once the wheelhouse is populated, use
 `python3 scripts/update.py --offline` for an offline start-of-work run.
+An existing environment stays selected; use `--migrate-python` to qualify a
+newer interpreter separately before selecting it. After verification, use
+`maintain.py bundle` to retain an RI wheel and compatible dependency wheels for
+consumers. [Maintenance](docs/maintenance.md#retained-wheel-bundles) has the recipe.
 Use `status` to inspect installed versions and `verify --require-native` when
 qualifying native Rust tools. Native toolchain updates are opt-in with
 `python3 scripts/update.py --native`.

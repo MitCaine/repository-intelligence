@@ -6,7 +6,7 @@ import re
 from urllib.request import Request, urlopen
 
 
-ACTION = re.compile(r'(?m)^(?P<prefix>[ \t]*- uses: )(?P<repo>[\w.-]+/[\w.-]+)@'
+ACTION = re.compile(r'(?m)^(?P<prefix>[ \t]*(?:-[ \t]+)?uses:[ \t]+)(?P<repo>[\w.-]+/[\w.-]+)@'
                     r'(?P<sha>[a-f0-9]{40})(?P<suffix>[ \t]+#[ \t]+)(?P<tag>v\S+)$')
 
 
@@ -32,7 +32,7 @@ def release(repo: str) -> tuple[str, str]:
 
 def update(workflows: Path) -> list[str]:
     changes = []
-    for path in sorted(workflows.glob('*.yml')):
+    for path in sorted((*workflows.glob('*.yml'), *workflows.glob('*.yaml'))):
         original = path.read_text(encoding='utf-8')
 
         def replace(match: re.Match) -> str:

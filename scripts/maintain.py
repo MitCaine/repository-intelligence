@@ -1,8 +1,9 @@
-"""Small shared maintenance commands; only prepare downloads or installs packages."""
+"""Shared preparation, verification, and local wheel-bundle commands."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.metadata
 import json
 import os
@@ -13,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import tomllib
+import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -129,6 +131,60 @@ def verify(pins: dict[str, dict[str, str]], wheelhouse: Path, *, require_native:
                           cwd=ROOT, env=environment, timeout=900).returncode
 
 
+def bundle(pins: dict[str, dict[str, str]], wheelhouse: Path, output: Path,
+           *, require_native: bool) -> int:
+    """Retain and smoke-test an exact local wheel bundle with a source receipt."""
+    if sys.prefix == sys.base_prefix:
+        raise ValueError('bundle requires the prepared virtual-environment Python')
+    mismatches = [item['name'] for item in status(pins)['packages'] if not item['matches']]
+    if mismatches:
+        raise ValueError('Installed pins differ; run prepare first: ' + ', '.join(mismatches))
+    result = verify(pins, wheelhouse, require_native=require_native)
+    if result:
+        raise ValueError(f'Full verification failed with exit {result}')
+    output = output.resolve()
+    if output.exists() and any(output.iterdir()):
+        raise ValueError(f'Bundle output must be empty: {output}')
+    output.mkdir(parents=True, exist_ok=True)
+    subprocess.run([sys.executable, '-m', 'pip', 'download', '--no-index',
+                    '--find-links', str(wheelhouse.resolve()), '--only-binary=:all:',
+                    '--dest', str(output), *requirements(pins)],
+                   cwd=ROOT, env=offline_environment(), check=True, timeout=600)
+    subprocess.run([sys.executable, '-m', 'pip', 'wheel', '--no-index',
+                    '--no-build-isolation', '--no-deps', '--wheel-dir', str(output), str(ROOT)],
+                   cwd=ROOT, env=offline_environment(), check=True, timeout=300)
+    built = list(output.glob('repository_intelligence-*.whl'))
+    if len(built) != 1:
+        raise ValueError('Expected one RI wheel in the bundle')
+    with tempfile.TemporaryDirectory(prefix='ri-bundle-smoke-') as raw:
+        candidate = Path(raw) / 'venv'
+        subprocess.run([sys.executable, '-m', 'venv', str(candidate)], check=True, timeout=60)
+        python = candidate / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+        subprocess.run([str(python), '-m', 'pip', 'install', '--no-index',
+                        '--find-links', str(output), str(built[0])],
+                       env=offline_environment(), check=True, timeout=300)
+        subprocess.run([str(python), '-m', 'pip', 'check'],
+                       env=offline_environment(), check=True, timeout=60)
+        subprocess.run([str(python), '-c',
+                        'from repository_intelligence.locator import query_path; '
+                        'from repository_intelligence.inventory import inventory_tree'],
+                       env=offline_environment(), check=True, timeout=30)
+    revision = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, check=True,
+                              capture_output=True, text=True, timeout=10).stdout.strip()
+    dirty = bool(subprocess.run(['git', 'status', '--porcelain', '--untracked-files=all'],
+                                cwd=ROOT, check=True, capture_output=True,
+                                text=True, timeout=10).stdout.strip())
+    receipt = {'commit': revision, 'clean_checkout': not dirty,
+               'python': platform.python_version(), 'platform': platform.platform(),
+               'full_verify_passed': True, 'required_native_tools': require_native,
+               'packages': {**pins['build'], **pins['runtime']},
+               'wheels': {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                          for path in sorted(output.glob('*.whl'))}}
+    (output / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n', encoding='utf-8')
+    print(json.dumps(receipt, indent=2))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -139,6 +195,10 @@ def main(argv: list[str] | None = None) -> int:
     check = commands.add_parser('verify', help='run full source and offline installed-consumer tests')
     check.add_argument('--wheelhouse', type=Path, default=DEFAULT_WHEELS)
     check.add_argument('--require-native', action='store_true', help='require functional Rust tools')
+    export = commands.add_parser('bundle', help='build and smoke-test a retained offline RI wheel bundle')
+    export.add_argument('--wheelhouse', type=Path, default=DEFAULT_WHEELS)
+    export.add_argument('--output', type=Path, required=True)
+    export.add_argument('--require-native', action='store_true')
     args = parser.parse_args(argv)
     try:
         pins = load_pins()
@@ -147,6 +207,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == 'prepare':
             return prepare(pins, args.wheelhouse, offline=args.offline)
+        if args.command == 'bundle':
+            return bundle(pins, args.wheelhouse, args.output,
+                          require_native=args.require_native)
         return verify(pins, args.wheelhouse, require_native=args.require_native)
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         print(f'Maintenance failed: {error}', file=sys.stderr)

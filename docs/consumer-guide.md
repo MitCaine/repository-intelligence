@@ -25,6 +25,30 @@ For an offline install, provide a compatible RI wheel and its dependency wheels:
   /path/to/repository_intelligence-0.1.0-py3-none-any.whl
 ```
 
+The [retained bundle recipe](maintenance.md#retained-wheel-bundles) creates that
+wheel alongside its pinned dependencies and a checksum receipt. Check the
+receipt's commit, `clean_checkout`, interpreter/platform, and wheel hashes
+before adoption. RI still declares package version `0.1.0`, so a wheel built
+from a newer commit can have the same filename as an older one.
+
+For an existing consumer, prepare a fresh candidate environment at its final
+path and install the selected bundle there. Run `pip check` and the consumer's
+real compatibility tests before changing its interpreter setting. Keep the old
+environment as the rollback target. If an in-place update is unavoidable,
+reinstall the wheel explicitly even when its package version is unchanged:
+
+```sh
+candidate/bin/python -m pip install --force-reinstall --no-index \
+  --find-links /path/to/bundle \
+  /path/to/bundle/repository_intelligence-0.1.0-py3-none-any.whl
+candidate/bin/python -m pip check
+```
+
+After installation, confirm the installed RI dependency metadata and parser
+versions match the bundle receipt. Generate both sides of a new planning/candidate
+comparison with the same accepted RI environment; do not compare observations
+from different parser pins.
+
 [Maintenance](maintenance.md#offline-package-verification) describes building and
 verifying that distribution offline. Its [host record](maintenance.md#verification-scope)
 distinguishes exercised environments from package metadata compatibility.
