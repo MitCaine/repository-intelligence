@@ -10,13 +10,29 @@ directory and does not need RI installed to report the environment. From the RI
 checkout:
 
 ```sh
-python3.13 -m venv .venv
+python3 scripts/update.py
 .venv/bin/python scripts/maintain.py status
-.venv/bin/python scripts/maintain.py prepare
-.venv/bin/python scripts/maintain.py verify
 ```
 
-On Windows use `.venv\Scripts\python.exe` instead. `status` prints installed
+The updater uses the newest installed CI-supported Python (3.12 or 3.13) when creating `.venv`, asks
+PyPI for current non-yanked wheel releases, edits exact pins in `pyproject.toml`,
+then runs `prepare` and `verify`. It also refreshes SHA-pinned GitHub Actions
+from their latest releases and writes `.vscode/settings.json` with the project
+interpreter. Codex and terminal commands use `.venv/bin/python`. If preparation
+or verification fails, the old manifest and installed pins are restored where
+the prior wheels are available. Review
+grammar changes and hosted CI before adopting updates. Use `--offline` to reuse
+existing wheels without release checks, `--skip-actions` to defer Actions checks,
+and `--native` to update rustup stable plus analyzer/source components and run
+native verification. Native updates cannot be rolled back by this script.
+Failed package releases are recorded in ignored `.ri-cache/rejected-updates.json`
+and skipped on later runs until a newer release appears. Delete that file to
+retry a rejected release after investigating it.
+
+For manual fixed-pin setup, create the environment and run `prepare` then
+`verify` as separate commands. The start-of-work updater currently targets macOS.
+On Windows use `.venv\Scripts\python.exe` for the shared maintenance commands.
+`status` prints installed
 versus pinned versions, Python/platform, and functional native-tool versions.
 It does not check the internet for newer releases. `prepare` downloads the
 pinned build/runtime wheels and installs them into the invoking virtual
@@ -68,22 +84,20 @@ package-building suites concurrently in the same checkout.
 
 ## Updates and ownership
 
-[Dependabot](../.github/dependabot.yml) proposes updates weekly: Tree-sitter runtime
-and grammars together, packaging tools separately, and GitHub Actions together.
-It reads the existing `pyproject.toml` and workflow files; no duplicate requirements
-manifest or scheduled custom updater is needed. New ordinary dependencies remain
-eligible even when they match no group. Proposals require review and are not
-automatically merged. GitHub documents [manifest support](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories)
-and [grouping](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#groups).
-The Python updater also reads [build-system requirements](https://github.com/dependabot/dependabot-core/blob/main/python/lib/dependabot/python/file_parser/pyproject_files_parser.rb).
+Run `python3 scripts/update.py` at the start of work when internet access is
+available. Package and Action checks live in separate modules under
+`scripts/update_modules/`; `scripts/maintain.py` remains the shared environment
+preparation and verification path. Dependency PR scheduling was removed because
+updates now start locally when the maintainer runs this command. The updater
+does not commit or push any changes.
 
 | Technology | Change location | Verification before adoption |
 | --- | --- | --- |
-| Tree-sitter runtime and grammar packages | Exact pins in `pyproject.toml` | Grammar review below, language fixtures, full `verify` |
+| Tree-sitter runtime and grammar packages | Exact pins in `pyproject.toml`, refreshed by `scripts/update.py` | Grammar review below, language fixtures, full `verify` |
 | Python packaging/build dependencies | `build-system.requires`; runtime additions go in `project.dependencies` | `prepare`, then fresh offline build/consumer verification |
 | Python interpreter support | `requires-python` and Verify's Python matrix | Compatible wheels and complete tests for every added interpreter |
 | Native Rust analyzer/toolchain | Host's existing Rust installation; CI provisions required components | `status`, then `verify --require-native`; retain the reported versions |
-| GitHub Actions and runner images | `.github/workflows`; action updates are proposed by Dependabot | Review release notes and complete the hosted matrix |
+| GitHub Actions and runner images | `.github/workflows`; SHA-pinned actions refreshed by `scripts/update.py` | Review release notes and complete the hosted matrix |
 | RI instructions and optional external skills | Repository instructions in `AGENTS.md`; external skills/plugins stay with their owning installation/source | Keep instructions pointed at these shared commands and rerun the relevant verification |
 
 No personal Codex skill or plugin is vendored or versioned by RI. Update those
@@ -92,8 +106,8 @@ RI would create another stale copy. A skill that maintains RI should call these
 commands instead of embedding package pins or its own install/test procedure.
 Consumer capsules remain owned by their consumer project.
 
-For a routine package update, edit the exact `NAME==VERSION` pin (or review the
-proposed edit), run `prepare`, inspect `status`, and run `verify`. Keep independent
+For a routine package update, run the updater or edit the exact `NAME==VERSION`
+pin, inspect `status`, and run `verify`. Keep independent
 behavior assertions: a parser upgrade that fixes a formerly unsupported construct
 needs a reviewed expectation change, not a blanket relaxation of failure tests.
 The current maintenance commands deliberately support exact, unmarked pins.
@@ -123,7 +137,8 @@ It provisions functional native tools and uses the same `prepare` and
 `verify --require-native` commands as local maintenance. Missing package/native
 prerequisites fail the job. Its Python environment and wheel cache are ignored
 workspace files. Action revisions remain SHA-pinned with version comments so
-[Dependabot can update them](https://docs.github.com/en/actions/reference/security/secure-use).
+the local updater can refresh them. Hosted CI is still required to verify an
+Action change.
 
 For future orchestration **inside this repository**, reuse the existing job:
 
@@ -137,8 +152,9 @@ jobs:
 
 Add specialized checks as separate jobs when they establish something different;
 use the shared commands in jobs that need the same environment. A new language
-runtime/ecosystem also needs its own manifest, verification, and Dependabot entry.
-New Actions references under `.github/workflows` are [discovered automatically](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/auto-update-actions).
+runtime/ecosystem also needs its own manifest and verification path.
+New SHA-pinned Actions references under `.github/workflows` are discovered by
+the updater when they use a `uses: owner/repo@SHA # vX` line.
 Cross-repository workflow reuse is not promised: checkout and script paths here
 assume RI's own source tree. No workflow publishes packages or merges changes.
 A workflow edit is verified only after its hosted run completes successfully.

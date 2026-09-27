@@ -73,6 +73,47 @@ class InventoryTests(unittest.TestCase):
             self.assertEqual(len(declarations["unchanged"]), 1)
             self.assertIn("change", declarations["modified"][0]["declaration_id"])
 
+    def test_crate_feature_guard_is_a_file_change_without_a_callable_body_change(self):
+        # Disabling an entire test crate can hide tests without editing any test body.
+        with tempfile.TemporaryDirectory() as raw:
+            planning, candidate = (Path(raw) / name for name in ("planning", "candidate"))
+            planning.mkdir()
+            candidate.mkdir()
+            test = '#[test]\nfn neutral_test() { assert_eq!(2, 2); }\n'
+            (planning / "tests.rs").write_text(test)
+            (candidate / "tests.rs").write_text('#![cfg(feature = "holdem")]\n' + test)
+            delta = compare_inventories(inventory_tree(planning, stable=True),
+                                        inventory_tree(candidate, stable=True))
+            self.assertEqual(delta["status"], "comparable_candidate_delta")
+            self.assertEqual([item["path"] for item in delta["file_changes"]["modified"]],
+                             ["tests.rs"])
+            changes = delta["declaration_changes"]
+            self.assertEqual([item["planning"]["name"] for item in changes["unchanged"]],
+                             ["neutral_test"])
+            self.assertEqual(changes["modified"], [])
+            self.assertEqual(changes["added"], [])
+            self.assertEqual(changes["removed"], [])
+
+    def test_manifest_only_change_is_outside_source_inventory_coverage(self):
+        # A comparable source inventory cannot replace the complete Git diff.
+        with tempfile.TemporaryDirectory() as raw:
+            planning, candidate = (Path(raw) / name for name in ("planning", "candidate"))
+            planning.mkdir()
+            candidate.mkdir()
+            for root in (planning, candidate):
+                (root / "lib.rs").write_text('pub fn calculate() -> i32 { 1 }\n')
+            (planning / "Cargo.toml").write_text('[features]\ndefault = ["holdem"]\n')
+            (candidate / "Cargo.toml").write_text('[features]\ndefault = []\n')
+            before, after = (inventory_tree(root, stable=True) for root in (planning, candidate))
+            self.assertEqual([item["path"] for item in before["files"]], ["lib.rs"])
+            self.assertEqual([item["path"] for item in after["files"]], ["lib.rs"])
+            delta = compare_inventories(before, after)
+            self.assertEqual(delta["status"], "comparable_candidate_delta")
+            self.assertEqual(len(delta["file_changes"]["unchanged"]), 1)
+            for kind in ("added", "removed", "modified"):
+                self.assertEqual(delta["file_changes"][kind], [])
+                self.assertEqual(delta["declaration_changes"][kind], [])
+
     def test_identical_bytes_have_same_digest_across_checkout_roots(self):
         with tempfile.TemporaryDirectory() as raw:
             left, right = (Path(raw) / name for name in ("left", "right"))
