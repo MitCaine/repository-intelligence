@@ -14,7 +14,7 @@ versions are tracked inside the references rather than in parallel filenames.
 | Prepare Poker capsule context without changing its workflow | [Poker capsule integration](poker-capsule-workflow.md) |
 | Decide whether more evidence is needed | [Limitations](limitations.md) |
 | Change a module or add a language | [Architecture and ownership](architecture.md) |
-| Verify, upgrade grammars, maintain docs, or package RI | [Maintenance](maintenance.md) |
+| Run the start-of-work updater, verify, upgrade grammars, maintain docs, or package RI | [Maintenance](maintenance.md) |
 
 [Historical records](archive/README.md) retain extraction decisions, pilot/adoption
 observations, and measured audit results. They are not current setup instructions,

@@ -58,15 +58,16 @@ handoff through its existing context-page helper.
 
 ## Develop and verify
 
-From the RI checkout, run the start-of-work updater. It checks current package
-and GitHub Action releases, prepares the project environment, verifies it, and
-sets the VS Code interpreter. Codex uses the same `.venv/bin/python`:
+From the RI checkout on macOS, run the start-of-work updater. It checks Python
+package and SHA-pinned GitHub Action releases, prepares `.venv`, runs the full
+offline package verification, and sets the VS Code interpreter. Use the same
+`.venv/bin/python` in Codex:
 
 ```sh
 python3 scripts/update.py
 ```
 
-For offline work or a fixed-pin verification session:
+To prepare and verify the current pins without checking for newer releases:
 
 ```sh
 python3.13 -m venv .venv
@@ -74,8 +75,11 @@ python3.13 -m venv .venv
 .venv/bin/python scripts/maintain.py verify
 ```
 
-Use `status` to inspect installed versions, `prepare --offline` to reuse local
-wheels, and `verify --require-native` when qualifying native Rust tools.
+`prepare` above downloads wheels. Once the wheelhouse is populated, use
+`python3 scripts/update.py --offline` for an offline start-of-work run.
+Use `status` to inspect installed versions and `verify --require-native` when
+qualifying native Rust tools. Native toolchain updates are opt-in with
+`python3 scripts/update.py --native`.
 [Maintenance](docs/maintenance.md) covers update options, all-grammar
 upgrade checks, external tool/skill ownership, and reusable CI workflows.
 [Architecture](docs/architecture.md) describes module ownership and the small-design goals.

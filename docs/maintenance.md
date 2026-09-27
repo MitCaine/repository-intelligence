@@ -14,26 +14,32 @@ python3 scripts/update.py
 .venv/bin/python scripts/maintain.py status
 ```
 
-The updater uses the newest installed CI-supported Python (3.12 or 3.13) when creating `.venv`, asks
-PyPI for current non-yanked wheel releases, edits exact pins in `pyproject.toml`,
-then runs `prepare` and `verify`. It also refreshes SHA-pinned GitHub Actions
-from their latest releases and writes `.vscode/settings.json` with the project
-interpreter. Codex and terminal commands use `.venv/bin/python`. If preparation
-or verification fails, the old manifest and installed pins are restored where
-the prior wheels are available. Review
-grammar changes and hosted CI before adopting updates. Use `--offline` to reuse
-existing wheels without release checks, `--skip-actions` to defer Actions checks,
-and `--native` to update rustup stable plus analyzer/source components and run
-native verification. Native updates cannot be rolled back by this script.
-Failed package releases are recorded in ignored `.ri-cache/rejected-updates.json`
-and skipped on later runs until a newer release appears. Delete that file to
-retry a rejected release after investigating it.
+The updater uses the newest installed CI-supported Python (3.12 or 3.13) when
+creating `.venv`. It asks PyPI for the latest release of each exact pin in
+`pyproject.toml`, then tries changes one at a time with `prepare` and `verify`.
+An available wheel on PyPI does not guarantee one for this host; preparation
+checks that. A failed candidate is restored and the full verification is rerun
+before the updater continues. Failed package releases are recorded in ignored
+`.ri-cache/rejected-updates.json` and skipped on later runs until a newer release
+appears. Delete that file to retry a rejected release after investigating it.
+The Tree-sitter 0.26.0 runtime caused a Python crash in the deep-call fixture on
+the tested macOS/Python 3.13 host; 0.25.0 remains pinned pending a compatible
+release. A fresh checkout without the local rejection cache may try 0.26.0 once.
+
+The updater also refreshes SHA-pinned GitHub Actions from their latest releases
+and writes `.vscode/settings.json` with the project interpreter. Codex and
+terminal commands use `.venv/bin/python`. It does not change the installed
+Python interpreter or CI runner image. Review grammar changes and hosted CI
+before adopting updates. Use `--offline` to reuse existing wheels without
+release checks, `--skip-actions` to defer Actions checks, and `--native` to
+update rustup stable plus analyzer/source components and run native verification.
+Native updates are opt-in and cannot be rolled back by this script.
 
 For manual fixed-pin setup, create the environment and run `prepare` then
 `verify` as separate commands. The start-of-work updater currently targets macOS.
 On Windows use `.venv\Scripts\python.exe` for the shared maintenance commands.
-`status` prints installed
-versus pinned versions, Python/platform, and functional native-tool versions.
+`status` prints installed versus pinned versions, Python/platform, and functional
+native-tool versions.
 It does not check the internet for newer releases. `prepare` downloads the
 pinned build/runtime wheels and installs them into the invoking virtual
 environment. It refuses a global interpreter. `verify` checks installed pins,
@@ -97,7 +103,8 @@ does not commit or push any changes.
 | Python packaging/build dependencies | `build-system.requires`; runtime additions go in `project.dependencies` | `prepare`, then fresh offline build/consumer verification |
 | Python interpreter support | `requires-python` and Verify's Python matrix | Compatible wheels and complete tests for every added interpreter |
 | Native Rust analyzer/toolchain | Host's existing Rust installation; CI provisions required components | `status`, then `verify --require-native`; retain the reported versions |
-| GitHub Actions and runner images | `.github/workflows`; SHA-pinned actions refreshed by `scripts/update.py` | Review release notes and complete the hosted matrix |
+| GitHub Actions | `.github/workflows`; SHA-pinned actions refreshed by `scripts/update.py` | Review release notes and complete the hosted matrix |
+| CI runner images | `.github/workflows/verify.yml`; change the `runs-on` value deliberately | Complete the hosted matrix |
 | RI instructions and optional external skills | Repository instructions in `AGENTS.md`; external skills/plugins stay with their owning installation/source | Keep instructions pointed at these shared commands and rerun the relevant verification |
 
 No personal Codex skill or plugin is vendored or versioned by RI. Update those
