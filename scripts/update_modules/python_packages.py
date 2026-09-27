@@ -8,6 +8,10 @@ from urllib.request import urlopen
 
 PIN = re.compile(r'("(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)==)(?P<version>[A-Za-z0-9.!+_-]+)(")')
 
+# 0.26.0 reproducibly crashes the deep-call fixture on macOS Python 3.13.
+# Keep the release out of fresh checkout updates; later versions can be tested.
+UNSAFE_RELEASES = {'tree-sitter': {'0.26.0'}}
+
 
 def latest(name: str) -> str:
     with urlopen(f'https://pypi.org/pypi/{name}/json', timeout=15) as response:
@@ -27,7 +31,8 @@ def proposals(path: Path) -> list[tuple[str, str, str]]:
         raise ValueError('No exact pins found in pyproject.toml')
     return [(match['name'], match['version'], new)
             for match in PIN.finditer(original)
-            if (new := latest(match['name'])) != match['version']]
+            if (new := latest(match['name'])) != match['version']
+            and new not in UNSAFE_RELEASES.get(match['name'], set())]
 
 
 def set_pin(path: Path, name: str, old: str, new: str) -> None:

@@ -14,17 +14,21 @@ python3 scripts/update.py
 .venv/bin/python scripts/maintain.py status
 ```
 
-The updater uses the newest installed CI-supported Python (3.12 or 3.13) when
-creating `.venv`. It asks PyPI for the latest release of each exact pin in
-`pyproject.toml`, then tries changes one at a time with `prepare` and `verify`.
+The updater uses the newest installed CI-supported Python (3.12, 3.13, or 3.14)
+and rebuilds `.venv` when that choice changes. It asks PyPI for the latest
+release of each exact pin in `pyproject.toml`, then tries changes one at a time
+with `prepare` and `verify`.
 An available wheel on PyPI does not guarantee one for this host; preparation
 checks that. A failed candidate is restored and the full verification is rerun
 before the updater continues. Failed package releases are recorded in ignored
 `.ri-cache/rejected-updates.json` and skipped on later runs until a newer release
 appears. Delete that file to retry a rejected release after investigating it.
 The Tree-sitter 0.26.0 runtime caused a Python crash in the deep-call fixture on
-the tested macOS/Python 3.13 host; 0.25.0 remains pinned pending a compatible
-release. A fresh checkout without the local rejection cache may try 0.26.0 once.
+the tested macOS/Python 3.13 host and is excluded from update proposals.
+Tree-sitter 0.25.1 supplies a Python 3.14 macOS ARM64 wheel and passed RI's
+offline installed-package and native verification on local Python 3.12, 3.13,
+and 3.14. Comparisons across different installed parser versions remain
+incompatible; regenerate both observations with the same pinned environment.
 
 The updater also refreshes SHA-pinned GitHub Actions from their latest releases
 and writes `.vscode/settings.json` with the project interpreter. Codex and
@@ -139,7 +143,7 @@ that run's environment, not every future native release.
 ## Automated and reusable verification
 
 [Verify](../.github/workflows/verify.yml) runs on pull requests, main pushes,
-manual dispatch, and reusable-workflow calls, on macOS 15 with Python 3.12/3.13.
+manual dispatch, and reusable-workflow calls, on macOS 15 with Python 3.12/3.13/3.14.
 It provisions functional native tools and uses the same `prepare` and
 `verify --require-native` commands as local maintenance. Missing package/native
 prerequisites fail the job. Its Python environment and wheel cache are ignored
@@ -218,9 +222,12 @@ contains revision-specific test counts, skips, and the later native-handoff
 check. Those measurements are not a standing quality guarantee. Native Rust fixtures used the locally
 available `rust-analyzer`; ordinary structural queries did not need it.
 
-The package requires Python >=3.12. Other Python/host combinations, including
-Windows and Linux, have not been qualified by these records. The configured
-hosted workflow is not evidence of a hosted pass until it actually executes.
+The package requires Python >=3.12. Local macOS ARM64 verification of the
+Tree-sitter 0.25.1 pin passed the full suite, including offline
+installed-wheel verification and required native tools, on Python 3.12, 3.13,
+and 3.14. Other Python/host combinations, including Windows and Linux, have not
+been qualified by these records. The configured hosted workflow is not evidence
+of a hosted pass until it actually executes.
 Record native tool versions and skips separately from structural/package results.
 
 ## Documentation ownership

@@ -16,7 +16,7 @@ Python 3.12+ is required. From the project you want to inspect, install a select
 RI checkout into a virtual environment:
 
 ```sh
-python3.13 -m venv .venv-ri
+python3.14 -m venv .venv-ri
 .venv-ri/bin/python -m pip install "/path/to/Repository Intelligence"
 .venv-ri/bin/python -m repository_intelligence.locator . \
   --query 'calculate total' --limit 8
@@ -70,7 +70,7 @@ python3 scripts/update.py
 To prepare and verify the current pins without checking for newer releases:
 
 ```sh
-python3.13 -m venv .venv
+python3.14 -m venv .venv
 .venv/bin/python scripts/maintain.py prepare
 .venv/bin/python scripts/maintain.py verify
 ```

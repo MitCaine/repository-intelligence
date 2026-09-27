@@ -28,6 +28,13 @@ class UpdateTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Expected one current pin'):
                 python_packages.set_pin(path, 'wheel', '1.0', '1.2')
 
+    def test_known_crashing_runtime_is_not_proposed_on_a_fresh_checkout(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / 'pyproject.toml'
+            path.write_text('"tree-sitter==0.25.1"\n', encoding='utf-8')
+            with mock.patch.object(python_packages, 'latest', return_value='0.26.0'):
+                self.assertEqual(python_packages.proposals(path), [])
+
     def test_editor_preserves_other_workspace_settings(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

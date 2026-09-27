@@ -7,7 +7,7 @@ RI supplies source evidence. The caller owns source materialization, full diff r
 Python 3.12 or newer is required. From the project being inspected:
 
 ```sh
-python3.13 -m venv .venv-ri
+python3.14 -m venv .venv-ri
 .venv-ri/bin/python -m pip install "/path/to/Repository Intelligence"
 .venv-ri/bin/python -m repository_intelligence.locator . --query 'calculate total'
 ```

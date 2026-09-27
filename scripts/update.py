@@ -24,10 +24,8 @@ def run(*args: str) -> None:
 
 
 def ensure_python() -> None:
-    if PYTHON.exists():
-        return
     candidates = []
-    for name in ('python3.12', 'python3.13'):
+    for name in ('python3.12', 'python3.13', 'python3.14'):
         path = shutil.which(name)
         if path:
             result = subprocess.run([path, '-c',
@@ -39,8 +37,18 @@ def ensure_python() -> None:
                     candidates.append(((major, minor), path))
     executable = max(candidates)[1] if candidates else None
     if executable is None:
-        raise RuntimeError('Install Python 3.12 or 3.13 before running updates')
-    run(executable, '-m', 'venv', str(VENV))
+        raise RuntimeError('Install Python 3.12, 3.13, or 3.14 before running updates')
+    selected = max(candidates)[0]
+    if PYTHON.exists():
+        result = subprocess.run([str(PYTHON), '-c',
+                                 'import sys; print(*sys.version_info[:2], sep=".")'],
+                                capture_output=True, text=True, timeout=10)
+        if result.returncode == 0 and result.stdout.strip() == f'{selected[0]}.{selected[1]}':
+            return
+        print(f'Rebuilding .venv with Python {selected[0]}.{selected[1]}', flush=True)
+        run(executable, '-m', 'venv', '--clear', str(VENV))
+    else:
+        run(executable, '-m', 'venv', str(VENV))
 
 
 def main() -> int:
