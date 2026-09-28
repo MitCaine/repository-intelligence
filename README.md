@@ -10,6 +10,18 @@ TypeScript/TSX, Java, Go, C#, C, and C++**. Native analyzers are optional.
 RI needs no service, database, or maintained symbol index. Task scope, capsule
 execution, and acceptance stay with the consumer project.
 
+## Choose a route
+
+| Your task | Start here | What you get |
+| --- | --- | --- |
+| Use RI in an ordinary project | [Consumer guide](docs/consumer-guide.md), then the `locator` command below | Source navigation and coverage evidence; no capsule is required. |
+| Add RI to a project with an existing capsule runner | [Controller workflow](docs/capsule-controller-workflow.md) and [skill templates](docs/skill-templates/README.md) | A bounded handoff pattern to adapt to that project's authority, tests, and review lane. |
+| Maintain the RI package | [Architecture](docs/architecture.md), [maintenance](docs/maintenance.md), and [documentation index](docs/README.md) | Module boundaries, updater/bundle commands, and verification requirements. |
+
+RI does not supply a consumer capsule runner, project permissions, approval
+rules, or a Work-to-Codex callback. A project can use RI source evidence without
+adopting the optional capsule workflow.
+
 ## First query
 
 Python 3.12+ is required. From the project you want to inspect, install a selected
@@ -70,6 +82,12 @@ Use the interpreter path printed by the updater in Codex:
 ```sh
 python3 scripts/update.py
 ```
+
+The updater retains the previously selected environment while it qualifies a
+package candidate in a separate environment. Its
+`.ri-cache/update-result.json` distinguishes local verification from outstanding
+grammar review or hosted GitHub Actions verification. Do not treat a locally
+ready interpreter as a completed cross-project adoption decision.
 
 To prepare and verify the current pins without checking for newer releases:
 

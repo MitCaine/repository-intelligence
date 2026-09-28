@@ -21,6 +21,14 @@ script. For personal local Codex use, install under the local Codex skills
 directory instead. Validate each copied folder with the available skill
 validator and try one realistic, non-destructive invocation before relying on
 it. Do not replace an existing project skill without comparing its instructions.
+Record the RI commit and template path used for each copied skill in the
+consumer's existing maintenance notes, along with local adaptations. On a
+later RI update, compare the installed folder with that recorded template
+revision and the new template before editing it. A plain `diff -ru` or Git
+comparison is enough; do not automatically overwrite a consumer's authority
+rules or change skills during an active attempt. From the actual consuming
+workspace, verify that a fresh agent discovers the intended instructions and
+selects the intended skill for a representative request.
 
 ChatGPT Work has a separate skill lifecycle; copying files into a Mac checkout
 does not make them available in a Work chat. Give the Work controller and fresh

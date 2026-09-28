@@ -11,4 +11,6 @@ Keep the review read-only and bound to one candidate. Inspect actual source, con
 
 Report a disposition for every active acceptance criterion and for applicable repository standards. Name the exact evidence and uncertainty behind each PASS or FAIL. Preserve mandatory tests and unsupported or incomplete evidence as unresolved; never convert them into PASS. Give actionable findings with candidate-bound file locations and the smallest useful reproduction. If review finds a substantive failure, preserve the failed candidate and evidence. A changed candidate needs fresh applicable qualification and review; do not transfer an earlier verdict.
 
+Account for the controlling objective beyond RI's selected source contract. Check relevant configuration, manifests, workflows, build conditions, and unsupported source through the full diff and suitable evidence. If a capsule revision silently drops a requirement, return a finding instead of treating the narrower list as complete.
+
 Return the complete review to the controller. Do not edit the candidate, approve, publish, accept, merge, or close the capsule from the reviewer lane.

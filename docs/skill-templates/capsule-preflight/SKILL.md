@@ -11,6 +11,8 @@ Before the requested capsule step, establish the current repository and issue st
 
 For a draft capsule, check that each active acceptance criterion has a stable ID, independently expected result, and authored verification route, including negative or boundary cases where needed. Check fixed compatibility contracts, non-goals, reviewer packet requirements, and the recovery boundary. The consumer's own capsule schema remains controlling. A checked planning box is not candidate-bound evidence.
 
+Trace every controlling requirement through the draft. Mark it covered, unresolved, or explicitly deferred by the owning authority. RI exclusions, unsupported source, and a revised capsule cannot silently erase it. Include relevant manifests, workflows, feature flags, and unsupported files in this accounting even when RI maps no callable there.
+
 If a required identity, scope grant, or execution prerequisite is missing or inconsistent, return `STOP_REPLAN` with the specific mismatch and the smallest needed controller decision. Do not repair authority by widening paths, choosing a different base, substituting an old candidate, or silently dropping a required check. A mechanical PASS authenticates only what that check actually covers; the controller still resolves semantic scope and acceptance.
 
 Return a compact preflight record: verified capsule and repository identities, permitted next action, applicable lane and checks, unresolved gaps, and the exact source of each decision. Do not launch implementation, qualify, publish, accept, or merge unless the active request and consumer workflow authorize that step.

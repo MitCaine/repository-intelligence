@@ -19,9 +19,9 @@ Use this skill when an external agent or other process needs a watcher to detect
 
 For a new external command, launch it once through the helper below. For an existing job, watch its blocking completion event or wrap a blocking watch command; never restart it to attach a watcher. If the service exposes only status checks, put bounded polling with backoff and a deadline inside a dedicated watcher script.
 
-Distinguish success, failure, timeout, cancellation, and lost connectivity using authoritative terminal evidence. A missing PID or closed connection is not success. Save raw, potentially untrusted logs under an unused project `work/` job directory. Queue exactly one concise terminal message containing outcome, status path, and the controller's next action. A queue delivery error or ambiguous delivery is recorded locally and is not retried automatically.
+Distinguish success, failure, timeout, signal termination, and lost connectivity using authoritative terminal evidence. A signal alone does not prove an intentional cancellation. A missing PID or closed connection is not success. Save raw, potentially untrusted logs under an unused project `work/` job directory. Queue exactly one concise terminal message containing outcome, status path, and the controller's next action. The helper records command outcome in `status.json` and notification state in `delivery.json`; `accepted_by_cli` is not proof the controller consumed it.
 
-After launch, end the waiting turn. Do not poll from later model turns or post periodic updates. On receipt, read `status.json` and relevant `output.log`, verify the exact capsule/candidate/check identity, then continue the controller workflow. Failure or missing evidence blocks the affected qualification gate; it does not turn into a PASS. Preserve the failed candidate and evidence for independent review or replan.
+After launch, end the waiting turn only if the host has a verified terminal delivery route. Do not poll from later model turns or post periodic updates. On receipt, read `status.json`, `delivery.json`, and relevant `output.log`, verify the exact capsule/candidate/check identity, then continue the controller workflow. Failure or missing evidence blocks the affected qualification gate; it does not turn into a PASS. Preserve the failed candidate and evidence for independent review or replan.
 
 ## Monitored command
 
@@ -32,11 +32,13 @@ origin_thread="${CODEX_THREAD_ID:?verified task UUID required}"
 python3 path/to/capsule-queue/scripts/run_and_queue.py \
   --thread "$origin_thread" --cwd "$PWD" \
   --job-dir "$PWD/work/qualification-watch-001" \
-  --label 'Capsule qualification' \
+  --label 'Capsule qualification' --timeout-seconds 3600 \
   --follow-up 'Controller: inspect the saved gate result and continue the capsule workflow.' \
   -- ./scripts/capsule-check.sh
 ```
 
-Pass a blocking watcher command after `--` for an existing job. Compound logic belongs in a script; arguments are executed without shell evaluation. Set `--timeout-seconds` when the command itself may hang. The helper records `status.json`, `output.log`, and `queue.log`, then makes one queue attempt for every terminal outcome. It survives the launching shell, but not host shutdown. A host shutdown or missing status requires fresh evidence before any gate disposition.
+Pass a blocking watcher command after `--` for an existing job. Compound logic belongs in a script; arguments are executed without shell evaluation. The default deadline is one hour; select a finite positive `--timeout-seconds` appropriate to the job. The helper records `status.json`, `delivery.json`, `output.log`, and `queue.log`, then makes one queue attempt for every terminal outcome. It survives the launching shell, but not host shutdown. A host shutdown or missing status requires fresh evidence before any gate disposition.
+
+If `delivery.json` reports `rejected_by_cli` or `uncertain`, the completed command must **not** be restarted to regain notification. Inspect the saved status and delivery evidence through a separate controller-visible route. The controller may use `python3 path/to/run_and_queue.py --redeliver /path/to/job/config.json` after checking the exact destination and accepting possible duplicate notification. This command sends only the saved terminal result; it never reruns the job. A host with no delivery acknowledgement cannot guarantee autonomous wake-up. For that host, retain a bounded external monitor or supported blocking wait and report the limitation.
 
 For a job managed by another runner, save its terminal evidence first and call `codex queue --thread "$origin_thread" --message "$completion_message"` once. Remote watchers need verified Codex access; otherwise run the watcher locally. If no reliable callback or detached watcher is available, use the environment's supported blocking wait and state that limit.

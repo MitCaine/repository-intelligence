@@ -16,6 +16,13 @@ goal is to complete routine implementation and correction loops without asking
 the user to restate the same objective. The capsule still comes from the
 consumer project's contract. This guide does not create a second RI capsule
 schema, a permission grant, or a shortcut around qualification and review.
+Every requirement in the controlling objective must remain satisfied,
+unresolved, or explicitly deferred by its proper authority. An RI exclusion,
+unsupported file, bounded packet, failed check, or capsule revision cannot
+silently remove a requirement. Incomplete RI evidence blocks a claim of
+complete structural comparison; it does not by itself cancel otherwise
+authorized work. Use another approved evidence route or replan while keeping
+the obligation visible.
 
 ```text
 User objective
@@ -89,6 +96,10 @@ fields already cover it. A checkmark is a planning aid, not acceptance evidence.
 - [ ] **Preflight:** Run the consumer's draft/planning validation against the
   exact state. `READY` means the work order is executable; it does not mean
   implementation, qualification, or review has passed.
+- [ ] **Whole-objective coverage:** Account for relevant configuration,
+  manifests, workflows, feature flags, and unsupported source outside RI's
+  selected mapping. Mark each original requirement satisfied, unresolved, or
+  explicitly deferred by the owning authority; no scan limit closes it.
 
 Write criteria as independently checkable outcomes, not directions to edit a
 particular line. For example, an illustrative source-mapping capsule might say:

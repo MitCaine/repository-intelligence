@@ -19,17 +19,24 @@ The updater reuses the selected environment for ordinary start-of-work runs.
 On first setup, it creates `.venv` with the newest installed CI-supported Python
 (3.12, 3.13, or 3.14). `--migrate-python` prepares a separate permanent candidate
 environment under `.ri-cache/venvs`, verifies it, then selects it for future runs
-and VS Code. Failure leaves the former environment and selection in place.
+and VS Code. Package candidates also qualify in separate environments before
+their pin and interpreter selection are promoted. An interruption leaves the
+last selected environment intact; a recovery record restores manifest/selection
+bytes at the next launch. A second updater run exits while another holds the
+single-run lock. A package candidate failure leaves the former environment and
+selection in place. Later native-tool failure can leave already qualified
+package changes selected, but no overall readiness result is written.
 The updater asks PyPI for the latest stable release of each exact pin in
 `pyproject.toml`, ignores lower versions, then tries changes one at a time with
 `prepare` and `verify`.
 An available wheel on PyPI does not guarantee one for this host; preparation
 checks that. A failed candidate is restored and the full verification is rerun
 before the updater continues. Releases that prepare successfully but fail
-verification are recorded in ignored
-`.ri-cache/rejected-updates.json` and skipped on later runs until a newer release
-appears. Download or preparation failures restore the prior pin and are retried
-on the next run. Delete that file to retry a rejected release after investigating it.
+verification are recorded in ignored `.ri-cache/rejected-updates.json` with the
+RI HEAD and tracked code diff, manifest, Python version, and platform context. The same
+version is retried when that context changes. Download or preparation failures
+restore the prior pin and remain retryable. Deliberate known-bad exclusions
+remain in the updater source. Delete the cache only after investigating it.
 The Tree-sitter 0.26.0 runtime caused a Python crash in the deep-call fixture on
 the tested macOS/Python 3.13 host and is excluded from update proposals.
 Tree-sitter 0.25.1 supplies a Python 3.14 macOS ARM64 wheel and passed RI's
@@ -48,6 +55,16 @@ update rustup stable plus analyzer/source components and verify that same stable
 toolchain. `--offline --native` is rejected because the native update can use
 the network.
 Native updates are opt-in and cannot be rolled back by this script.
+
+On success, inspect `.ri-cache/update-result.json`: `selected_python` and
+`local_verify_passed` identify the usable local environment;
+`outstanding_qualification` names work still required. Updated grammar packages
+still need the upstream node review described below. Changed Actions still need
+a successful hosted Verify run. The updater does not claim either check passed
+merely because local tests completed. A failed or interrupted run removes its
+previous readiness result. The recovery journal and candidate environments
+remain ignored local files; do not run dependency updates inside an active
+consumer capsule attempt.
 
 For manual fixed-pin setup, create the environment and run `prepare` then
 `verify` as separate commands. The start-of-work updater currently targets macOS.

@@ -81,6 +81,7 @@ class UpdateTests(unittest.TestCase):
 
             with mock.patch.object(updater, 'ROOT', root), \
                     mock.patch.object(updater, 'VENV', root / '.venv'), \
+                    mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
                     mock.patch.object(updater, 'SELECTION', root / '.ri-cache' / 'selected-python.json'), \
                     mock.patch.object(updater.shutil, 'which', side_effect=lambda name: name), \
                     mock.patch.object(updater.subprocess, 'run', side_effect=version), \
@@ -101,6 +102,10 @@ class UpdateTests(unittest.TestCase):
             selection.write_text('{"path":".venv/bin/python"}\n', encoding='utf-8')
             candidate = root / '.ri-cache' / 'venvs' / 'python3.14' / 'bin' / 'python'
             with mock.patch.object(updater, 'ROOT', root), \
+                    mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
+                    mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
+                    mock.patch.object(updater, 'RESULT', root / '.ri-cache' / 'update-result.json'), \
+                    mock.patch.object(updater, 'REJECTIONS', root / '.ri-cache' / 'rejected-updates.json'), \
                     mock.patch.object(updater, 'SELECTION', selection), \
                     mock.patch.object(updater, 'ensure_python', return_value=(candidate, True)), \
                     mock.patch.object(updater, 'run', side_effect=subprocess.CalledProcessError(1, 'prepare')), \
@@ -109,7 +114,7 @@ class UpdateTests(unittest.TestCase):
             self.assertEqual(selection.read_text(encoding='utf-8'),
                              '{"path":".venv/bin/python"}\n')
 
-    def test_native_timeout_uses_rollback_path(self):
+    def test_native_timeout_does_not_erase_qualified_package_candidate(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             manifest = root / 'pyproject.toml'
@@ -121,8 +126,14 @@ class UpdateTests(unittest.TestCase):
                                 encoding='utf-8')
 
             with mock.patch.object(updater, 'ROOT', root), \
+                    mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
+                    mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
+                    mock.patch.object(updater, 'RESULT', root / '.ri-cache' / 'update-result.json'), \
+                    mock.patch.object(updater, 'REJECTIONS', root / '.ri-cache' / 'rejected-updates.json'), \
                     mock.patch.object(updater, 'SELECTION', root / '.ri-cache' / 'selected-python.json'), \
                     mock.patch.object(updater, 'ensure_python', return_value=(root / '.venv/bin/python', False)), \
+                    mock.patch.object(updater, 'new_candidate', return_value=root / 'candidate/bin/python'), \
+                    mock.patch.object(updater, 'rejection_context', return_value='context'), \
                     mock.patch.object(updater.python_packages, 'proposals', return_value=[('wheel', '1', '2')]), \
                     mock.patch.object(updater.python_packages, 'set_pin', side_effect=change_pin), \
                     mock.patch.object(updater, 'run'), \
@@ -130,7 +141,10 @@ class UpdateTests(unittest.TestCase):
                                       side_effect=subprocess.TimeoutExpired('rustup', 1)), \
                     mock.patch.object(sys, 'argv', ['update.py', '--native']):
                 self.assertEqual(updater.main(), 1)
-            self.assertEqual(manifest.read_text(encoding='utf-8'), '"wheel==1"')
+            self.assertEqual(manifest.read_text(encoding='utf-8'), '"wheel==2"')
+            self.assertEqual(json.loads((root / '.ri-cache' / 'selected-python.json').read_text())['path'],
+                             'candidate/bin/python')
+            self.assertFalse((root / '.ri-cache' / 'update-result.json').exists())
 
     def test_transient_preparation_failure_does_not_cache_rejection(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -146,12 +160,18 @@ class UpdateTests(unittest.TestCase):
             calls = []
             def run(*args, **_kwargs):
                 calls.append(args)
-                if args[-1] == 'prepare' and len(calls) == 3:
+                if args[-1] == 'prepare':
                     raise subprocess.TimeoutExpired('pip download', 1)
 
             with mock.patch.object(updater, 'ROOT', root), \
+                    mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
+                    mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
+                    mock.patch.object(updater, 'RESULT', root / '.ri-cache' / 'update-result.json'), \
+                    mock.patch.object(updater, 'REJECTIONS', root / '.ri-cache' / 'rejected-updates.json'), \
                     mock.patch.object(updater, 'SELECTION', root / '.ri-cache' / 'selected-python.json'), \
                     mock.patch.object(updater, 'ensure_python', return_value=(root / '.venv/bin/python', False)), \
+                    mock.patch.object(updater, 'new_candidate', return_value=root / 'candidate/bin/python'), \
+                    mock.patch.object(updater, 'rejection_context', return_value='context'), \
                     mock.patch.object(updater.python_packages, 'proposals', return_value=[('wheel', '1', '2')]), \
                     mock.patch.object(updater.python_packages, 'set_pin', side_effect=change_pin), \
                     mock.patch.object(updater, 'run', side_effect=run), \
@@ -159,6 +179,150 @@ class UpdateTests(unittest.TestCase):
                 self.assertEqual(updater.main(), 0)
             self.assertEqual(manifest.read_text(encoding='utf-8'), '"wheel==1"')
             self.assertFalse((root / '.ri-cache' / 'rejected-updates.json').exists())
+
+    def test_interrupted_verification_restores_pin_without_selecting_candidate(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            manifest = root / 'pyproject.toml'
+            manifest.write_text('"wheel==1"', encoding='utf-8')
+            (root / '.github' / 'workflows').mkdir(parents=True)
+            selection = root / '.ri-cache' / 'selected-python.json'
+            selection.parent.mkdir()
+            selection.write_text('{"path":".venv/bin/python"}\n', encoding='utf-8')
+
+            def change_pin(path, _name, old, new):
+                path.write_text(path.read_text().replace(f'=={old}', f'=={new}'))
+
+            def run(*args, **_kwargs):
+                if args[-1] == 'verify':
+                    raise KeyboardInterrupt()
+
+            with mock.patch.object(updater, 'ROOT', root), \
+                    mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
+                    mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
+                    mock.patch.object(updater, 'SELECTION', selection), \
+                    mock.patch.object(updater, 'new_candidate', return_value=root / 'candidate/bin/python'), \
+                    mock.patch.object(updater, 'rejection_context', return_value='context'), \
+                    mock.patch.object(updater.python_packages, 'set_pin', side_effect=change_pin), \
+                    mock.patch.object(updater, 'run', side_effect=run):
+                with self.assertRaises(KeyboardInterrupt):
+                    updater.update_packages(root / '.venv/bin/python', manifest,
+                                            [('wheel', '1', '2')], {})
+            self.assertEqual(manifest.read_text(), '"wheel==1"')
+            self.assertEqual(selection.read_text(), '{"path":".venv/bin/python"}\n')
+            self.assertFalse((root / '.ri-cache' / 'update-recovery.json').exists())
+
+    def test_next_launch_restores_an_abruptly_interrupted_manifest_and_selection(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            manifest = root / 'pyproject.toml'
+            manifest.write_text('old pin', encoding='utf-8')
+            workflow = root / '.github' / 'workflows' / 'verify.yml'
+            workflow.parent.mkdir(parents=True)
+            workflow.write_text('old action', encoding='utf-8')
+            selection = root / '.ri-cache' / 'selected-python.json'
+            selection.parent.mkdir()
+            selection.write_text('{"path":"old/bin/python"}\n', encoding='utf-8')
+            with mock.patch.object(updater, 'ROOT', root), \
+                    mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
+                    mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
+                    mock.patch.object(updater, 'SELECTION', selection):
+                updater.begin_recovery()
+                manifest.write_text('candidate pin', encoding='utf-8')
+                workflow.write_text('candidate action', encoding='utf-8')
+                selection.write_text('{"path":"candidate/bin/python"}\n', encoding='utf-8')
+                self.assertTrue(updater.recover())
+                self.assertFalse(updater.recover())
+            self.assertEqual(manifest.read_text(), 'old pin')
+            self.assertEqual(workflow.read_text(), 'old action')
+            self.assertEqual(selection.read_text(), '{"path":"old/bin/python"}\n')
+
+    def test_promotion_interruption_restores_old_selection(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            manifest = root / 'pyproject.toml'
+            manifest.write_text('"wheel==1"', encoding='utf-8')
+            (root / '.github' / 'workflows').mkdir(parents=True)
+            selection = root / '.ri-cache' / 'selected-python.json'
+            selection.parent.mkdir()
+            selection.write_text('{"path":".venv/bin/python"}\n', encoding='utf-8')
+
+            def change_pin(path, _name, old, new):
+                path.write_text(path.read_text().replace(f'=={old}', f'=={new}'))
+
+            def interrupted_select(candidate):
+                updater.atomic_write(selection, (json.dumps({'path': str(candidate.relative_to(root))}) + '\n').encode())
+                raise KeyboardInterrupt()
+
+            with mock.patch.object(updater, 'ROOT', root), \
+                    mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
+                    mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
+                    mock.patch.object(updater, 'SELECTION', selection), \
+                    mock.patch.object(updater, 'new_candidate', return_value=root / 'candidate/bin/python'), \
+                    mock.patch.object(updater, 'rejection_context', return_value='context'), \
+                    mock.patch.object(updater.python_packages, 'set_pin', side_effect=change_pin), \
+                    mock.patch.object(updater, 'run'), \
+                    mock.patch.object(updater, 'select_python', side_effect=interrupted_select):
+                with self.assertRaises(KeyboardInterrupt):
+                    updater.update_packages(root / '.venv/bin/python', manifest,
+                                            [('wheel', '1', '2')], {})
+            self.assertEqual(manifest.read_text(), '"wheel==1"')
+            self.assertEqual(selection.read_text(), '{"path":".venv/bin/python"}\n')
+
+    def test_verified_candidate_promotes_without_installing_into_old_python(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            manifest = root / 'pyproject.toml'
+            manifest.write_text('"wheel==1"', encoding='utf-8')
+            (root / '.github' / 'workflows').mkdir(parents=True)
+            current = root / '.venv/bin/python'
+            candidate = root / 'candidate/bin/python'
+
+            def change_pin(path, _name, old, new):
+                path.write_text(path.read_text().replace(f'=={old}', f'=={new}'))
+
+            with mock.patch.object(updater, 'ROOT', root), \
+                    mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
+                    mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
+                    mock.patch.object(updater, 'SELECTION', root / '.ri-cache' / 'selected-python.json'), \
+                    mock.patch.object(updater, 'new_candidate', return_value=candidate), \
+                    mock.patch.object(updater, 'rejection_context', return_value='context'), \
+                    mock.patch.object(updater.python_packages, 'set_pin', side_effect=change_pin), \
+                    mock.patch.object(updater, 'run') as run:
+                selected, review, changed = updater.update_packages(current, manifest,
+                                            [('wheel', '1', '2')], {})
+            self.assertEqual((selected, review, changed), (candidate, [], ['wheel']))
+            self.assertEqual(manifest.read_text(), '"wheel==2"')
+            self.assertEqual(json.loads((root / '.ri-cache' / 'selected-python.json').read_text())['path'],
+                             'candidate/bin/python')
+            self.assertTrue(all(call.args[0] == str(candidate) for call in run.call_args_list))
+
+    def test_rejection_cache_is_bound_to_qualification_context(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            manifest = root / 'pyproject.toml'
+            manifest.write_text('"wheel==1"', encoding='utf-8')
+            (root / '.github' / 'workflows').mkdir(parents=True)
+            with mock.patch.object(updater, 'ROOT', root), \
+                    mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
+                    mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
+                    mock.patch.object(updater, 'SELECTION', root / '.ri-cache' / 'selected-python.json'), \
+                    mock.patch.object(updater, 'rejection_context', return_value='new-context'), \
+                    mock.patch.object(updater.python_packages, 'set_pin'), \
+                    mock.patch.object(updater, 'new_candidate', side_effect=RuntimeError('retried')):
+                with self.assertRaisesRegex(RuntimeError, 'retried'):
+                    updater.update_packages(root / '.venv/bin/python', manifest,
+                                            [('wheel', '1', '2')],
+                                            {'wheel': {'version': '2', 'context': 'old-context'}})
+
+    def test_concurrent_updater_is_rejected(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            with mock.patch.object(updater, 'CACHE', root / '.ri-cache'):
+                with updater.update_lock():
+                    with self.assertRaisesRegex(ValueError, 'Another updater'):
+                        with updater.update_lock():
+                            pass
 
     def test_jsonc_editor_settings_do_not_undo_verified_packages(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -170,6 +334,10 @@ class UpdateTests(unittest.TestCase):
             settings.write_text('{\n  // user setting\n  "editor.tabSize": 4,\n}\n',
                                 encoding='utf-8')
             with mock.patch.object(updater, 'ROOT', root), \
+                    mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
+                    mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
+                    mock.patch.object(updater, 'RESULT', root / '.ri-cache' / 'update-result.json'), \
+                    mock.patch.object(updater, 'REJECTIONS', root / '.ri-cache' / 'rejected-updates.json'), \
                     mock.patch.object(updater, 'SELECTION', root / '.ri-cache' / 'selected-python.json'), \
                     mock.patch.object(updater, 'ensure_python', return_value=(root / '.venv/bin/python', False)), \
                     mock.patch.object(updater, 'run'), \
