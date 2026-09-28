@@ -16,6 +16,27 @@ from update_modules import actions, editor, python_packages  # noqa: E402
 
 
 class UpdateTests(unittest.TestCase):
+    def test_readiness_classifies_grammar_upgrade(self):
+        result = updater.readiness_result(Path('candidate/bin/python'),
+                                          ['tree-sitter-python'], [], True, [])
+        self.assertTrue(result['local_verify_passed'])
+        self.assertEqual(result['outstanding_qualification'],
+                         ['upstream grammar and node review'])
+
+    def test_readiness_classifies_action_update(self):
+        result = updater.readiness_result(Path('candidate/bin/python'), [],
+                                          ['actions/checkout: v1 -> v2'], True, [])
+        self.assertTrue(result['local_verify_passed'])
+        self.assertEqual(result['outstanding_qualification'],
+                         ['hosted Verify for changed GitHub Actions'])
+
+    def test_readiness_classifies_clean_local_run(self):
+        result = updater.readiness_result(Path('.venv/bin/python'), [], [], True, [])
+        self.assertEqual(result['outstanding_qualification'], [])
+        self.assertTrue(result['local_verify_passed'])
+        self.assertEqual(result['package_changes'], [])
+        self.assertEqual(result['action_changes'], [])
+
     def test_package_proposals_change_only_the_selected_exact_pin(self):
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / 'pyproject.toml'

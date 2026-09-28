@@ -198,7 +198,8 @@ that run's environment, not every future native release.
 
 [Verify](../.github/workflows/verify.yml) runs on pull requests, main pushes,
 manual dispatch, and reusable-workflow calls, on macOS 15 with Python 3.12/3.13/3.14.
-It provisions functional native tools, runs `prepare`, then runs
+It provisions functional native tools, runs `prepare`, checks local documentation
+links and skill manifests with `scripts/check_docs_and_skills.py`, then runs
 `bundle --require-native`, which includes full `verify` and an offline install
 of the retained wheel. Missing package/native
 prerequisites fail the job. Its Python environment and wheel cache are ignored
@@ -292,9 +293,9 @@ The [documentation index](README.md) assigns each topic to one current guide.
 Keep filenames stable as schemas change; update compatibility notes inside the
 reference. Keep commands in usage/maintenance guides and measurements in the
 archive. Avoid duplicating live issue status or historical test counts in the
-README. For a docs-only change, check local links/anchors, CLI examples, and
-`git diff --check`; a runtime suite rerun is warranted when behavior or examples
-exercise a changed execution path.
+README. For a docs-only change, run `python3 scripts/check_docs_and_skills.py`,
+check CLI examples and `git diff --check`; rerun the runtime suite when behavior
+or examples exercise a changed execution path.
 
 ## Distribution
 

@@ -5,7 +5,9 @@ session scripts, database rules, and consumer-specific authority maps do not
 apply here. The current user request defines the task scope.
 
 - Inspect the checkout status and preserve unrelated changes before editing.
-- Read README.md and docs/architecture.md; use docs/README.md for current contracts.
+- Read README.md for project purpose or first-use questions. Read
+  docs/architecture.md when changing module seams or ownership. Use
+  docs/README.md to find the current contract relevant to the task.
 - Keep scanning, source identity, adapter semantics, ranking, and comparison at
   their existing seams. Ordinary operations remain language-neutral and local;
   native Rust analysis remains a separate optional operation.

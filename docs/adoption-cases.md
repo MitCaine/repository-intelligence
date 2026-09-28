@@ -27,3 +27,22 @@ For each case, explicitly account for every original requirement as satisfied,
 unresolved, or deferred by the appropriate authority. A partial RI packet is
 not a task-scope reduction. A passing syntax validator or one scripted probe
 does not qualify agent selection, independent judgment, or terminal delivery.
+
+## Skill activation trials
+
+Run these with fresh agents in the actual consumer workspace. Record whether
+the skill activated, what the agent did, and whether it preserved the capsule's
+authority. Include an incomplete request to check that the agent identifies
+missing evidence instead of inventing it.
+
+| Skill | Should activate | Should not activate |
+| --- | --- | --- |
+| `capsule-preflight` | Authenticate an active capsule and exact planning state before implementation. | An ordinary RI source question in a project with no capsule. |
+| `ri-evidence-handoff` | Bind a selected RI location to the exact consumer blob for a capsule handoff. | A request to treat RI output as approval or to grant new edit paths. |
+| `capsule-independent-review` | Review a frozen candidate and full packet in a fresh read-only context. | A request for the implementor to self-certify an incomplete candidate. |
+| `capsule-queue` | Watch an external qualification job with a verified controller destination and no native callback. | An ordinary command or native agent whose completion already reaches the controller. |
+
+For each positive case, repeat once with a missing identity, packet, or delivery
+route. The correct outcome is a precise gap or stop condition, never a guessed
+commit, verdict, or destination. These trials remain unverified until run and
+recorded in the consumer environment.

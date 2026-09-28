@@ -3,9 +3,9 @@
 This is a reusable handoff pattern, not an RI execution policy. The consumer
 repository's current capsule contract, runner, issue state, and supported-host
 rules control the work. RI supplies bounded source evidence. The example roles
-are a Sol Light ChatGPT Work controller, a Luna Max Codex implementor, and a
-separate Sol Light Work reviewer; the contracts matter more than those model
-names. Local Codex skills do not automatically appear in Work chats.
+are Controller, Implementor, and Independent Reviewer. Consumer projects may
+choose models and effort levels using their own evaluated workflow. Local Codex
+skills do not automatically appear in Work chats.
 
 ## Why this guide exists
 
@@ -28,7 +28,7 @@ the obligation visible.
 User objective
     |
     v
-Controller (Sol Light, Work)
+Controller
   authenticate issue + current repository state
   write decision-complete capsule in consumer's format
     |
@@ -39,7 +39,7 @@ Preflight exact capsule/base/planning overlay/scope/host
 RI evidence, if useful: locate -> inspect -> bind to exact Git blob
     |
     v
-Implementor (Luna Max, Codex) -> candidate C + tests + return packet
+Implementor -> candidate C + tests + return packet
     | terminal result --> event route --> controller wakes once
     |
     v
@@ -47,7 +47,7 @@ Controller qualifies exact C on required host/checks
     | terminal result --> event route --> controller wakes once
     | failure --> preserve C/evidence --> correction or revised capsule --+
     v                                                                |
-Fresh reviewer (separate Sol Light Work chat, read-only)                 |
+Independent Reviewer (fresh read-only context)                 |
   exact capsule + P/C + full diff + qualification evidence              |
     | terminal verdict --> event route --> controller wakes once         |
     | FAIL or missing evidence --> preserve C/findings -----------------+
@@ -126,7 +126,7 @@ drafting example, not a new file format:
       Evidence: <candidate-bound result location to fill after execution>
 ```
 
-The controller authors `Expected` and `Check` before implementation. Luna may
+The controller authors `Expected` and `Check` before implementation. The implementor may
 check off implementation work, but only candidate-bound check results and the
 fresh reviewer can satisfy the AC. If a requirement cannot be made observable,
 resolve it before dispatch rather than leaving the implementor to guess.
@@ -192,7 +192,7 @@ or final result. This does not grant a wider task or bypass a required host,
 reviewer, or approval boundary.
 
 **Queue routing matters:** `codex queue` targets an existing Codex session. It
-does not by itself address an arbitrary ChatGPT Work chat. For a Sol Work
+does not by itself address an arbitrary ChatGPT Work chat. For a Work
 controller, use its verified native agent completion/wait facility or an
 explicitly tested bridge to the controller's exact task. Where a job exposes
 only status polling, attach one bounded watcher with a deadline and terminal

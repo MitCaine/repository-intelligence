@@ -230,6 +230,19 @@ def update_packages(python: Path, manifest: Path, proposals: list[tuple[str, str
     return python, review, changed
 
 
+def readiness_result(python: Path, changed: list[str], action_changes: list[str],
+                     editor_ready: bool, review: list[str]) -> dict:
+    outstanding = []
+    if any(name in GRAMMAR_NAMES for name in changed):
+        outstanding.append('upstream grammar and node review')
+    if action_changes:
+        outstanding.append('hosted Verify for changed GitHub Actions')
+    return {'selected_python': str(python), 'local_verify_passed': True,
+            'package_changes': changed, 'action_changes': action_changes,
+            'outstanding_qualification': outstanding,
+            'editor_configured': editor_ready, 'rejected_or_retryable': review}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--native', action='store_true', help='also update rustup stable tools')
@@ -287,15 +300,7 @@ def main() -> int:
             except (OSError, ValueError) as error:
                 editor_ready = False
                 print(f'Editor setting unchanged: {error}', file=sys.stderr)
-            outstanding = []
-            if any(name in GRAMMAR_NAMES for name in changed):
-                outstanding.append('upstream grammar and node review')
-            if action_changes:
-                outstanding.append('hosted Verify for changed GitHub Actions')
-            result = {'selected_python': str(python), 'local_verify_passed': True,
-                      'package_changes': changed, 'action_changes': action_changes,
-                      'outstanding_qualification': outstanding,
-                      'editor_configured': editor_ready, 'rejected_or_retryable': review}
+            result = readiness_result(python, changed, action_changes, editor_ready, review)
             atomic_write(RESULT, (json.dumps(result, indent=2) + '\n').encode())
             if review:
                 print('Updates requiring review:\n' + '\n'.join(review), file=sys.stderr)
