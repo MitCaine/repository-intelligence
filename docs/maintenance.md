@@ -56,15 +56,30 @@ toolchain. `--offline --native` is rejected because the native update can use
 the network.
 Native updates are opt-in and cannot be rolled back by this script.
 
-On success, inspect `.ri-cache/update-result.json`: `selected_python` and
-`local_verify_passed` identify the usable local environment;
-`outstanding_qualification` names work still required. Updated grammar packages
-still need the upstream node review described below. Changed Actions still need
-a successful hosted Verify run. The updater does not claim either check passed
-merely because local tests completed. A failed or interrupted run removes its
-previous readiness result. The recovery journal and candidate environments
-remain ignored local files; do not run dependency updates inside an active
-consumer capsule attempt.
+Inspect `.ri-cache/update-result.json` after an invocation. A caller may pass
+`--run-id <unique-id>` (1–128 ASCII letters, digits, `.`, `_`, or `-`, beginning
+with a letter or digit); otherwise RI generates one. The atomically replaced
+JSON result has `schema_version: 1`, that `run_id`, the Git `source_commit`
+observed before work, and one `disposition`: `completed`, `review_required`, or
+`failed`. `completed` means local verification passed with no outstanding
+review; `review_required` means local verification passed but a rejected or
+retryable proposal, grammar review, or hosted Actions check remains. Both
+successful dispositions retain `selected_python`, `local_verify_passed`,
+`package_changes`, `action_changes`, `outstanding_qualification`,
+`editor_configured`, and `rejected_or_retryable`. A `failed` result instead has
+a bounded `failure_reason` and asserts no readiness. The command returns zero
+for the first two dispositions, nonzero for failure or interruption. Printed
+text is diagnostic, not the machine disposition. A caller must compare its
+requested run ID and expected source commit, validate the schema and exit
+status, and treat a missing result as failure. A concurrent invocation rejected
+before acquiring the updater lock does not replace the active run's result.
+Updated grammar packages still need the upstream node review described below.
+Changed Actions still need a successful hosted Verify run. The updater does
+not claim either check passed merely because local tests completed. The
+previous result is removed at the start of a locked run; an interrupted run
+normally writes `failed`, while a crash may leave no record. The recovery
+journal and candidate environments remain ignored local files; do not run
+dependency updates inside an active consumer capsule attempt.
 
 For manual fixed-pin setup, create the environment and run `prepare` then
 `verify` as separate commands. The start-of-work updater currently targets macOS.
