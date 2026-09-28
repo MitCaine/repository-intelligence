@@ -107,6 +107,13 @@ def main() -> int:
             python_packages.set_pin(manifest, name, old, new)
             try:
                 run(str(python), str(ROOT / 'scripts' / 'maintain.py'), 'prepare')
+            except (OSError, subprocess.SubprocessError) as error:
+                python_packages.set_pin(manifest, name, new, old)
+                run(str(python), str(ROOT / 'scripts' / 'maintain.py'), 'prepare', '--offline')
+                run(str(python), str(ROOT / 'scripts' / 'maintain.py'), 'verify')
+                rejected.append(f'{name} {new}: preparation unavailable, retry next run: {error}')
+                continue
+            try:
                 run(str(python), str(ROOT / 'scripts' / 'maintain.py'), 'verify')
             except (OSError, subprocess.SubprocessError) as error:
                 python_packages.set_pin(manifest, name, new, old)

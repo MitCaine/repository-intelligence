@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import tarfile
 import hashlib
 import importlib.metadata
 import json
@@ -131,28 +132,50 @@ def verify(pins: dict[str, dict[str, str]], wheelhouse: Path, *, require_native:
                           cwd=ROOT, env=environment, timeout=900).returncode
 
 
+def archive_source(revision: str, source: Path) -> None:
+    """Materialize only tracked bytes from the exact receipt commit."""
+    archive = source.parent / 'source.tar'
+    subprocess.run(['git', 'archive', '--format=tar', '--output', str(archive), revision],
+                   cwd=ROOT, check=True, timeout=60)
+    with tarfile.open(archive) as tar:
+        tar.extractall(source, filter='data')
+
+
 def bundle(pins: dict[str, dict[str, str]], wheelhouse: Path, output: Path,
-           *, require_native: bool) -> int:
+           *, require_native: bool, allow_dirty: bool = False) -> int:
     """Retain and smoke-test an exact local wheel bundle with a source receipt."""
     if sys.prefix == sys.base_prefix:
         raise ValueError('bundle requires the prepared virtual-environment Python')
+    revision = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, check=True,
+                              capture_output=True, text=True, timeout=10).stdout.strip()
+    dirty = bool(subprocess.run(['git', 'status', '--porcelain', '--untracked-files=all'],
+                                cwd=ROOT, check=True, capture_output=True,
+                                text=True, timeout=10).stdout.strip())
+    if dirty and not allow_dirty:
+        raise ValueError('Bundle requires a clean checkout; use --allow-dirty for diagnostics')
+    output = output.resolve()
+    if output.exists() and any(output.iterdir()):
+        raise ValueError(f'Bundle output must be empty: {output}')
     mismatches = [item['name'] for item in status(pins)['packages'] if not item['matches']]
     if mismatches:
         raise ValueError('Installed pins differ; run prepare first: ' + ', '.join(mismatches))
     result = verify(pins, wheelhouse, require_native=require_native)
     if result:
         raise ValueError(f'Full verification failed with exit {result}')
-    output = output.resolve()
-    if output.exists() and any(output.iterdir()):
-        raise ValueError(f'Bundle output must be empty: {output}')
     output.mkdir(parents=True, exist_ok=True)
     subprocess.run([sys.executable, '-m', 'pip', 'download', '--no-index',
                     '--find-links', str(wheelhouse.resolve()), '--only-binary=:all:',
                     '--dest', str(output), *requirements(pins)],
                    cwd=ROOT, env=offline_environment(), check=True, timeout=600)
-    subprocess.run([sys.executable, '-m', 'pip', 'wheel', '--no-index',
-                    '--no-build-isolation', '--no-deps', '--wheel-dir', str(output), str(ROOT)],
-                   cwd=ROOT, env=offline_environment(), check=True, timeout=300)
+    with tempfile.TemporaryDirectory(prefix='ri-bundle-source-') as raw:
+        source = Path(raw) / 'source'
+        source.mkdir()
+        archive_source(revision, source)
+        if load_pins(source / 'pyproject.toml') != pins:
+            raise ValueError('HEAD pins differ from the live checkout; cannot bundle')
+        subprocess.run([sys.executable, '-m', 'pip', 'wheel', '--no-index',
+                        '--no-build-isolation', '--no-deps', '--wheel-dir', str(output), str(source)],
+                       cwd=source, env=offline_environment(), check=True, timeout=300)
     built = list(output.glob('repository_intelligence-*.whl'))
     if len(built) != 1:
         raise ValueError('Expected one RI wheel in the bundle')
@@ -169,11 +192,6 @@ def bundle(pins: dict[str, dict[str, str]], wheelhouse: Path, output: Path,
                         'from repository_intelligence.locator import query_path; '
                         'from repository_intelligence.inventory import inventory_tree'],
                        env=offline_environment(), check=True, timeout=30)
-    revision = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, check=True,
-                              capture_output=True, text=True, timeout=10).stdout.strip()
-    dirty = bool(subprocess.run(['git', 'status', '--porcelain', '--untracked-files=all'],
-                                cwd=ROOT, check=True, capture_output=True,
-                                text=True, timeout=10).stdout.strip())
     receipt = {'commit': revision, 'clean_checkout': not dirty,
                'python': platform.python_version(), 'platform': platform.platform(),
                'full_verify_passed': True, 'required_native_tools': require_native,
@@ -199,6 +217,8 @@ def main(argv: list[str] | None = None) -> int:
     export.add_argument('--wheelhouse', type=Path, default=DEFAULT_WHEELS)
     export.add_argument('--output', type=Path, required=True)
     export.add_argument('--require-native', action='store_true')
+    export.add_argument('--allow-dirty', action='store_true',
+                        help='diagnostic bundle from HEAD while checkout has local changes')
     args = parser.parse_args(argv)
     try:
         pins = load_pins()
@@ -209,7 +229,7 @@ def main(argv: list[str] | None = None) -> int:
             return prepare(pins, args.wheelhouse, offline=args.offline)
         if args.command == 'bundle':
             return bundle(pins, args.wheelhouse, args.output,
-                          require_native=args.require_native)
+                          require_native=args.require_native, allow_dirty=args.allow_dirty)
         return verify(pins, args.wheelhouse, require_native=args.require_native)
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         print(f'Maintenance failed: {error}', file=sys.stderr)

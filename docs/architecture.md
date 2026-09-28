@@ -21,6 +21,8 @@ For questions requiring more precision, use [explicit native analysis](native-an
 and retain separate observations. RI currently resolves one Rust reference;
 it does not promise callers, overrides, or semantic providers for every language.
 [Poker integration](poker-capsule-workflow.md) illustrates the existing capsule seam.
+The [controller workflow](capsule-controller-workflow.md) describes role handoffs,
+terminal result routing, and recovery without adding those decisions to RI.
 
 ## Shared source and parsing
 

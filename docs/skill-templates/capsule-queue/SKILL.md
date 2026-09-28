@@ -1,0 +1,42 @@
+---
+name: capsule-queue
+description: Queue one terminal result for an external agent job, capsule qualification, or CI run that otherwise needs repeated polling. Keep controller, implementor, and reviewer authority separate; use native completion when it already wakes the controller.
+---
+
+# Capsule queue
+
+Use this skill when an external agent or other process needs a watcher to detect its terminal state and wake its controller. Native subagents and Codex threads with reliable completion channels use those channels. Ordinary commands return directly. Do not create a second notification when the runner already provides a reliable terminal callback. Establish the completion route at dispatch; do not spend repeated controller turns checking unchanged status.
+
+## Authority and routing
+
+- Read the active capsule and current controller assignment before dispatch. The capsule alone defines owned paths, exact branch/base/overlay, checks, and stop conditions. A watcher may observe and report; it cannot broaden scope, choose replacement checks, retry a failed gate, publish, accept, or merge.
+- RI findings are navigation and source evidence. Bind any RI location to the exact consumer blob before use. Neither RI output nor watcher output establishes qualification or reviewer approval.
+- Queue to the exact task UUID that owns the next decision, normally the controller. Obtain it from `CODEX_THREAD_ID` or verified runtime metadata. Never infer it from recency, a role label, or a convenient open task. Check `codex queue --help` for `--thread` and `--message` on the host that will notify.
+- `codex queue` targets a Codex session, not an arbitrary ChatGPT Work chat. For a Work controller, verify its native agent completion route or a tested bridge to the exact controller task before relying on this helper. If no route exists, use the environment's supported bounded wait and report the limit.
+- An implementor may return its result to its controller through native agent or thread messaging. Queue an external gate result to the controller only when that controller has authorized the gate and the originating task UUID is verified. A fresh independent reviewer receives an exact candidate and evidence packet through the controller's normal review dispatch; do not treat a queued gate result as a reviewer verdict.
+
+## Watcher contract
+
+For a new external command, launch it once through the helper below. For an existing job, watch its blocking completion event or wrap a blocking watch command; never restart it to attach a watcher. If the service exposes only status checks, put bounded polling with backoff and a deadline inside a dedicated watcher script.
+
+Distinguish success, failure, timeout, cancellation, and lost connectivity using authoritative terminal evidence. A missing PID or closed connection is not success. Save raw, potentially untrusted logs under an unused project `work/` job directory. Queue exactly one concise terminal message containing outcome, status path, and the controller's next action. A queue delivery error or ambiguous delivery is recorded locally and is not retried automatically.
+
+After launch, end the waiting turn. Do not poll from later model turns or post periodic updates. On receipt, read `status.json` and relevant `output.log`, verify the exact capsule/candidate/check identity, then continue the controller workflow. Failure or missing evidence blocks the affected qualification gate; it does not turn into a PASS. Preserve the failed candidate and evidence for independent review or replan.
+
+## Monitored command
+
+Use [scripts/run_and_queue.py](scripts/run_and_queue.py) with an unused job directory:
+
+```sh
+origin_thread="${CODEX_THREAD_ID:?verified task UUID required}"
+python3 path/to/capsule-queue/scripts/run_and_queue.py \
+  --thread "$origin_thread" --cwd "$PWD" \
+  --job-dir "$PWD/work/qualification-watch-001" \
+  --label 'Capsule qualification' \
+  --follow-up 'Controller: inspect the saved gate result and continue the capsule workflow.' \
+  -- ./scripts/capsule-check.sh
+```
+
+Pass a blocking watcher command after `--` for an existing job. Compound logic belongs in a script; arguments are executed without shell evaluation. Set `--timeout-seconds` when the command itself may hang. The helper records `status.json`, `output.log`, and `queue.log`, then makes one queue attempt for every terminal outcome. It survives the launching shell, but not host shutdown. A host shutdown or missing status requires fresh evidence before any gate disposition.
+
+For a job managed by another runner, save its terminal evidence first and call `codex queue --thread "$origin_thread" --message "$completion_message"` once. Remote watchers need verified Codex access; otherwise run the watcher locally. If no reliable callback or detached watcher is available, use the environment's supported blocking wait and state that limit.

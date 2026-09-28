@@ -11,7 +11,8 @@ checkout:
 
 ```sh
 python3 scripts/update.py
-.venv/bin/python scripts/maintain.py status
+# Use the interpreter path printed by the updater:
+/path/to/selected/python scripts/maintain.py status
 ```
 
 The updater reuses the selected environment for ordinary start-of-work runs.
@@ -24,9 +25,11 @@ The updater asks PyPI for the latest stable release of each exact pin in
 `prepare` and `verify`.
 An available wheel on PyPI does not guarantee one for this host; preparation
 checks that. A failed candidate is restored and the full verification is rerun
-before the updater continues. Failed package releases are recorded in ignored
+before the updater continues. Releases that prepare successfully but fail
+verification are recorded in ignored
 `.ri-cache/rejected-updates.json` and skipped on later runs until a newer release
-appears. Delete that file to retry a rejected release after investigating it.
+appears. Download or preparation failures restore the prior pin and are retried
+on the next run. Delete that file to retry a rejected release after investigating it.
 The Tree-sitter 0.26.0 runtime caused a Python crash in the deep-call fixture on
 the tested macOS/Python 3.13 host and is excluded from update proposals.
 Tree-sitter 0.25.1 supplies a Python 3.14 macOS ARM64 wheel and passed RI's
@@ -35,7 +38,7 @@ and 3.14. Comparisons across different installed parser versions remain
 incompatible; regenerate both observations with the same pinned environment.
 
 The updater also refreshes SHA-pinned GitHub Actions from their latest releases
-and writes `.vscode/settings.json` with the project interpreter when that file
+and writes ignored local `.vscode/settings.json` with the project interpreter when that file
 is JSON. JSONC settings are left untouched with a warning so an editor preference
 cannot invalidate package verification. Codex uses the interpreter printed by
 the updater. It does not install a new Python or CI runner image. Review grammar changes and hosted CI
@@ -122,15 +125,16 @@ Python/platform combination:
 After `--migrate-python`, substitute the selected interpreter path printed by
 the updater for `.venv/bin/python` in this recipe.
 
-`bundle` runs full verification, copies compatible pinned dependency wheels,
-builds an RI wheel, and installs that exact retained wheel into a temporary
+`bundle` requires a clean checkout, runs full verification, copies compatible pinned
+dependency wheels, builds the RI wheel from `git archive HEAD`, and installs that
+exact retained wheel into a temporary
 offline consumer environment for an import and `pip check`. The output includes
 `receipt.json` with the Git commit, clean-checkout flag, Python/platform,
 package pins, and SHA-256 of every wheel. The output directory must be empty.
-Keep only bundles whose receipt reports `clean_checkout: true` for consumer
-adoption; a dirty build identifies its base commit but does not bind the wheel
-to that commit. Build a separate bundle for each required Python/platform.
-The bundle is local and is not published or uploaded by CI.
+Only clean bundles qualify for consumer adoption. `--allow-dirty` permits a
+diagnostic build from HEAD while the checkout has local changes; its receipt
+records `clean_checkout: false`. Build a separate bundle for each required
+Python/platform. CI exercises bundle creation but does not publish or upload it.
 
 | Technology | Change location | Verification before adoption |
 | --- | --- | --- |
@@ -140,13 +144,15 @@ The bundle is local and is not published or uploaded by CI.
 | Native Rust analyzer/toolchain | Host's existing Rust installation; CI provisions required components | `status`, then `verify --require-native`; retain the reported versions |
 | GitHub Actions | `.github/workflows`; SHA-pinned actions refreshed by `scripts/update.py` | Review release notes and complete the hosted matrix |
 | CI runner images | `.github/workflows/verify.yml`; change the `runs-on` value deliberately | Complete the hosted matrix |
-| RI instructions and optional external skills | Repository instructions in `AGENTS.md`; external skills/plugins stay with their owning installation/source | Keep instructions pointed at these shared commands and rerun the relevant verification |
+| RI instructions and capsule skill templates | Repository instructions in `AGENTS.md`; optional templates under `docs/skill-templates/` | Keep RI maintenance on shared commands; validate templates and their links after changes |
 
-No personal Codex skill or plugin is vendored or versioned by RI. Update those
-through their owning installation or source repository; duplicating them into
-RI would create another stale copy. A skill that maintains RI should call these
-commands instead of embedding package pins or its own install/test procedure.
-Consumer capsules remain owned by their consumer project.
+RI now carries optional **source templates** for capsule handoffs, including a
+queue watcher helper. These do not install automatically, alter the RI package,
+or grant authority in a consumer project. An installed personal skill or plugin
+still has its own lifecycle; compare it with the template before updating it.
+A skill that maintains RI should call these shared commands instead of embedding
+package pins or its own install/test procedure. Consumer capsules remain owned
+by their consumer project; see the [controller workflow](capsule-controller-workflow.md).
 
 For a routine package update, run the updater or edit the exact `NAME==VERSION`
 pin, inspect `status`, and run `verify`. Keep independent
@@ -175,8 +181,9 @@ that run's environment, not every future native release.
 
 [Verify](../.github/workflows/verify.yml) runs on pull requests, main pushes,
 manual dispatch, and reusable-workflow calls, on macOS 15 with Python 3.12/3.13/3.14.
-It provisions functional native tools and uses the same `prepare` and
-`verify --require-native` commands as local maintenance. Missing package/native
+It provisions functional native tools, runs `prepare`, then runs
+`bundle --require-native`, which includes full `verify` and an offline install
+of the retained wheel. Missing package/native
 prerequisites fail the job. Its Python environment and wheel cache are ignored
 workspace files. Action revisions remain SHA-pinned with version comments so
 the local updater can refresh them. Hosted CI is still required to verify an
@@ -185,7 +192,7 @@ Action change.
 For future orchestration **inside this repository**, reuse the existing job:
 
 ```yaml
-name: Manual full verification
+name: Manual verification and bundle smoke test
 on: workflow_dispatch
 jobs:
   verify:

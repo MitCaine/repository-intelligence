@@ -55,13 +55,17 @@ provides explicit Python AST, native Rust syntax, and Rust definition interfaces
 Keep the original structural evidence; the providers have different coverage.
 [Poker's capsule recipe](docs/poker-capsule-workflow.md) demonstrates the controller
 handoff through its existing context-page helper.
+The [capsule controller workflow](docs/capsule-controller-workflow.md) explains
+the purpose, capsule requirements and checkable acceptance criteria, full
+handoff, terminal result routing, recovery decisions, and optional project
+skill templates. The consumer's capsule remains the execution authority.
 
 ## Develop and verify
 
 From the RI checkout on macOS, run the start-of-work updater. It checks Python
-package and SHA-pinned GitHub Action releases, prepares `.venv`, runs the full
-offline package verification, and sets the VS Code interpreter. Use the same
-`.venv/bin/python` in Codex:
+package and SHA-pinned GitHub Action releases, prepares the selected environment,
+runs the full offline package verification, and sets the local VS Code interpreter.
+Use the interpreter path printed by the updater in Codex:
 
 ```sh
 python3 scripts/update.py

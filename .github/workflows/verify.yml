@@ -43,8 +43,8 @@ jobs:
         run: |
           python -m venv .venv
           .venv/bin/python scripts/maintain.py prepare
-      - name: Verify source and installed consumer
-        run: .venv/bin/python scripts/maintain.py verify --require-native
+      - name: Verify and build retained wheel bundle
+        run: .venv/bin/python scripts/maintain.py bundle --require-native --output .ri-cache/ci-bundle
       - name: Check whitespace and tracked source cleanliness
         run: |
           git diff --check

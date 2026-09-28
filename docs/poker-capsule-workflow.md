@@ -1,5 +1,10 @@
 # Poker capsule workflow: first-consumer recipe
 
+For the complete controller/implementor/reviewer loop, terminal callbacks,
+checkable capsule requirements, recovery decisions, and optional skill templates, see the
+[capsule controller workflow](capsule-controller-workflow.md). This page remains
+the Poker-specific source and page handoff recipe.
+
 Poker is the first consumer, not a policy module inside RI. The current
 [task capsule contract](https://github.com/MitCaine/poker-app/blob/main/engineering/workflow/TASK_CAPSULE.md)
 and [context-retention policy](https://github.com/MitCaine/poker-app/blob/main/engineering/workflow/CONTEXT_RETENTION.md)

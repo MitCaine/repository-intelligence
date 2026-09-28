@@ -156,6 +156,42 @@ class MaintenanceTests(unittest.TestCase):
         self.assertIn('tree-sitter', {item['name'] for item in report['packages']})
         self.assertEqual(set(report['native_tools']), {'rustc', 'cargo', 'rust-analyzer'})
 
+    def test_bundle_rejects_dirty_checkout_before_verification_or_output(self):
+        with tempfile.TemporaryDirectory() as raw, \
+                mock.patch.object(maintenance.sys, 'prefix', '/fixture-venv'), \
+                mock.patch.object(maintenance.sys, 'base_prefix', '/fixture-base'), \
+                mock.patch.object(maintenance.subprocess, 'run', side_effect=[
+                    subprocess.CompletedProcess([], 0, 'abc123\n', ''),
+                    subprocess.CompletedProcess([], 0, ' M source.py\n', '')]), \
+                mock.patch.object(maintenance, 'verify') as verify:
+            output = Path(raw) / 'bundle'
+            with self.assertRaisesRegex(ValueError, 'clean checkout'):
+                maintenance.bundle(PINS, Path(raw), output, require_native=True)
+            verify.assert_not_called()
+            self.assertFalse(output.exists())
+
+    def test_archive_source_uses_head_bytes_and_omits_ignored_files(self):
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw) / 'repo'
+            repo.mkdir()
+            subprocess.run(['git', 'init', '-q', str(repo)], check=True)
+            (repo / '.gitignore').write_text('ignored/\n', encoding='utf-8')
+            (repo / 'source.txt').write_text('committed', encoding='utf-8')
+            subprocess.run(['git', 'add', '.gitignore', 'source.txt'], cwd=repo, check=True)
+            subprocess.run(['git', '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid',
+                            'commit', '-qm', 'fixture'], cwd=repo, check=True)
+            revision = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=repo, check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            (repo / 'source.txt').write_text('live edit', encoding='utf-8')
+            (repo / 'ignored').mkdir()
+            (repo / 'ignored' / 'payload').write_text('ignored', encoding='utf-8')
+            source = Path(raw) / 'source'
+            source.mkdir()
+            with mock.patch.object(maintenance, 'ROOT', repo):
+                maintenance.archive_source(revision, source)
+            self.assertEqual((source / 'source.txt').read_text(encoding='utf-8'), 'committed')
+            self.assertFalse((source / 'ignored').exists())
+
 
 if __name__ == '__main__':
     unittest.main()

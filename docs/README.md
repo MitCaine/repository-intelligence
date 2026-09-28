@@ -12,6 +12,7 @@ versions are tracked inside the references rather than in parallel filenames.
 | Know exactly which callables each language maps | [Language support](language-support.md) |
 | Hand off to Python AST, native Rust syntax, or Rust definition lookup | [Native analysis](native-analysis.md) |
 | Prepare Poker capsule context without changing its workflow | [Poker capsule integration](poker-capsule-workflow.md) |
+| Orient a controller, draft checkable capsule requirements, and run a low-interruption handoff | [Capsule controller workflow](capsule-controller-workflow.md) and [optional skill templates](skill-templates/README.md) |
 | Decide whether more evidence is needed | [Limitations](limitations.md) |
 | Change a module or add a language | [Architecture and ownership](architecture.md) |
 | Run the start-of-work updater, verify, upgrade grammars, maintain docs, or package RI | [Maintenance](maintenance.md) |

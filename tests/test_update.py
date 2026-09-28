@@ -132,6 +132,34 @@ class UpdateTests(unittest.TestCase):
                 self.assertEqual(updater.main(), 1)
             self.assertEqual(manifest.read_text(encoding='utf-8'), '"wheel==1"')
 
+    def test_transient_preparation_failure_does_not_cache_rejection(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            manifest = root / 'pyproject.toml'
+            manifest.write_text('"wheel==1"', encoding='utf-8')
+            (root / '.github' / 'workflows').mkdir(parents=True)
+
+            def change_pin(path, _name, old, new):
+                path.write_text(path.read_text(encoding='utf-8').replace(f'=={old}', f'=={new}'),
+                                encoding='utf-8')
+
+            calls = []
+            def run(*args, **_kwargs):
+                calls.append(args)
+                if args[-1] == 'prepare' and len(calls) == 3:
+                    raise subprocess.TimeoutExpired('pip download', 1)
+
+            with mock.patch.object(updater, 'ROOT', root), \
+                    mock.patch.object(updater, 'SELECTION', root / '.ri-cache' / 'selected-python.json'), \
+                    mock.patch.object(updater, 'ensure_python', return_value=(root / '.venv/bin/python', False)), \
+                    mock.patch.object(updater.python_packages, 'proposals', return_value=[('wheel', '1', '2')]), \
+                    mock.patch.object(updater.python_packages, 'set_pin', side_effect=change_pin), \
+                    mock.patch.object(updater, 'run', side_effect=run), \
+                    mock.patch.object(sys, 'argv', ['update.py', '--skip-actions']):
+                self.assertEqual(updater.main(), 0)
+            self.assertEqual(manifest.read_text(encoding='utf-8'), '"wheel==1"')
+            self.assertFalse((root / '.ri-cache' / 'rejected-updates.json').exists())
+
     def test_jsonc_editor_settings_do_not_undo_verified_packages(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
