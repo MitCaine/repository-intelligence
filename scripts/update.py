@@ -58,6 +58,30 @@ def atomic_write(path: Path, data: bytes) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def source_commit() -> str:
+    commit = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
+                            capture_output=True, text=True, check=True, timeout=10).stdout.strip()
+    if not re.fullmatch(r'[0-9a-f]{40,64}', commit):
+        raise ValueError('RI source commit is unavailable')
+    return commit
+
+
+def write_result(run_id: str, commit: str, disposition: str, **details: object) -> dict:
+    result = {'schema_version': 1, 'run_id': run_id, 'source_commit': commit,
+              'disposition': disposition, **details}
+    atomic_write(RESULT, (json.dumps(result, indent=2) + '\n').encode())
+    return result
+
+
+def write_failed_result(run_id: str, commit: str | None, reason: str) -> None:
+    if commit is None:
+        return
+    try:
+        write_result(run_id, commit, 'failed', failure_reason=reason[:500])
+    except OSError as error:
+        print(f'Could not write failed update result: {error}', file=sys.stderr)
+
+
 def selected_bytes() -> bytes | None:
     return SELECTION.read_bytes() if SELECTION.exists() else None
 
@@ -195,6 +219,7 @@ def update_packages(python: Path, manifest: Path, proposals: list[tuple[str, str
     for name, old, new in proposals:
         context = rejection_context(manifest.read_bytes(), python)
         if rejected_versions.get(name) == {'version': new, 'context': context}:
+            review.append(f'{name} {new}: previously rejected in this qualification context')
             continue
         print(f'Trying {name}: {old} -> {new}', flush=True)
         begin_recovery()
@@ -250,15 +275,22 @@ def main() -> int:
     parser.add_argument('--migrate-python', action='store_true',
                         help='qualify a newer Python in a separate environment before selecting it')
     parser.add_argument('--skip-actions', action='store_true', help='leave CI action pins unchanged')
+    parser.add_argument('--run-id', help='caller-selected unique run ID for the structured result')
     args = parser.parse_args()
+    if args.run_id is not None and (not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}', args.run_id)
+                                    or args.run_id in {'.', '..'}):
+        parser.error('--run-id must be 1-128 safe ASCII characters')
     if args.offline and args.native:
         parser.error('--offline cannot update native tools; use verify --require-native')
+    run_id = args.run_id or uuid.uuid4().hex
+    commit = None
     try:
         with update_lock():
+            RESULT.unlink(missing_ok=True)
+            commit = source_commit()
             recovered = recover()
             if recovered:
                 print('Restored an interrupted update; verifying the selected environment', flush=True)
-            RESULT.unlink(missing_ok=True)
             manifest = ROOT / 'pyproject.toml'
             python, migrating = ensure_python(migrate=args.migrate_python)
             try:
@@ -300,18 +332,22 @@ def main() -> int:
             except (OSError, ValueError) as error:
                 editor_ready = False
                 print(f'Editor setting unchanged: {error}', file=sys.stderr)
-            result = readiness_result(python, changed, action_changes, editor_ready, review)
-            atomic_write(RESULT, (json.dumps(result, indent=2) + '\n').encode())
+            readiness = readiness_result(python, changed, action_changes, editor_ready, review)
+            disposition = ('review_required' if review or readiness['outstanding_qualification']
+                           else 'completed')
+            result = write_result(run_id, commit, disposition, **readiness)
             if review:
                 print('Updates requiring review:\n' + '\n'.join(review), file=sys.stderr)
             print(json.dumps(result, indent=2))
             return 0
     except KeyboardInterrupt:
+        write_failed_result(run_id, commit, 'interrupted')
         print('Update interrupted; selected environment remains at last qualified state',
               file=sys.stderr)
         return 130
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, URLError) as error:
-        print(f'Update failed; no readiness result written: {error}', file=sys.stderr)
+        write_failed_result(run_id, commit, str(error))
+        print(f'Update failed: {error}', file=sys.stderr)
         return 1
 
 

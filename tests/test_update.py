@@ -121,19 +121,47 @@ class UpdateTests(unittest.TestCase):
             selection = root / '.ri-cache' / 'selected-python.json'
             selection.parent.mkdir()
             selection.write_text('{"path":".venv/bin/python"}\n', encoding='utf-8')
+            result_path = root / '.ri-cache' / 'update-result.json'
+            result_path.write_text('{"disposition":"completed","run_id":"old"}\n',
+                                   encoding='utf-8')
             candidate = root / '.ri-cache' / 'venvs' / 'python3.14' / 'bin' / 'python'
             with mock.patch.object(updater, 'ROOT', root), \
                     mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
                     mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
                     mock.patch.object(updater, 'RESULT', root / '.ri-cache' / 'update-result.json'), \
+                    mock.patch.object(updater, 'source_commit', return_value='a' * 40), \
                     mock.patch.object(updater, 'REJECTIONS', root / '.ri-cache' / 'rejected-updates.json'), \
                     mock.patch.object(updater, 'SELECTION', selection), \
                     mock.patch.object(updater, 'ensure_python', return_value=(candidate, True)), \
                     mock.patch.object(updater, 'run', side_effect=subprocess.CalledProcessError(1, 'prepare')), \
-                    mock.patch.object(sys, 'argv', ['update.py', '--offline', '--migrate-python']):
+                    mock.patch.object(sys, 'argv', ['update.py', '--offline', '--migrate-python',
+                                                    '--run-id', 'poker-run-1']):
                 self.assertEqual(updater.main(), 1)
             self.assertEqual(selection.read_text(encoding='utf-8'),
                              '{"path":".venv/bin/python"}\n')
+            result = json.loads(result_path.read_text(encoding='utf-8'))
+            self.assertEqual(result['schema_version'], 1)
+            self.assertEqual(result['run_id'], 'poker-run-1')
+            self.assertEqual(result['source_commit'], 'a' * 40)
+            self.assertEqual(result['disposition'], 'failed')
+            self.assertNotIn('local_verify_passed', result)
+
+    def test_interrupted_run_records_failed_disposition(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            result_path = root / '.ri-cache' / 'update-result.json'
+            with mock.patch.object(updater, 'ROOT', root), \
+                    mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
+                    mock.patch.object(updater, 'RESULT', result_path), \
+                    mock.patch.object(updater, 'source_commit', return_value='b' * 40), \
+                    mock.patch.object(updater, 'ensure_python', side_effect=KeyboardInterrupt()), \
+                    mock.patch.object(sys, 'argv', ['update.py', '--run-id', 'interrupted-run']):
+                self.assertEqual(updater.main(), 130)
+            result = json.loads(result_path.read_text(encoding='utf-8'))
+            self.assertEqual(result['run_id'], 'interrupted-run')
+            self.assertEqual(result['source_commit'], 'b' * 40)
+            self.assertEqual(result['disposition'], 'failed')
+            self.assertEqual(result['failure_reason'], 'interrupted')
 
     def test_native_timeout_does_not_erase_qualified_package_candidate(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -150,6 +178,7 @@ class UpdateTests(unittest.TestCase):
                     mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
                     mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
                     mock.patch.object(updater, 'RESULT', root / '.ri-cache' / 'update-result.json'), \
+                    mock.patch.object(updater, 'source_commit', return_value='a' * 40), \
                     mock.patch.object(updater, 'REJECTIONS', root / '.ri-cache' / 'rejected-updates.json'), \
                     mock.patch.object(updater, 'SELECTION', root / '.ri-cache' / 'selected-python.json'), \
                     mock.patch.object(updater, 'ensure_python', return_value=(root / '.venv/bin/python', False)), \
@@ -165,7 +194,9 @@ class UpdateTests(unittest.TestCase):
             self.assertEqual(manifest.read_text(encoding='utf-8'), '"wheel==2"')
             self.assertEqual(json.loads((root / '.ri-cache' / 'selected-python.json').read_text())['path'],
                              'candidate/bin/python')
-            self.assertFalse((root / '.ri-cache' / 'update-result.json').exists())
+            result = json.loads((root / '.ri-cache' / 'update-result.json').read_text())
+            self.assertEqual(result['disposition'], 'failed')
+            self.assertFalse(result.get('local_verify_passed', False))
 
     def test_transient_preparation_failure_does_not_cache_rejection(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -188,6 +219,7 @@ class UpdateTests(unittest.TestCase):
                     mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
                     mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
                     mock.patch.object(updater, 'RESULT', root / '.ri-cache' / 'update-result.json'), \
+                    mock.patch.object(updater, 'source_commit', return_value='a' * 40), \
                     mock.patch.object(updater, 'REJECTIONS', root / '.ri-cache' / 'rejected-updates.json'), \
                     mock.patch.object(updater, 'SELECTION', root / '.ri-cache' / 'selected-python.json'), \
                     mock.patch.object(updater, 'ensure_python', return_value=(root / '.venv/bin/python', False)), \
@@ -200,6 +232,9 @@ class UpdateTests(unittest.TestCase):
                 self.assertEqual(updater.main(), 0)
             self.assertEqual(manifest.read_text(encoding='utf-8'), '"wheel==1"')
             self.assertFalse((root / '.ri-cache' / 'rejected-updates.json').exists())
+            result = json.loads((root / '.ri-cache' / 'update-result.json').read_text())
+            self.assertEqual(result['disposition'], 'review_required')
+            self.assertTrue(result['rejected_or_retryable'])
 
     def test_interrupted_verification_restores_pin_without_selecting_candidate(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -336,6 +371,24 @@ class UpdateTests(unittest.TestCase):
                                             [('wheel', '1', '2')],
                                             {'wheel': {'version': '2', 'context': 'old-context'}})
 
+    def test_cached_rejection_remains_review_required_on_next_run(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            manifest = root / 'pyproject.toml'
+            manifest.write_text('"wheel==1"', encoding='utf-8')
+            with mock.patch.object(updater, 'rejection_context', return_value='same-context'), \
+                    mock.patch.object(updater, 'new_candidate',
+                                      side_effect=AssertionError('retried cached rejection')):
+                _python, review, changed = updater.update_packages(
+                    root / '.venv/bin/python', manifest, [('wheel', '1', '2')],
+                    {'wheel': {'version': '2', 'context': 'same-context'}})
+            self.assertEqual(changed, [])
+            self.assertEqual(len(review), 1)
+            self.assertIn('previously rejected', review[0])
+            self.assertEqual(manifest.read_text(encoding='utf-8'), '"wheel==1"')
+            readiness = updater.readiness_result(root / '.venv/bin/python', changed, [], True, review)
+            self.assertTrue(readiness['rejected_or_retryable'])
+
     def test_concurrent_updater_is_rejected(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -358,6 +411,7 @@ class UpdateTests(unittest.TestCase):
                     mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
                     mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
                     mock.patch.object(updater, 'RESULT', root / '.ri-cache' / 'update-result.json'), \
+                    mock.patch.object(updater, 'source_commit', return_value='a' * 40), \
                     mock.patch.object(updater, 'REJECTIONS', root / '.ri-cache' / 'rejected-updates.json'), \
                     mock.patch.object(updater, 'SELECTION', root / '.ri-cache' / 'selected-python.json'), \
                     mock.patch.object(updater, 'ensure_python', return_value=(root / '.venv/bin/python', False)), \
@@ -365,6 +419,9 @@ class UpdateTests(unittest.TestCase):
                     mock.patch.object(sys, 'argv', ['update.py', '--offline']):
                 self.assertEqual(updater.main(), 0)
             self.assertIn('// user setting', settings.read_text(encoding='utf-8'))
+            result = json.loads((root / '.ri-cache' / 'update-result.json').read_text())
+            self.assertEqual(result['disposition'], 'completed')
+            self.assertTrue(result['local_verify_passed'])
 
     def test_editor_preserves_other_workspace_settings(self):
         with tempfile.TemporaryDirectory() as raw:
