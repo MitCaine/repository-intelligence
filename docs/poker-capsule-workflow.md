@@ -22,12 +22,18 @@ intent, all active acceptance criteria and repository standards. The controller
 reconciles findings and authorizes integration. A controller who writes a patch
 still needs someone else to review that candidate; different identity strings
 in a receipt alone cannot establish independent reasoning.
+The controller prepares the dedicated execution branch from authenticated
+planning P. In Poker's current direct CLI lane, Codex edits but does not commit
+or push. The controller/operator creates candidate C, qualifies and reviews
+that exact SHA, then publishes it under the selected review lane. The literal
+launch and checkpoint commands are owned by Poker's
+[CAPSULE_COMMANDS.md](https://github.com/MitCaine/poker-app/blob/main/engineering/workflow/CAPSULE_COMMANDS.md).
 
 | Step and owner | Useful RI contribution | Required evidence outside RI |
 | --- | --- | --- |
 | Triage and draft — controller | Locate the owning declaration and likely callers/tests; expose parser gaps | Resolved intent, actual callers/types/contracts, read/edit scope and independent acceptance oracles |
 | Context preparation — controller | Suggest exact source envelopes and conditional native questions | Base Git blobs, authenticated excerpts, selected transport and installed prerequisites |
-| Implementation — implementor | Narrow navigation within permitted reads; refresh locations after edits | Frozen capsule, real source changes and authored tests |
+| Implementation — implementor | Narrow navigation within permitted reads; refresh locations after edits | Frozen capsule, authorized edits and test result; controller/operator creates exact C afterward |
 | Qualification — controller/runner | Source delta can focus additional inspection | Required compiler/runtime tests against exact candidate C and actual feature/target configuration |
 | Review — fresh reviewer | Independently regenerate navigation or P-to-C comparison when useful | Full Git diff, exact capsule/intent, qualification Q(C), all-AC and Standards findings |
 | Correction and integration — controller | Explain structural changes in the new candidate | Fresh required proof/review for changed C, approval and existing guarded closeout |
@@ -90,14 +96,19 @@ authorized output, never an unowned tracked ledger.
 4. When page mode is selected, author context through Poker's existing
    `capsule_verify.py page` helper against the exact intended planning base. RI locations suggest an excerpt;
    the helper obtains the actual Git blob and validates the page declaration.
-5. Verify the completed draft against that exact base, then verify the published
-   planning object through Poker's existing `draft` and `planning` checks.
-   Mechanical PASS authenticates the envelope; the controller still resolves
-   semantic omissions and chooses the supported execution/review lane.
+5. Put the completed capsule and planning state P through Poker's current
+   planning route. Verify the draft and P with its existing `draft` and
+   `planning` checks. Prepare the execution branch with Poker's authenticated
+   wrapper; a planning-only remote ref may be published for recovery before
+   implementation. Mechanical PASS authenticates the envelope;
+   the controller still resolves semantic omissions and chooses the supported
+   execution/review lane.
 6. During execution, use supplied pages and only the expansion mechanism the
    selected transport supports; otherwise use the authorized repository-read lane. RI does
    not add a new read permission or permit missing context to be invented.
-7. Review the candidate with the full changed-file list, tests, and—when useful—
+7. After the direct Codex process, have the controller/operator run authored
+   checks, create C, and bind qualification and independent review to it.
+   Review that SHA with the full changed-file list, tests, and—when useful—
    RI's structural delta from stable planning/candidate trees with equal policy.
    Configuration, imports, type definitions, unsupported files, and enclosing
    state can change behavior even when all callable hashes are unchanged.

@@ -6,6 +6,12 @@ agents, not RI package behavior or permission policy. Read each `SKILL.md` and
 adapt repository-specific commands, accepted review lanes, supported hosts, and
 approval boundaries against the consumer's current capsule contract before
 installing it. Keep the capsule and local `AGENTS.md` authoritative.
+Start with the [new-project setup checklist](../new-project-setup.md) when
+adopting the workflow in a consumer repository.
+In the documented handoff, the controller creates a dedicated capsule branch
+and records its remote and planning state. The implementor pushes candidate
+commits to that branch for review. A consumer adaptation should retain this
+role split and make any different branch policy explicit.
 
 | Template | Role | Copy when |
 | --- | --- | --- |

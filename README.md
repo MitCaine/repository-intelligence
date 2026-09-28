@@ -15,7 +15,7 @@ execution, and acceptance stay with the consumer project.
 | Your task | Start here | What you get |
 | --- | --- | --- |
 | Use RI in an ordinary project | [Consumer guide](docs/consumer-guide.md), then the `locator` command below | Source navigation and coverage evidence; no capsule is required. |
-| Use RI with a capsule workflow | [Controller workflow](docs/capsule-controller-workflow.md) and [skill templates](docs/skill-templates/README.md) | Work-to-Codex chat and terminal CLI handoffs to adapt to the project's authority, tests, and review lane. |
+| Use RI with a capsule workflow | [New-project setup](docs/new-project-setup.md), [controller workflow](docs/capsule-controller-workflow.md), and [skill templates](docs/skill-templates/README.md) | Work-to-Codex chat and terminal CLI handoffs to adapt to the project's authority, tests, and review lane. |
 | Maintain the RI package | [Architecture](docs/architecture.md), [maintenance](docs/maintenance.md), and [documentation index](docs/README.md) | Module boundaries, updater/bundle commands, and verification requirements. |
 
 RI does not supply a consumer capsule runner, project permissions, approval
@@ -72,7 +72,8 @@ the purpose, capsule requirements and checkable acceptance criteria, full
 handoff, terminal result routing, recovery decisions, and optional project
 skill templates. The Work controller can launch a Codex chat or use a terminal
 Codex CLI wrapper. The consumer's capsule remains the execution authority;
-its own workflow determines who commits and publishes the candidate.
+its own workflow determines who commits and publishes the candidate. Poker's
+current direct CLI route leaves those steps to the controller/operator.
 
 ## Develop and verify
 

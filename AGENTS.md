@@ -22,4 +22,9 @@ apply here. The current user request defines the task scope.
   --check and report skips and unavailable checks.
 - Keep source acquisition bounded and read-only. Avoid new services, registries,
   persistent indexes, or consumer permission policy without a concrete need.
-- Do not commit, push, merge, or change repository settings unless requested.
+- For this standalone RI checkout, do not commit, push, merge, or change
+  repository settings unless requested. This restriction does not override the
+  documented consumer capsule workflow: its controller creates the dedicated
+  capsule branch, and its implementor commits and pushes authorized candidate
+  work to that branch for review. Neither role pushes directly to `main` as
+  part of that handoff; the consumer's acceptance route controls integration.

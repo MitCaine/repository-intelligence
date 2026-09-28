@@ -13,6 +13,7 @@ versions are tracked inside the references rather than in parallel filenames.
 | Hand off to Python AST, native Rust syntax, or Rust definition lookup | [Native analysis](native-analysis.md) |
 | Prepare Poker capsule context without changing its workflow | [Poker capsule integration](poker-capsule-workflow.md) |
 | Orient a controller, draft checkable capsule requirements, and run a low-interruption handoff | [Capsule controller workflow](capsule-controller-workflow.md) and [optional skill templates](skill-templates/README.md) |
+| Set up RI and the capsule skills in a new consumer project | [New-project setup](new-project-setup.md) |
 | Exercise adoption in a new project before claiming reliable autonomy | [Workflow adoption cases](adoption-cases.md) |
 | Decide whether more evidence is needed | [Limitations](limitations.md) |
 | Change a module or add a language | [Architecture and ownership](architecture.md) |
