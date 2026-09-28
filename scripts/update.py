@@ -219,6 +219,7 @@ def update_packages(python: Path, manifest: Path, proposals: list[tuple[str, str
     for name, old, new in proposals:
         context = rejection_context(manifest.read_bytes(), python)
         if rejected_versions.get(name) == {'version': new, 'context': context}:
+            review.append(f'{name} {new}: previously rejected in this qualification context')
             continue
         print(f'Trying {name}: {old} -> {new}', flush=True)
         begin_recovery()

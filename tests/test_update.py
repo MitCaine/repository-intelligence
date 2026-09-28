@@ -371,6 +371,24 @@ class UpdateTests(unittest.TestCase):
                                             [('wheel', '1', '2')],
                                             {'wheel': {'version': '2', 'context': 'old-context'}})
 
+    def test_cached_rejection_remains_review_required_on_next_run(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            manifest = root / 'pyproject.toml'
+            manifest.write_text('"wheel==1"', encoding='utf-8')
+            with mock.patch.object(updater, 'rejection_context', return_value='same-context'), \
+                    mock.patch.object(updater, 'new_candidate',
+                                      side_effect=AssertionError('retried cached rejection')):
+                _python, review, changed = updater.update_packages(
+                    root / '.venv/bin/python', manifest, [('wheel', '1', '2')],
+                    {'wheel': {'version': '2', 'context': 'same-context'}})
+            self.assertEqual(changed, [])
+            self.assertEqual(len(review), 1)
+            self.assertIn('previously rejected', review[0])
+            self.assertEqual(manifest.read_text(encoding='utf-8'), '"wheel==1"')
+            readiness = updater.readiness_result(root / '.venv/bin/python', changed, [], True, review)
+            self.assertTrue(readiness['rejected_or_retryable'])
+
     def test_concurrent_updater_is_rejected(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
