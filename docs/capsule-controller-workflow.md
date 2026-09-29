@@ -113,6 +113,10 @@ fields already cover it. A checkmark is a planning aid, not acceptance evidence.
 - [ ] **Qualification:** Name required commands, real runtime or consumer
   tests, fixtures, host, and the evidence each produces. State whether a check
   is mandatory or conditional. An unavailable mandatory check remains open.
+- [ ] **Pre-dispatch gate:** Map every active acceptance criterion and required
+  review standard to its exact check or inspection, execution place, expected
+  evidence, and environment assumption. Reconcile owned paths and required
+  profiles with the files and commands the capsule actually permits.
 - [ ] **Review and completion:** Define the exact candidate and evidence
   packet for a fresh reviewer, the required per-criterion and standards
   dispositions, and the consumer's guarded approval/acceptance route.
@@ -157,6 +161,32 @@ them before implementation. The implementor may check off implementation
 work, but only candidate-bound check results and the
 fresh reviewer can satisfy the AC. If a requirement cannot be made observable,
 resolve it before dispatch rather than leaving the implementor to guess.
+
+## Check the execution plan before dispatch
+
+Record a short gate table with the planning packet, using the consumer's
+existing notes or capsule fields. Include one row per active AC and each
+review standard requiring separate evidence. Do not add a second capsule
+schema or count a row as passing evidence.
+
+| Requirement | Exact check or inspection and expected result | Where it runs and evidence retained | Environment assumption |
+| --- | --- | --- | --- |
+| AC or required standard ID | Authored test, source inspection, or reviewer judgment | Local sandbox, supported native host, or hosted check; output bound to C | Profile, tool version, network, filesystem, or Git setting needed |
+
+Before implementor dispatch, compare this table with the capsule's owned
+paths, permitted reads, required profiles, changed-file expectations, and
+reviewer packet. Resolve any check that needs an unowned file, unavailable
+host, or missing evidence route through the consumer's planning authority.
+Rehearse costly or sandbox-sensitive frozen commands in the intended evidence
+environment when safe: verify invocation, fixtures, permissions, and output
+capture without treating a planning-state result as qualification of C. Run
+applicable cross-platform fixtures before C is frozen, and rerun them on C when
+the capsule requires candidate-bound proof. New tests should run before C is
+frozen. Keep machine-global settings out of an isolated evidence run unless
+the consumer explicitly requires them; record any unavoidable assumption.
+Before paying for remote qualification, recheck the table against the actual
+P..C changed files and the planned review packet's per-standard evidence. A dry run cannot
+waive a mandatory check or a substantive reviewer finding.
 
 ## Hand-off packets and done condition
 
@@ -211,7 +241,8 @@ qualify its own host and protected review lane. See OpenAI's
    branch/ref, P SHA, edit/read scope, non-goals, independently expected ACs,
    checks, and stop conditions. The controller inspects the actual planning
    diff, runs draft/planning checks, resolves omissions, publishes the validated
-   branch, and verifies its remote/ref and P SHA before implementation. Use the
+   branch, and verifies its remote/ref and P SHA before implementation. It
+   records and checks the pre-dispatch gate table above before handing off. Use the
    [capsule preflight template](skill-templates/capsule-preflight/SKILL.md)
    to authenticate the envelope; it cannot supply missing authority.
 2. **Context:** Ask RI a specific source question only where it helps. Bind each
@@ -226,19 +257,21 @@ qualify its own host and protected review lane. See OpenAI's
    before editing, using `capsule-preflight` where installed. Work only within
    the capsule's grants. Commit and push C to the dedicated branch when that
    is the consumer's authorized candidate route; never push directly to main.
+   Run new tests and applicable cross-platform fixtures before freezing C.
    Return DONE or STOP_REPLAN, C SHA, changed paths, authored tests, exact
    checks and results, unresolved questions, and any scope collision. The
-   controller
-   compares planning P to candidate C and keeps the base-to-P planning change
+   controller compares planning P to candidate C and keeps the base-to-P planning change
    separate. A structural RI delta is optional; the full P..C Git diff is mandatory.
    Wait for native completion, then authenticate the returned metadata against
    the branch and repository before treating DONE as a candidate handoff.
 4. **Controller:** Fetch the recorded branch and verify its head equals the
-   returned C SHA and that the changed-file inventory matches P..C. Qualify
-   exact C using the authored checks on the required host. Route long external
-   gates through their own supported completion mechanism. Open or update a
-   review PR
-   when the consumer uses GitHub PRs; confirm that consumer's hosted checks
+   returned C SHA and that the changed-file inventory matches P..C. Reconcile
+   the gate table with the actual changed files, execution profiles, and full
+   reviewer packet. Rehearse costly or sandbox-sensitive commands where safe
+   before remote qualification, then qualify exact C using the authored checks
+   on the required host. Route long external gates through their own supported
+   completion mechanism. Open or update a review PR when the consumer uses
+   GitHub PRs; confirm that consumer's hosted checks
    actually ran for the candidate. A branch push alone is not a hosted pass.
    Save raw status and logs bound to C.
 5. **Fresh reviewer subagent:** Receive the exact capsule/intent, branch/ref, and P/C

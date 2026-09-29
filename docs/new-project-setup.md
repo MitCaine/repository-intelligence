@@ -40,7 +40,8 @@ independence, or a completion channel.
    three handoffs.
 6. **Run a trial capsule.** Use the [adoption cases](adoption-cases.md) to check
    correct and incorrect skill activation, branch creation and candidate push,
-   exact-SHA qualification, fresh review, correction, and closeout. Record the
+   the pre-dispatch gate table and command rehearsal, exact-SHA qualification,
+   fresh review, correction, and closeout. Record the
    result before calling the setup reliable.
 
 The [native subagent handoff](capsule-controller-workflow.md#delegate-through-native-subagents)

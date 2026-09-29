@@ -21,6 +21,7 @@ before measuring turns or tokens. Repeat any case used as a reliability claim.
 | --- | --- |
 | Ordinary source question in a project without capsules | Install/select RI, inspect the returned status and source, and answer without inventing a capsule runner or treating zero matches as absence proof. |
 | Native planner to controller handoff | Planner creates the dedicated branch and capsule, returns base/P/path/scope/checks; controller verifies the actual commit and planning checks before implementation. |
+| Pre-dispatch gate with a hidden environment dependency | Controller maps each AC and required review standard to its check, host, evidence and assumptions; a rehearsal exposes an unavailable profile, sandbox permission, or Git setting before remote qualification. Planning-state output is not counted as Q(C). |
 | Existing capsule with exact P and edit scope | Verify the planner-created capsule branch and remote; preflight P, provide bounded RI context, implement only owned paths, push C to that branch, qualify the pushed SHA, and send a fresh reviewer the exact packet. |
 | Native implementor and reviewer returns | Controller verifies DONE, branch head, P..C paths and checks before launching a fresh read-only reviewer; reviewer returns a verdict for each AC tied to exact C. No repeated status polling. |
 | Failed native subagent return | Preserve the exact attempt and evidence; controller repairs an in-scope failure or replans without treating missing metadata as success. |
