@@ -19,7 +19,7 @@ role split and make any different branch policy explicit.
 | [capsule-preflight](capsule-preflight/SKILL.md) | Controller, planner, or implementor | The project has an active capsule workflow with exact base/scope checks. |
 | [ri-evidence-handoff](ri-evidence-handoff/SKILL.md) | Controller, implementor, or reviewer | RI locations or comparisons will enter a handoff. |
 | [capsule-independent-review](capsule-independent-review/SKILL.md) | Fresh reviewer | The consumer requires candidate-bound independent review. |
-| [capsule-queue](capsule-queue/SKILL.md) | Optional external gate watcher | A non-subagent job has no native completion and its exact controller destination is verified. It is not part of the native three-subagent handoff. |
+| [capsule-queue](capsule-queue/SKILL.md) | External gate watcher | A long non-subagent job has no native completion and its exact Codex controller destination is verified. Use a tested Work bridge or bounded wait for a Work controller. It is not part of the native three-subagent handoff. |
 
 For a project-scoped Codex installation, copy the chosen **whole skill folders**
 to that project's `.agents/skills/` (or the skill location supported by its
@@ -41,8 +41,9 @@ ChatGPT Work has a separate skill lifecycle; copying files into a Mac checkout
 does not make them available in a Work chat. Give the controller, planner,
 implementor, and reviewer their applicable instructions through the supported
 workspace route, then verify availability. The native subagents return to the
-same parent controller. The optional queue template is retained for external
-gates that lack native completion; it is unnecessary for these subagents.
+same parent controller. Use the queue template for a long external gate that
+lacks native completion and has a verified destination; it is unnecessary for
+these subagents.
 
 Keep the templates narrow. A project need not install all four, and no skill
 creates capsule authority, review independence, or a successful qualification

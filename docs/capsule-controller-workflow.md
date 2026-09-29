@@ -67,6 +67,7 @@ Implementor subagent -> commit and push C to capsule branch + tests
     |
     v
 Controller verifies C metadata + branch head, then qualifies exact C
+    | external gate: native terminal callback or one verified queue watcher
     | failure --> preserve C/evidence --> correction or revised capsule --+
     v                                                                |
 Independent Reviewer subagent (fresh read-only context)         |
@@ -80,8 +81,10 @@ publication, acceptance, and closeout commands
 
 The parent waits on each native subagent completion; it does not repeatedly
 poll unchanged status. Verify each returned identity and result before the
-next delegation. The capsule-queue watcher is unnecessary for these native
-subagent handoffs.
+next delegation. A long external qualification needs its own verified terminal
+delivery route. Use the capsule-queue watcher when it lacks native completion
+and the exact controller destination can receive its notification; the watcher
+is unnecessary for native subagent handoffs.
 ```
 
 ## Prepare the issue-to-planner handoff
@@ -287,6 +290,7 @@ recovery rules below.
 | **Before implementor dispatch** | Complete the [pre-dispatch gate table](#check-the-execution-plan-before-dispatch), including every AC and required review standard. Rehearse costly or sandbox-sensitive commands where safe. Confirm exact P still heads the branch, the implementation checkout is ready, the selected model/effort and host have required access, and the handoff contains the frozen capsule, permitted source context, checks, and STOP_REPLAN route. | Delegate implementation bound to P and the dedicated branch. |
 | **After implementor return** | Require DONE or a precise failure, C SHA, branch/ref, changed-file list, check results, and unresolved gaps. Independently verify the committed branch head and remote ref where required, clean/allowed-dirty state, base..P and full P..C diffs, owned paths, profiles, new tests, and applicable cross-platform fixtures. A DONE flag or matching counts alone is insufficient. | Preserve failed C/evidence for repair; otherwise prepare exact-C qualification. |
 | **Before exact-C qualification** | Reconcile the gate table with every changed file, required profile, and standard. Confirm each command's path, host, inputs and evidence location; rehearse costly or sandbox-sensitive invocation where safe. Ensure C and its source material are stable and that no required test or fixture is missing. | Run the consumer's mandatory local/native and hosted gates on exact C; preserve raw results. |
+| **At external-gate dispatch** | Select one completion route before starting the job: the runner's reliable terminal callback, or a bounded watcher using `capsule-queue` with the exact verified Codex controller destination. For a Work controller, use only a tested bridge to that exact chat or its supported bounded wait. Bind the job to C, required profiles, deadline, and retained status/log paths. | Launch the gate once and wait for its terminal event; no periodic controller-turn status checks or duplicate native run. |
 | **After qualification, before reviewer dispatch** | Verify Q(C) names the exact candidate, host/profile, commands, exit status, logs, coverage gaps, and hosted-check SHA. A missing or failed mandatory gate remains unresolved. Assemble the capsule/intent, B/P/C, full diff and changed-file inventory, expected AC observations, Q(C), and per-standard evidence. Recheck branch head C and give a fresh reviewer enforced read-only access. | Dispatch one exact-C independent review only with a complete, authenticated packet. |
 | **After reviewer return** | Authenticate the verdict's branch and C against current Git state. Require a finding or evidence-backed disposition for every active AC and applicable standard; reconcile each finding with the original objective, qualification, and changed-file inventory. Treat absent dispositions, unsupported evidence, or a moved C as unresolved. | Preserve failed C/findings and return an in-scope correction or replan; a complete PASS proceeds to guarded integration checks. |
 | **Before guarded integration** | Recheck published base/ref and candidate head; ensure required Q(C), fresh independent R(C), all active criteria and standards, approvals, and consumer-specific publication conditions bind the same C. Requalify and re-review any changed C or execution-relevant base. | Use only the consumer's authorized approval, publication, and acceptance route. |
@@ -369,8 +373,17 @@ reviewer, or approval boundary.
 
 Native completion returns each child result to the parent controller. The
 controller waits for that result once and verifies its evidence. A long external
-qualification gate may have its own watcher; it is separate from these three
-subagent handoffs and cannot supply a planner, candidate, or reviewer verdict.
+qualification gate must have a verified terminal route selected at dispatch.
+Use the [capsule-queue skill](skill-templates/capsule-queue/SKILL.md) when the
+gate lacks a native callback and the exact Codex controller can receive the
+queued result. `codex queue` does not address an arbitrary ChatGPT Work chat;
+use a tested Work bridge or a supported bounded wait there. Put any necessary
+status polling inside one watcher with backoff and a deadline, not in repeated
+controller turns. The watcher saves one terminal outcome for success, failure,
+timeout, or lost delivery. On receipt, the controller checks its status, logs,
+candidate SHA and required profiles before deciding Q(C). A queued message
+cannot supply a planner, candidate, qualification PASS, or reviewer verdict.
+Do not restart a completed native run merely to regain notification.
 
 ## Recovery without repeated user turns
 

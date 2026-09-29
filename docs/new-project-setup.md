@@ -38,7 +38,13 @@ independence, or a completion channel.
    failed subagent returns in the actual host. Use native completion rather
    than repeated controller status checks; no queue helper is needed for these
    three handoffs.
-6. **Run a trial capsule.** Use the [adoption cases](adoption-cases.md) to check
+6. **Test the external qualification return route.** If a long hosted gate has
+   no reliable native completion, install the whole `capsule-queue` template
+   including its helper and test one terminal success and failure to the exact
+   controller destination. `codex queue` targets a Codex session; a Work
+   controller needs a tested bridge or supported bounded wait. Select the
+   route at dispatch so one hosted run does not cause repeated controller turns.
+7. **Run a trial capsule.** Use the [adoption cases](adoption-cases.md) to check
    correct and incorrect skill activation, branch creation and candidate push,
    all [controller gates](capsule-controller-workflow.md#controller-gates-from-intake-through-closeout),
    command rehearsal, exact-SHA qualification, fresh review, correction, and closeout. Record the
@@ -56,6 +62,7 @@ permissions in each consuming host before relying on the route.
 | Select and bind source context or P-to-C evidence | `ri-evidence-handoff` | Controller; implementor or reviewer as needed |
 | Judge exact pushed candidate independently | `capsule-independent-review` | Fresh reviewer |
 | Return planner, implementor, and reviewer results | Native subagent completion | Continuing controller verifies each result |
+| Return a long external gate result without native completion | `capsule-queue` with verified destination | Controller verifies retained terminal evidence |
 
 The [skill templates](skill-templates/README.md) are the source to copy. Use
 only the skills relevant to the consumer's actual workflow. At each handoff,
