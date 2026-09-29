@@ -20,17 +20,19 @@ import tree_sitter_go
 import tree_sitter_c_sharp
 import tree_sitter_c
 import tree_sitter_cpp
+import tree_sitter_markdown
 
 from .adapters import PARSERS
 from .source import RawOffsets, python_source_encoding
 
 
-ADAPTER_VERSION = 10
+ADAPTER_VERSION = 11
 MAX_DECLARATION_DETAILS = 100
 MAX_DIAGNOSTIC_DETAILS = 50
 GRAMMARS = {
     ".py": ("Python", "tree-sitter-python", tree_sitter_python),
     ".rs": ("Rust", "tree-sitter-rust", tree_sitter_rust),
+    ".md": ("Markdown", "tree-sitter-markdown", tree_sitter_markdown.language),
     ".js": ("JavaScript", "tree-sitter-javascript", tree_sitter_javascript.language),
     ".jsx": ("JavaScript", "tree-sitter-javascript", tree_sitter_javascript.language),
     ".mjs": ("JavaScript", "tree-sitter-javascript", tree_sitter_javascript.language),
@@ -53,7 +55,7 @@ GRAMMARS = {
 
 
 # These grammars accept CR as a line terminator. Rust and Go use LF instead.
-_CR_NEWLINE_GRAMMARS = {"Python", "JavaScript", "TypeScript", "TSX", "Java",
+_CR_NEWLINE_GRAMMARS = {"Python", "Markdown", "JavaScript", "TypeScript", "TSX", "Java",
                         "CSharp", "C", "C++"}
 
 
@@ -160,7 +162,8 @@ def with_mapping(syntax: dict, indexed: dict) -> dict:
     entries = indexed["functions"]
     declarations = [
         {"kind": entry["declaration_kind"] if entry["declaration_kind"] in
-          {"lambda", "closure", "arrow"} else "function",
+          {"lambda", "closure", "arrow", "section", "checklist_item", "metadata"}
+          else "function",
          "name": (None if entry.get("anonymous") or entry["declaration_kind"] in
                   {"lambda", "closure", "arrow"} else entry["name"]),
          "byte_range": entry["byte_range"],

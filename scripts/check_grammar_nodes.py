@@ -23,6 +23,7 @@ SOURCES = {
        for language in ("python", "rust", "javascript", "java", "go", "c-sharp", "c", "cpp")},
     "typescript": ("tree-sitter-typescript", "typescript/src/node-types.json"),
     "tsx": ("tree-sitter-typescript", "tsx/src/node-types.json"),
+    "markdown": ("tree-sitter-markdown", "tree-sitter-markdown/src/node-types.json"),
 }
 
 # Field presence and requiredness used by adapters. Empty maps check a named node
@@ -69,6 +70,13 @@ _C = {
     "call_expression": {"function": True},
 }
 EXPECTED = {
+    "markdown": {
+        "section": {}, "atx_heading": {"heading_content": False},
+        "setext_heading": {"heading_content": True},
+        "list_item": {}, "task_list_marker_checked": {},
+        "task_list_marker_unchecked": {},
+        "minus_metadata": {}, "plus_metadata": {},
+    },
     "python": {
         "function_definition": {"body": True, "name": True, "parameters": True},
         "lambda": {"body": True, "parameters": False},
@@ -173,7 +181,8 @@ def source_urls(project: Path = ROOT / "pyproject.toml") -> dict[str, str]:
     for language, (distribution, relative) in SOURCES.items():
         if distribution not in pins:
             raise ValueError(f"{distribution} needs an exact pin in {project}")
-        urls[language] = (f"https://raw.githubusercontent.com/tree-sitter/{distribution}/"
+        owner = "tree-sitter-grammars" if language == "markdown" else "tree-sitter"
+        urls[language] = (f"https://raw.githubusercontent.com/{owner}/{distribution}/"
                           f"v{pins[distribution]}/{relative}")
     return urls
 

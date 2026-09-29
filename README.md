@@ -1,12 +1,13 @@
 # Repository Intelligence
 
 Repository Intelligence (RI) is a local Python tool for finding relevant source
-and reviewing structural changes. It reads current files, locates callables,
-and compares caller-supplied planning and candidate trees. It keeps source hashes,
-locations, parser metadata, and coverage gaps with its results.
+and reviewing structural changes. It reads current files, locates callables and
+Markdown document units, and compares caller-supplied planning and candidate
+trees. It keeps source hashes, locations, parser metadata, and coverage gaps
+with its results.
 
 Tree-sitter is the default parser for **Python, Rust, JavaScript/JSX,
-TypeScript/TSX, Java, Go, C#, C, and C++**. Native analyzers are optional.
+TypeScript/TSX, Java, Go, C#, C, C++, and Markdown**. Native analyzers are optional.
 RI needs no service, database, or maintained symbol index. Task scope, capsule
 execution, and acceptance stay with the consumer project.
 
@@ -37,6 +38,9 @@ python3.14 -m venv .venv-ri
 Use a file path to narrow the question and `--json` to inspect full packet metadata.
 A direct ambiguous C/C++ header needs `--language c` or `--language cpp`;
 directory scans use repeatable `--header-language include/api.h=cpp`.
+For a Markdown capsule, query the exact `.md` file for a heading or checklist
+term; RI reports source-bound sections and task items, while the consumer's
+capsule validator still decides whether the document is valid.
 [The consumer guide](docs/consumer-guide.md) covers installation, offline use,
 upgrading an existing consumer, selection, and troubleshooting. Keep the RI
 revision fixed during a comparison.

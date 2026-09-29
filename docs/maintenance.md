@@ -260,7 +260,7 @@ copy of the full reference or reinterpret old packets under new semantics.
 
 A grammar-pin change requires reviewing upstream `node-types.json` and relevant
 grammar rules at the exact tags. The maintainer checker covers selected
-node/field-presence and requiredness assumptions for all ten parser variants,
+node/field-presence and requiredness assumptions for all eleven parser variants,
 including separate TypeScript and TSX shapes. Print URLs derived from the
 current pins, download the relevant files, and check them locally:
 
@@ -270,7 +270,7 @@ python scripts/check_grammar_nodes.py python=/tmp/python-node-types.json
 ```
 
 Pass all `LANGUAGE=PATH` pairs with `--require-all` for a complete set (`python`,
-`rust`, `javascript`, `typescript`, `tsx`, `java`, `go`, `c-sharp`, `c`, `cpp`).
+`rust`, `markdown`, `javascript`, `typescript`, `tsx`, `java`, `go`, `c-sharp`, `c`, `cpp`).
 The historical two-positional-file Python/Rust invocation still works. The
 checker never downloads or changes dependencies. Review its upstream repository
 paths if a project changes its tag or packaging convention.

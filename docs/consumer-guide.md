@@ -130,8 +130,8 @@ policy = dict(stable=True, logical_root='app',
               excluded_directories=('generated',))
 planning = inventory_tree(Path('/snapshots/planning'), **policy)
 candidate = inventory_tree(Path('/snapshots/candidate'), **policy)
-assert planning['inventory_schema_version'] == 13
-assert candidate['inventory_schema_version'] == 13
+assert planning['inventory_schema_version'] == 14
+assert candidate['inventory_schema_version'] == 14
 delta = compare_inventories(planning, candidate)
 if delta['status'] != 'comparable_candidate_delta':
     raise RuntimeError((delta['status'], delta['mismatches']))

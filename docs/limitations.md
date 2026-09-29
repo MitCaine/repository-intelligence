@@ -9,6 +9,7 @@ per-language promises are in [language support](language-support.md).
 | Search | Lexical ranking and bounded display; zero matches does not prove absence | Refine a named question and inspect relevant source |
 | Coverage | Only the declared source constructs in selected supported files | Review unsupported paths, omissions, failures, and the full changed-file list |
 | Program behavior | Imports, types, enclosing containers, initializers, and configuration may change without callable deltas | Read the owning contracts and relevant file changes |
+| Markdown | Block grammar maps headings, front matter, and task items; it does not validate capsule fields, links, inline syntax, or acceptance decisions | Run the consumer's capsule validator and inspect the full document diff |
 | C/C++ and generated code | Macros, includes, conditional compilation, and build settings are unexpanded | Use compiler/build evidence when effective declarations matter |
 | Source freshness | Directory reads are non-atomic; `stable=True` is the caller's assertion | Supply stable materializations for comparison; refresh changed working-source locations |
 | Identity | Hashes identify observed bytes, not commit membership; anonymous offsets can move | Bind planning through the consumer's Git workflow; accept conservative ambiguous/add-remove deltas |

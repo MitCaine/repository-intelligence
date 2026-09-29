@@ -11,13 +11,14 @@ from .adapters import PARSERS
 from .source import SCHEMA_VERSION, git_object_format, identify_bytes, legacy_git_blob_sha1
 
 
-LANGUAGE_SUFFIX = {"python": ".py", "rust": ".rs", "javascript": ".js",
+LANGUAGE_SUFFIX = {"python": ".py", "rust": ".rs", "markdown": ".md", "javascript": ".js",
                    "typescript": ".ts", "tsx": ".tsx", "java": ".java", "go": ".go",
                    "csharp": ".cs", "c": ".c", "cpp": ".cpp"}
 SUFFIX_LANGUAGE = {suffix: ("javascript" if suffix in {".js", ".jsx", ".mjs", ".cjs"}
                             else "typescript" if suffix in {".ts", ".mts", ".cts"} else "tsx"
                             if suffix == ".tsx" else "python" if suffix == ".py"
                             else "java" if suffix == ".java" else "go" if suffix == ".go"
+                            else "markdown" if suffix == ".md"
                             else "csharp" if suffix == ".cs" else "c" if suffix == ".c"
                             else "cpp" if suffix in {".cc", ".cpp", ".cxx", ".hpp", ".hh",
                                                      ".hxx"} else "rust")

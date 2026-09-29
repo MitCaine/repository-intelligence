@@ -27,7 +27,8 @@ class GrammarUpgradeCheckTests(unittest.TestCase):
     def test_every_shipped_parser_variant_has_a_review_contract_and_source(self):
         names = {"Python": "python", "Rust": "rust", "JavaScript": "javascript",
                  "TypeScript": "typescript", "TSX": "tsx", "Java": "java",
-                 "Go": "go", "CSharp": "c-sharp", "C": "c", "C++": "cpp"}
+                 "Go": "go", "CSharp": "c-sharp", "C": "c", "C++": "cpp",
+                 "Markdown": "markdown"}
         shipped = {names[name] for name, _, _ in GRAMMARS.values()}
         self.assertEqual(set(CHECK["EXPECTED"]), shipped)
         self.assertEqual(set(CHECK["SOURCES"]), shipped)

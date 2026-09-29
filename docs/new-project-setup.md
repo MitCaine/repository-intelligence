@@ -31,11 +31,13 @@ independence, or a completion channel.
    role's handoff packet. A local `.agents/skills/` copy does not install skills
    in a Work chat. Verify availability in both Work roles before relying on
    automatic activation.
-5. **Configure terminal delivery only where needed.** `capsule-queue` is for an
-   external job that otherwise needs polling. Use native agent completion when
-   it already wakes the controller. If the controller is in Work, verify an
-   actual Work completion route or tested bridge; a local `codex queue` target
-   alone is insufficient. Test one completed job and one failed delivery.
+5. **Test each return route before relying on it.** A native subagent can return
+   to its parent Work or Codex chat. A separately created Codex implementor
+   chat or Work reviewer chat needs a verified cross-chat route; its ordinary
+   completion does not prove that the controller will wake. Test one success
+   and one failure for each route. `capsule-queue` is for an external job that
+   otherwise needs polling and can notify a verified Codex session; a local
+   `codex queue` target alone cannot wake a Work controller.
 6. **Run a trial capsule.** Use the [adoption cases](adoption-cases.md) to check
    correct and incorrect skill activation, branch creation and candidate push,
    exact-SHA qualification, fresh review, correction, and closeout. Record the

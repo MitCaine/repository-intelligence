@@ -32,12 +32,12 @@ terminal result routing, and recovery without adding those decisions to RI.
 
 [`structural.py`](../src/repository_intelligence/structural.py) owns installed runtime/grammar metadata, Tree-sitter setup, Python declared-encoding input conversion, and independent ERROR/MISSING diagnostics. Diagnostic traversal skips subtrees
 whose Tree-sitter error flag is clear; adapter traversal still visits clean
-source to extract callables. Exhaustive-walk regressions across all pinned
+source to extract mapped units. Exhaustive-walk regressions across all pinned
 grammars guard diagnostic order, missing tokens, and bounded detail counts. `ScanSetup` collects full grammar metadata but constructs parsers only for languages encountered, reusing them within one invocation. It is not a persistent source cache or a global shared parser pool. Python raw positions come from actual incremental decoder boundaries; unsupported boundaries fail instead of receiving approximate offsets.
 
 ## Language adapters
 
-Each `*_tree_index.py` module owns its language's callable classification, body/bodyless policy, names, ownership, syntactic identity components, attached source envelope, and lexical call hints. The [callable contract](language-support.md) is the intended reviewed boundary. [Limitations](limitations.md) explains coverage and unsupported questions.
+Each `*_tree_index.py` module owns its language's mapped-unit classification, names, ownership, syntactic identity components, and source envelope. Code adapters also own callable body policy and lexical call hints. The Markdown adapter maps document sections, front matter, and task-list items from the block grammar; it does not validate capsules. The [mapping contract](language-support.md) is the intended reviewed boundary. [Limitations](limitations.md) explains coverage and unsupported questions.
 
 [`declarations.py`](../src/repository_intelligence/declarations.py) provides small shared primitives: token-preserving syntax keys, exact source-range hashes, named ID assignment, and coverage accounting. It must not decide language semantics. In particular, omitting one declaration from the callable map must not automatically suppress traversal of nested declarations.
 

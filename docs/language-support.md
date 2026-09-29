@@ -1,4 +1,4 @@
-# Language support and callable contracts
+# Language support and mapped source contracts
 
 The shared locator runs a small structural probe. Ordinary Python and Rust
 navigation now come from the same Tree-sitter parse as the probe. The Python
@@ -12,6 +12,26 @@ names, kinds, ownership, and source slices. Structural declaration
 details are a bounded presentation of adapter entries, not a second independent
 classifier. Fixed expected-source fixtures, not agreement between two counters,
 test the mapping promise.
+
+## Markdown
+
+The pinned Markdown block grammar maps `.md` front matter (`---` or `+++`),
+every nonempty ATX or Setext heading section, and every grammar-recognized
+checked or unchecked task-list item. A section's source range includes its
+heading and own content up to the first nested section; checklist items have
+their own overlapping ranges and `task_state`. Fenced code examples do not
+create headings or checklist entries. Section identity uses its heading path;
+checklist identity uses its ordinal within that path. Repeated headings and
+inserted checklist items can therefore produce conservative add/remove deltas.
+
+The existing `functions`/`function_count` packet keys carry these document
+units for compatibility. Their `declaration_kind` distinguishes `metadata`,
+`section`, and `checklist_item`; they are not executable callables. The block
+parse preserves exact UTF-8 source bytes and parser diagnostics. It does not
+run a Markdown renderer or inline parser, resolve links, validate front-matter
+TOML/YAML, or decide whether a capsule's fields, checkboxes, and acceptance
+criteria satisfy a consumer's policy. Body text outside a mapped unit remains
+visible through the file hash and full Git diff.
 
 ## Shared accounting
 

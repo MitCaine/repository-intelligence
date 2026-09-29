@@ -9,10 +9,10 @@ The shared entry points are `repository_intelligence.locator.index_file` and
 
 | Contract | Current value |
 | --- | --- |
-| Navigation `schema_version` | `6` |
-| `inventory_schema_version` | `13` |
-| `adapter_version` | `10` |
-| `mapping_contract` | `python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v10` |
+| Navigation `schema_version` | `7` |
+| `inventory_schema_version` | `14` |
+| `adapter_version` | `11` |
+| `mapping_contract` | `python-rust-javascript-typescript-java-go-csharp-c-cpp-markdown-source-units-v11` |
 
 Package metadata remains `0.1.0`; pin the RI revision and retain emitted parser
 metadata. Navigation schema alone does not identify all mapping behavior. Check
@@ -22,11 +22,11 @@ have separate shapes. Read the [limitations](limitations.md) with this reference
 
 ## Entry points and selection
 
-`index_file(path, *, root=None, language=None)` reads a file and returns its complete extracted callable list under `functions`. The default identity root is the file's parent. `query_path(source, terms, limit=8, *, root=None, language=None, language_choices=None, excluded_directories=())` accepts a direct path or directory and returns ranked `matches`; limits range from 1 through 20. Internal scan-setup/object-format parameters are implementation seams, not needed for normal consumers.
+`index_file(path, *, root=None, language=None)` reads a file and returns its extracted callable or Markdown-unit list under the retained `functions` key. The default identity root is the file's parent. `query_path(source, terms, limit=8, *, root=None, language=None, language_choices=None, excluded_directories=())` accepts a direct path or directory and returns ranked `matches`; limits range from 1 through 20. Internal scan-setup/object-format parameters are implementation seams, not needed for normal consumers.
 
-For direct files, `language` can select `python`, `rust`, `javascript`, `typescript`, `tsx`, `java`, `go`, `csharp`, `c`, or `cpp`. A known-extension conflict returns `unsupported` with `language_extension_mismatch`; an unknown language is rejected. Unselected unknown/ambiguous extensions return `unsupported` with `no_language_adapter_selected`, provided acquisition succeeds. A direct symlink or a path resolving outside its root is `excluded`, without byte identity.
+For direct files, `language` can select `python`, `rust`, `markdown`, `javascript`, `typescript`, `tsx`, `java`, `go`, `csharp`, `c`, or `cpp`. A known-extension conflict returns `unsupported` with `language_extension_mismatch`; an unknown language is rejected. Unselected unknown/ambiguous extensions return `unsupported` with `no_language_adapter_selected`, provided acquisition succeeds. A direct symlink or a path resolving outside its root is `excluded`, without byte identity.
 
-Directory scans use `.py`, `.rs`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.mts`, `.cts`, `.tsx`, `.java`, `.go`, `.cs`, `.c`, `.cc`, `.cpp`, `.cxx`, `.hh`, `.hpp`, and `.hxx`. Exact relative `.h` paths can additionally be mapped to `c` or `cpp` through `language_choices` / `--header-language`. Direct-file `root` and `language` options do not apply to a directory query.
+Directory scans use `.py`, `.rs`, `.md`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.mts`, `.cts`, `.tsx`, `.java`, `.go`, `.cs`, `.c`, `.cc`, `.cpp`, `.cxx`, `.hh`, `.hpp`, and `.hxx`. Exact relative `.h` paths can additionally be mapped to `c` or `cpp` through `language_choices` / `--header-language`. Direct-file `root` and `language` options do not apply to a directory query.
 
 ## Status and byte identity
 
@@ -50,6 +50,13 @@ Unsupported regular files within the acquisition limit still receive byte identi
 ## Callable records
 
 Successful `index_file` results include `function_count`, `functions`, `parse_error_count`, `adapter_coverage`, parser metadata, structural evidence, and raw identity. Callable records contain `name`, `qualified_name`, display `line`/`column`/`end_line`, `signature`, `docs`, `lexical_call_candidates`, `declaration_kind`, `declaration_id`, half-open raw `byte_range`, and `declaration_sha256`. Additional fields are adapter-specific; consumers must not require a JavaScript alias or C++ preprocessing record from every language.
+
+For Markdown, the retained `functions` and `function_count` keys contain
+document units instead of callables. `declaration_kind` is `metadata`,
+`section`, or `checklist_item`; checklist entries also carry `task_state`.
+Read [Markdown mapping](language-support.md#markdown) before treating a
+section or checkbox delta as a capsule decision. The consumer's validator
+and full Git diff remain necessary.
 
 Named IDs use kind, qualified owner/name, optional syntactic signature, and an ordinal among identical keys. Repeated keys set `identity_ambiguous`; inventory compares them conservatively in changed files. Anonymous identities include source positions and may move after unrelated preceding edits. These IDs are structural, not resolved compiler symbols.
 
@@ -101,6 +108,7 @@ Do not reinterpret an older packet using current semantics.
 | 4 | Added JS/TS binding aliases and direct export semantics; corrected syntactic overload/owner distinctions (inventory 10, mapping v3) |
 | 5 | Corrected decoded raw positions, attached C++ envelopes and classification, token-preserving identity, nested ownership, I/O limits, and packet consistency |
 | 6 | Preserves module bindings and exclusion-only directory evidence; corrects supported newline handling, Python normalized names, and nested/overloaded callable owners (inventory 13, mapping/adapter 10) |
+| 7 | Adds Markdown front matter, section and task-list units under retained packet keys (inventory 14, mapping/adapter 11) |
 
 Within navigation schema 5, later adapter/mapping revisions refined C++ and
 JavaScript identities. Version 8 carries static/instance distinctions through

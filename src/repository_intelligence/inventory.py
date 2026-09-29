@@ -18,8 +18,8 @@ from .source import SCHEMA_VERSION, git_object_format
 from .structural import MAX_DECLARATION_DETAILS, ScanSetup
 
 
-INVENTORY_SCHEMA_VERSION = 13
-MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v10"
+INVENTORY_SCHEMA_VERSION = 14
+MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-markdown-source-units-v11"
 
 
 def _digest(scope: dict, files: list[dict]) -> str:
@@ -194,7 +194,8 @@ def _complete_packet_errors(inventory: dict) -> list[str]:
             errors.append(f"invalid_structural_declarations:{path}")
         else:
             projected = [{"kind": item.get("declaration_kind") if item.get("declaration_kind")
-                          in {"lambda", "closure", "arrow"} else "function",
+                          in {"lambda", "closure", "arrow", "section", "checklist_item",
+                              "metadata"} else "function",
                           "name": (None if item.get("anonymous") or item.get("declaration_kind")
                                    in {"lambda", "closure", "arrow"} else item.get("name")),
                           "byte_range": item.get("byte_range"),

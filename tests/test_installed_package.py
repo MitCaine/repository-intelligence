@@ -115,6 +115,7 @@ class InstalledPackageTests(unittest.TestCase):
             (consumer / "fixture.cs").write_text("class C { int Total(){ return 1; } }\n")
             (consumer / "fixture.c").write_text("int total(){ return 1; }\n")
             (consumer / "fixture.cpp").write_text("int total(){ return 1; }\n")
+            (consumer / "fixture.md").write_text("# Review total\n- [ ] Verify total\n")
             script = temp / "smoke.py"
             script.write_text(
                 "import json\n"
@@ -150,6 +151,7 @@ class InstalledPackageTests(unittest.TestCase):
                 "assert query_path(Path('fixture.cs'), 'total')['matches'][0]['name'] == 'Total'\n"
                 "assert query_path(Path('fixture.c'), 'total')['matches'][0]['name'] == 'total'\n"
                 "assert query_path(Path('fixture.cpp'), 'total')['matches'][0]['name'] == 'total'\n"
+                "assert query_path(Path('fixture.md'), 'verify total')['matches'][0]['name'] == 'Verify total'\n"
                 "assert {name: version(name) for name in expected_versions} == expected_versions\n"
                 "grammar_probes = {'src/orders.py': ('total', 'tree-sitter-python'), "
                 "'src/lib.rs': ('total', 'tree-sitter-rust'), "
@@ -160,17 +162,18 @@ class InstalledPackageTests(unittest.TestCase):
                 "'fixture.go': ('total', 'tree-sitter-go'), "
                 "'fixture.cs': ('total', 'tree-sitter-c-sharp'), "
                 "'fixture.c': ('total', 'tree-sitter-c'), "
-                "'fixture.cpp': ('total', 'tree-sitter-cpp')}\n"
+                "'fixture.cpp': ('total', 'tree-sitter-cpp'), "
+                "'fixture.md': ('verify', 'tree-sitter-markdown')}\n"
                 "for path, (term, distribution) in grammar_probes.items():\n"
                 "    parser = query_path(Path(path), term)['structural']['parser']\n"
                 "    assert parser['runtime_version'] == expected_versions['tree-sitter']\n"
                 "    assert parser['grammar_version'] == expected_versions[distribution]\n"
-                "    assert parser['adapter_version'] == 10\n"
+                "    assert parser['adapter_version'] == 11\n"
                 "polyglot = inventory_tree(Path('.'), stable=True)\n"
                 "assert polyglot['status'] == 'complete'\n"
                 "assert {f['path'] for f in polyglot['files']} == "
                 "{'src/lib.rs', 'src/orders.py', 'fixture.js', 'fixture.ts', 'fixture.tsx', "
-                "'fixture.java', 'fixture.go', 'fixture.cs', 'fixture.c', 'fixture.cpp'}\n"
+                "'fixture.java', 'fixture.go', 'fixture.cs', 'fixture.c', 'fixture.cpp', 'fixture.md'}\n"
                 "Path('fixture.js').write_text('export function calculate_total(){ return 2; }\\n')\n"
                 "changed = inventory_tree(Path('.'), stable=True)\n"
                 "delta = compare_inventories(polyglot, changed)\n"

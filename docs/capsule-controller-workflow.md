@@ -67,9 +67,11 @@ Controller reconciles and uses consumer's guarded approval,
 publication, acceptance, and closeout commands
   verify integration and retained evidence; delete completed capsule branch
 
-Event route: native completion callback when reliable; otherwise
-capsule-queue watches the external job and sends one terminal result
-to a verified controller session. No repeated agent-status polling.
+Event route: use a verified native subagent completion channel when the
+implementor or reviewer is a subagent of this controller. A separate Codex or
+Work chat needs its own verified completion route. capsule-queue can watch an
+external job and notify a Codex session; it does not address a Work chat.
+No repeated controller-turn status polling.
 ```
 
 ## Author a decision-complete capsule
@@ -162,11 +164,12 @@ for an artifact, command result, or required approval.
 
 ## Launch the Codex implementor from a terminal
 
-There are two supported handoff shapes for this guide:
+Choose one implementor handoff shape for the consumer's verified environment:
 
 | Implementor transport | How the controller starts it | What returns |
 | --- | --- | --- |
-| Work to Codex chat | Launch a separate Codex chat with the exact capsule, branch, P and selected context | Chat completion and a candidate handoff through the available chat channel |
+| Native subagent | Delegate the exact capsule to a child with explicit model, effort, and repository access | Result to its parent through the native wait/completion channel |
+| Work to Codex chat | Launch a separate Codex chat with the exact capsule, branch, P and selected context | Candidate handoff through a verified cross-chat completion route; do not assume the parent Work chat is awakened |
 | Terminal Codex CLI | Run the consumer's authenticated wrapper, or the minimal `codex exec` example below after adding its missing checks | Process exit, saved result and terminal notification or a verified queue callback |
 
 Use the same capsule, scope, checks and downstream review requirements in
@@ -174,6 +177,18 @@ either route. A `.py` checkpoint command is a separate candidate transaction:
 it consumes C after implementation and does not start a Codex chat or execute
 the capsule for Codex. The controller selects one implementation transport per
 attempt and does not run both over the same workspace.
+
+Native Work/Codex subagents can return results to their parent without repeated
+controller turns. Select the implementor model and effort explicitly and verify
+that the subagent has the required repository access, host, branch, and push
+route before using this transport. A hosted Work subagent does not inherit a
+local Codex checkout merely because the controller can see it. For the fresh
+review lane, a read-only subagent with an independent context may be used only
+when the consumer's independence rules allow it; otherwise dispatch a separate
+review chat with the exact C SHA and a tested return route. A new chat alone
+does not establish a callback to the controller. See OpenAI's
+[subagent guidance](https://learn.chatgpt.com/docs/agent-configuration/subagents)
+and [Work code-review guidance](https://learn.chatgpt.com/docs/code-review).
 
 For a consumer without an owning launcher, the controller can run Codex from
 the checkout at authenticated planning state P. Replace `<capsule-path>` with
@@ -236,8 +251,9 @@ The exact command flags and Luna's Max support are documented in
    compares planning P to candidate C and keeps the base-to-P planning change
    separate. A structural RI delta is optional; the full P..C Git diff is mandatory.
    At dispatch, establish how its terminal result reaches the controller. Use
-   the native agent completion channel when it reliably wakes the controller;
-   for an external job requiring status checks, use the
+   native completion when the implementor is a supported subagent of the
+   controller; a separately launched chat requires a tested cross-chat route.
+   For an external job requiring status checks, use the
    [queue skill](skill-templates/capsule-queue/SKILL.md) with a blocking watcher.
 4. **Controller:** Fetch the recorded branch and verify its head equals the
    returned C SHA and that the changed-file inventory matches P..C. Qualify
@@ -253,8 +269,10 @@ The exact command flags and Luna's Max support are documented in
    evidence is not PASS. Use the
    [independent review skill](skill-templates/capsule-independent-review/SKILL.md)
    when it is available in the reviewer's Work environment.
-   Arrange its completion route at dispatch as well; the queue is a notifier,
-   never a substitute for the review verdict.
+   Arrange its completion route at dispatch as well. A native subagent result
+   can return to its parent; a separate Work reviewer chat needs a verified
+   cross-chat return route. The queue is a notifier, never a substitute for
+   the review verdict.
 6. **Controller:** Recheck the branch head before integration. If it moved
    beyond the reviewed C, bind qualification and fresh review to the new SHA.
    Reconcile findings, then use the consumer's existing guarded
@@ -273,8 +291,11 @@ reviewer, or approval boundary.
 
 **Queue routing matters:** `codex queue` targets an existing Codex session. It
 does not by itself address an arbitrary ChatGPT Work chat. For a Work
-controller, use its verified native agent completion/wait facility or an
-explicitly tested bridge to the controller's exact task. Where a job exposes
+controller, use its native completion/wait facility for supported subagents or
+an explicitly tested bridge to the controller's exact chat. Official product
+guidance documents subagent return to the parent; it does not establish that
+an independently created Codex or Work chat can wake another Work chat.
+Where a job exposes
 only status polling, attach one bounded watcher with a deadline and terminal
 notification; do not spend repeated controller turns checking unchanged state.
 If no terminal delivery route exists, use one supported blocking wait rather

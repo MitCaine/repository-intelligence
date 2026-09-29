@@ -155,6 +155,7 @@ class ScanIntegrityTests(unittest.TestCase):
             ".cs": b"class C { void Good() {} void Broken( { return ; } }",
             ".c": b"void good(void) {}\nvoid broken(void) { return 1 }",
             ".cpp": b"void good() {}\nvoid broken() { return 1 }",
+            ".md": b"# Good\n\n```\nunterminated fence\n",
         }
         aliases = {".jsx": ".js", ".mjs": ".js", ".cjs": ".js",
                    ".mts": ".ts", ".cts": ".ts", ".cc": ".cpp",
@@ -172,7 +173,8 @@ class ScanIntegrityTests(unittest.TestCase):
                                          "byte_range": {"start": node.start_byte,
                                                         "end": node.end_byte}})
                     pending.extend(reversed(node.children))
-                self.assertGreater(len(expected), 0)
+                if suffix != ".md":  # Markdown accepts an unclosed fence as content.
+                    self.assertGreater(len(expected), 0)
                 self.assertEqual(syntax["diagnostics"], expected[:MAX_DIAGNOSTIC_DETAILS])
                 self.assertEqual(syntax["error_count"],
                                  sum(item["kind"] == "ERROR" for item in expected))

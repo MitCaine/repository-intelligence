@@ -41,7 +41,8 @@ RESULT = CACHE / 'update-result.json'
 REJECTIONS = CACHE / 'rejected-updates.json'
 GRAMMAR_NAMES = {'tree-sitter', 'tree-sitter-python', 'tree-sitter-rust',
                  'tree-sitter-javascript', 'tree-sitter-typescript', 'tree-sitter-java',
-                 'tree-sitter-go', 'tree-sitter-c-sharp', 'tree-sitter-c', 'tree-sitter-cpp'}
+                 'tree-sitter-go', 'tree-sitter-c-sharp', 'tree-sitter-c', 'tree-sitter-cpp',
+                 'tree-sitter-markdown'}
 
 
 def run(*args: str, env: dict[str, str] | None = None) -> None:

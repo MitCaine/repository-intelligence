@@ -2,23 +2,24 @@
 
 `repository_intelligence.inventory.inventory_tree(root, stable=False,
 logical_root=".")` scans supported Python, Rust, JavaScript, JSX, TypeScript,
-TSX, Java, Go, C#, C, and C++ source without query terms. The current inventory
-schema is version 13; older packets are incompatible with it. `.mts` and `.cts`
+TSX, Java, Go, C#, C, C++, and Markdown source without query terms. The current inventory
+schema is version 14; older packets are incompatible with it. `.mts` and `.cts`
 use the TypeScript adapter. Ambiguous `.h` files are not guessed: pass
 `language_choices={"include/api.h": "cpp"}` (or `"c"`) for exact relative
 header paths in both directory queries and inventories. Unselected `.h` files
 are listed in `observed_unsupported_paths`.
-Mapping contract v10 carries the corrected declaration identity, source-range,
-and classification semantics documented in [navigation reference](navigation.md).
+Mapping contract v11 adds Markdown front matter, section and checklist units
+to the existing source-callable mappings documented in
+[navigation reference](navigation.md).
 Every supported in-scope file appears in `files`, including files with zero
-mapped callables. Each file carries its exact `source_identity`, parser and
+mapped units. Each file carries its exact `source_identity`, parser and
 adapter coverage, structural diagnostics, mapping status, and contracted
 declaration entries. Excluded hidden/generated directories, symlinks, nested
 repositories are reported in `observed_exclusions`; two distinct relative paths
 hardlinked to the same bytes are both included. Source-like unsupported paths
 are named in `observed_unsupported_paths`; other file types are counted.
 This is source-level coverage
-for the [current callable contract](language-support.md), not compiled
+for the [current mapping contract](language-support.md), not compiled
 program, generated macro, or semantic-call completeness.
 
 The default working-tree walk is `incomplete` because it is not atomic. Pass
