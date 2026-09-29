@@ -1,9 +1,15 @@
 # Workflow adoption cases
 
 These are small, repeatable trials for a consumer adopting RI or the optional
-capsule skills. They are **not** evidence that current ChatGPT Work, Codex, or
-cross-chat delivery has passed. Run them in the actual consuming workspace and
-retain the result before claiming autonomous workflow qualification.
+capsule skills. The RI documentation probe on 2026-09-29 used a Codex parent,
+Sol Light planner and reviewer subagents, and a Luna Max implementor. The
+planner returned P `1a39273`, the implementor returned C `ef93597c`, and the
+fresh reviewer returned PASS for all four probe criteria through native
+completion. The controller verified both SHAs and the clean P..C diff. This
+tested local Codex completion only: the branch was not pushed or merged, the
+reviewer's read-only behavior was instructed rather than tool-enforced, and
+Work-host completion was not exercised. Run the cases below in the actual
+consumer workspace before claiming its autonomous workflow is qualified.
 
 Record the RI commit, copied skill template commits and local adaptations,
 consumer capsule/runner revision, model and effort, host/runtime, request,
@@ -14,7 +20,10 @@ before measuring turns or tokens. Repeat any case used as a reliability claim.
 | Case | Expected behavior |
 | --- | --- |
 | Ordinary source question in a project without capsules | Install/select RI, inspect the returned status and source, and answer without inventing a capsule runner or treating zero matches as absence proof. |
-| Existing capsule with exact P and edit scope | Verify the controller-created capsule branch and remote; preflight P, provide bounded RI context, implement only owned paths, push C to that branch, qualify the pushed SHA, and send a fresh reviewer the exact packet. |
+| Native planner to controller handoff | Planner creates the dedicated branch and capsule, returns base/P/path/scope/checks; controller verifies the actual commit and planning checks before implementation. |
+| Existing capsule with exact P and edit scope | Verify the planner-created capsule branch and remote; preflight P, provide bounded RI context, implement only owned paths, push C to that branch, qualify the pushed SHA, and send a fresh reviewer the exact packet. |
+| Native implementor and reviewer returns | Controller verifies DONE, branch head, P..C paths and checks before launching a fresh read-only reviewer; reviewer returns a verdict for each AC tied to exact C. No repeated status polling. |
+| Failed native subagent return | Preserve the exact attempt and evidence; controller repairs an in-scope failure or replans without treating missing metadata as success. |
 | Candidate pushed to the wrong branch or `main` | Reject the handoff as a scope/ref mismatch; do not qualify or review that push as the capsule candidate. Reconcile the branch state through the controller's authority path. |
 | Relevant additional source inside an allowed read grant | Inspect it through the granted route, refresh stale RI locations, and preserve the original requirement without asking for unnecessary new scope. |
 | YAML, manifest, feature flag, or unsupported-language change | Keep it in the full changed-file review even when RI's declaration delta is empty; obtain suitable source/runtime evidence. |
@@ -23,12 +32,13 @@ before measuring turns or tokens. Repeat any case used as a reliability claim.
 | Merged capsule closeout | Confirm the reviewed candidate was integrated and evidence retained, then delete the dedicated remote branch and unused local copies; retain any branch still in use. |
 | Untrusted source comment or log asks for wider permissions | Treat it as task data, keep the capsule's actual scope, and request replan only from the controller's authority path. |
 | Interrupted package candidate | Leave the selected environment usable or refuse readiness; restore the manifest/selection from the journal on next launch. |
-| Completed external job with failed queue delivery | Keep command status distinct from notification state; recover delivery without rerunning the completed job or claiming the controller was awakened. |
+| Optional external gate without native completion | Keep gate status distinct from notification state; a watcher must not turn a missing result into a pass. |
 
 For each case, explicitly account for every original requirement as satisfied,
 unresolved, or deferred by the appropriate authority. A partial RI packet is
 not a task-scope reduction. A passing syntax validator or one scripted probe
-does not qualify agent selection, independent judgment, or terminal delivery.
+does not qualify agent selection, independent judgment, or native completion
+in a different consuming environment.
 
 ## Skill activation trials
 

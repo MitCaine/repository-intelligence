@@ -19,44 +19,42 @@ independence, or a completion channel.
    authority for a capsule.
 3. **Install the relevant skill folders for local Codex.** Copy the whole
    selected folders from [RI's templates](skill-templates/README.md) into the
-   consumer repository's `.agents/skills/`, including the queue helper script
-   if using `capsule-queue`. Compare any existing skill before replacing it.
+   consumer repository's `.agents/skills/`. Compare any existing skill before
+   replacing it.
    Record the RI template revision and project adaptations. Check that Codex
    discovers the skills from that repository and try a harmless invocation.
-4. **Make the Work roles able to read their instructions.** The controller needs
-   the adapted `capsule-preflight` and `ri-evidence-handoff` instructions. The
-   separate, fresh reviewer needs `capsule-independent-review` and may use
-   `ri-evidence-handoff` for source inspection. Provide these through the
-   supported ChatGPT Work workspace skill or plugin route, or explicitly in the
-   role's handoff packet. A local `.agents/skills/` copy does not install skills
-   in a Work chat. Verify availability in both Work roles before relying on
-   automatic activation.
-5. **Test each return route before relying on it.** A native subagent can return
-   to its parent Work or Codex chat. A separately created Codex implementor
-   chat or Work reviewer chat needs a verified cross-chat route; its ordinary
-   completion does not prove that the controller will wake. Test one success
-   and one failure for each route. `capsule-queue` is for an external job that
-   otherwise needs polling and can notify a verified Codex session; a local
-   `codex queue` target alone cannot wake a Work controller.
+4. **Make every role able to read its instructions.** The continuing controller
+   and capsule planner need the adapted `capsule-preflight` and
+   `ri-evidence-handoff` instructions. The implementor needs preflight and the
+   exact capsule. The fresh reviewer needs `capsule-independent-review` and may
+   use `ri-evidence-handoff` for source inspection. Provide these through the
+   environment's supported skill route or in each handoff packet. A local
+   `.agents/skills/` copy does not install skills in a Work chat. Verify actual
+   availability for all four roles.
+5. **Test native subagent completion.** The controller should delegate a small
+   capsule to a planner, verify returned P, delegate implementation with P,
+   verify returned C, then delegate a fresh read-only review with exact P/C.
+   Confirm branch and SHA metadata at every return. Test both successful and
+   failed subagent returns in the actual host. Use native completion rather
+   than repeated controller status checks; no queue helper is needed for these
+   three handoffs.
 6. **Run a trial capsule.** Use the [adoption cases](adoption-cases.md) to check
    correct and incorrect skill activation, branch creation and candidate push,
    exact-SHA qualification, fresh review, correction, and closeout. Record the
    result before calling the setup reliable.
 
-For the first trial, choose the [Work-to-Codex chat or terminal transport](capsule-controller-workflow.md#launch-the-codex-implementor-from-a-terminal).
-The Work route gives the Codex chat the exact capsule, branch and P. The CLI
-route uses the consumer's owning launch command. If none exists, the minimal
-terminal example requests `gpt-6-luna` with Max reasoning; build and validate
-the missing preflight, result capture and candidate transaction before adopting
-it. Poker App owns a different exact direct wrapper in its
-[command guide](https://github.com/MitCaine/poker-app/blob/main/engineering/workflow/CAPSULE_COMMANDS.md).
+The [native subagent handoff](capsule-controller-workflow.md#delegate-through-native-subagents)
+uses one continuing controller, a capsule planner, a Luna Max implementor, and
+a fresh read-only reviewer. Sol Light is the target controller model and the
+tested planner and reviewer model; confirm model names, efforts, repository access, and enforced review
+permissions in each consuming host before relying on the route.
 
 | Stage | Skill to use when applicable | Owner |
 | --- | --- | --- |
-| Authenticate capsule, branch, P, and scope | `capsule-preflight` | Controller and implementor |
+| Authenticate capsule, branch, P, and scope | `capsule-preflight` | Controller, planner, and implementor |
 | Select and bind source context or P-to-C evidence | `ri-evidence-handoff` | Controller; implementor or reviewer as needed |
 | Judge exact pushed candidate independently | `capsule-independent-review` | Fresh reviewer |
-| Notify one terminal external-job outcome | `capsule-queue` | Verified watcher route; controller receives result |
+| Return planner, implementor, and reviewer results | Native subagent completion | Continuing controller verifies each result |
 
 The [skill templates](skill-templates/README.md) are the source to copy. Use
 only the skills relevant to the consumer's actual workflow. At each handoff,

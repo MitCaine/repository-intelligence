@@ -8,17 +8,18 @@ approval boundaries against the consumer's current capsule contract before
 installing it. Keep the capsule and local `AGENTS.md` authoritative.
 Start with the [new-project setup checklist](../new-project-setup.md) when
 adopting the workflow in a consumer repository.
-In the documented handoff, the controller creates a dedicated capsule branch
-and records its remote and planning state. The implementor pushes candidate
-commits to that branch for review. A consumer adaptation should retain this
+In the documented handoff, the controller delegates dedicated branch and
+capsule creation to a planner subagent, then verifies its remote and planning
+state. The implementor pushes candidate commits to that branch for review. A
+consumer adaptation should retain this
 role split and make any different branch policy explicit.
 
 | Template | Role | Copy when |
 | --- | --- | --- |
-| [capsule-preflight](capsule-preflight/SKILL.md) | Controller or implementor | The project has an active capsule workflow with exact base/scope checks. |
+| [capsule-preflight](capsule-preflight/SKILL.md) | Controller, planner, or implementor | The project has an active capsule workflow with exact base/scope checks. |
 | [ri-evidence-handoff](ri-evidence-handoff/SKILL.md) | Controller, implementor, or reviewer | RI locations or comparisons will enter a handoff. |
 | [capsule-independent-review](capsule-independent-review/SKILL.md) | Fresh reviewer | The consumer requires candidate-bound independent review. |
-| [capsule-queue](capsule-queue/SKILL.md) | External agent or gate watcher | A dispatched job would otherwise require repeated polling, and its exact controller destination and terminal callback route are verified. |
+| [capsule-queue](capsule-queue/SKILL.md) | Optional external gate watcher | A non-subagent job has no native completion and its exact controller destination is verified. It is not part of the native three-subagent handoff. |
 
 For a project-scoped Codex installation, copy the chosen **whole skill folders**
 to that project's `.agents/skills/` (or the skill location supported by its
@@ -37,14 +38,11 @@ workspace, verify that a fresh agent discovers the intended instructions and
 selects the intended skill for a representative request.
 
 ChatGPT Work has a separate skill lifecycle; copying files into a Mac checkout
-does not make them available in a Work chat. Give the Work controller and fresh
-reviewer their applicable instructions through the supported workspace route,
-then verify availability. If cross-chat delivery is unavailable, exchange the
-exact return packet through the existing controller handoff rather than claiming
-the queue helper can send it. The queue template can watch an external agent
-job or qualification command, but `codex queue` addresses a Codex session,
-not an arbitrary Work chat. Use a verified Work-native completion route or
-tested bridge for a Work controller.
+does not make them available in a Work chat. Give the controller, planner,
+implementor, and reviewer their applicable instructions through the supported
+workspace route, then verify availability. The native subagents return to the
+same parent controller. The optional queue template is retained for external
+gates that lack native completion; it is unnecessary for these subagents.
 
 Keep the templates narrow. A project need not install all four, and no skill
 creates capsule authority, review independence, or a successful qualification

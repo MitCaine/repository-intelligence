@@ -24,7 +24,8 @@ apply here. The current user request defines the task scope.
   persistent indexes, or consumer permission policy without a concrete need.
 - For this standalone RI checkout, do not commit, push, merge, or change
   repository settings unless requested. This restriction does not override the
-  documented consumer capsule workflow: its controller creates the dedicated
-  capsule branch, and its implementor commits and pushes authorized candidate
-  work to that branch for review. Neither role pushes directly to `main` as
-  part of that handoff; the consumer's acceptance route controls integration.
+  documented consumer capsule workflow: its controller directs a capsule
+  planner subagent to create the dedicated branch and verifies planning state
+  P before dispatch. Its implementor subagent commits and pushes authorized
+  candidate work to that branch for review. No subagent pushes directly to
+  `main`; the consumer's acceptance route controls integration.

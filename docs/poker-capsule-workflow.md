@@ -1,6 +1,6 @@
 # Poker capsule workflow: first-consumer recipe
 
-For the complete controller/implementor/reviewer loop, terminal callbacks,
+For the complete controller/planner/implementor/reviewer loop, native completion,
 checkable capsule requirements, recovery decisions, and optional skill templates, see the
 [capsule controller workflow](capsule-controller-workflow.md). This page remains
 the Poker-specific source and page handoff recipe.
@@ -22,18 +22,19 @@ intent, all active acceptance criteria and repository standards. The controller
 reconciles findings and authorizes integration. A controller who writes a patch
 still needs someone else to review that candidate; different identity strings
 in a receipt alone cannot establish independent reasoning.
-The controller prepares the dedicated execution branch from authenticated
-planning P. In Poker's current direct CLI lane, Codex edits but does not commit
-or push. The controller/operator creates candidate C, qualifies and reviews
-that exact SHA, then publishes it under the selected review lane. The literal
-launch and checkpoint commands are owned by Poker's
-[CAPSULE_COMMANDS.md](https://github.com/MitCaine/poker-app/blob/main/engineering/workflow/CAPSULE_COMMANDS.md).
+The planner subagent prepares the dedicated execution branch and capsule under
+the controller's authenticated objective. The controller verifies P before
+dispatch. The implementor subagent commits and pushes C to that branch when
+the consumer's candidate route permits it. The controller verifies and
+qualifies exact C, then sends it to a fresh read-only reviewer subagent.
+Poker's own current capsule contract and acceptance route remain controlling;
+adapt its runner and commit ownership before using this subagent pattern there.
 
 | Step and owner | Useful RI contribution | Required evidence outside RI |
 | --- | --- | --- |
 | Triage and draft — controller | Locate the owning declaration and likely callers/tests; expose parser gaps | Resolved intent, actual callers/types/contracts, read/edit scope and independent acceptance oracles |
 | Context preparation — controller | Suggest exact source envelopes and conditional native questions | Base Git blobs, authenticated excerpts, selected transport and installed prerequisites |
-| Implementation — implementor | Narrow navigation within permitted reads; refresh locations after edits | Frozen capsule, authorized edits and test result; controller/operator creates exact C afterward |
+| Implementation — implementor | Narrow navigation within permitted reads; refresh locations after edits | Frozen capsule, authorized edits, tests, committed C and branch/ref metadata |
 | Qualification — controller/runner | Source delta can focus additional inspection | Required compiler/runtime tests against exact candidate C and actual feature/target configuration |
 | Review — fresh reviewer | Independently regenerate navigation or P-to-C comparison when useful | Full Git diff, exact capsule/intent, qualification Q(C), all-AC and Standards findings |
 | Correction and integration — controller | Explain structural changes in the new candidate | Fresh required proof/review for changed C, approval and existing guarded closeout |
@@ -104,10 +105,10 @@ authorized output, never an unowned tracked ledger.
    the controller still resolves semantic omissions and chooses the supported
    execution/review lane.
 6. During execution, use supplied pages and only the expansion mechanism the
-   selected transport supports; otherwise use the authorized repository-read lane. RI does
+   selected subagent host supports; otherwise use the authorized repository-read lane. RI does
    not add a new read permission or permit missing context to be invented.
-7. After the direct Codex process, have the controller/operator run authored
-   checks, create C, and bind qualification and independent review to it.
+7. After the implementor subagent returns DONE, have the controller verify its
+   committed C and run authored checks, binding qualification and independent review to it.
    Review that SHA with the full changed-file list, tests, and—when useful—
    RI's structural delta from stable planning/candidate trees with equal policy.
    Configuration, imports, type definitions, unsupported files, and enclosing
@@ -194,7 +195,7 @@ RI can navigate some non-UTF-8 Python files that this page mechanism rejects.
 A declaration can also be larger than one page. Use controller-selected smaller
 pages with the essential context, or an explicitly authorized source-read lane;
 do not silently transcode, truncate, or invent a new expansion permission.
-Direct implementation transports must actually supply the selected context:
+Implementation handoffs must actually supply the selected context:
 listing expansion IDs does not implement the legacy runner's page-request loop.
 
 ## Comparison is a review aid, not a test selector

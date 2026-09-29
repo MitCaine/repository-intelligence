@@ -16,11 +16,11 @@ execution, and acceptance stay with the consumer project.
 | Your task | Start here | What you get |
 | --- | --- | --- |
 | Use RI in an ordinary project | [Consumer guide](docs/consumer-guide.md), then the `locator` command below | Source navigation and coverage evidence; no capsule is required. |
-| Use RI with a capsule workflow | [New-project setup](docs/new-project-setup.md), [controller workflow](docs/capsule-controller-workflow.md), and [skill templates](docs/skill-templates/README.md) | Work-to-Codex chat and terminal CLI handoffs to adapt to the project's authority, tests, and review lane. |
+| Use RI with a capsule workflow | [New-project setup](docs/new-project-setup.md), [controller workflow](docs/capsule-controller-workflow.md), and [skill templates](docs/skill-templates/README.md) | One controller delegates capsule planning, implementation, and independent review to native subagents. |
 | Maintain the RI package | [Architecture](docs/architecture.md), [maintenance](docs/maintenance.md), and [documentation index](docs/README.md) | Module boundaries, updater/bundle commands, and verification requirements. |
 
-RI does not supply a consumer capsule runner, project permissions, approval
-rules, or a Work-to-Codex callback. A project can use RI source evidence without
+RI does not supply a consumer capsule runner, project permissions, or approval
+rules. A project can use RI source evidence without
 adopting the optional capsule workflow.
 
 ## First query
@@ -73,11 +73,10 @@ Keep the original structural evidence; the providers have different coverage.
 handoff through its existing context-page helper.
 The [capsule controller workflow](docs/capsule-controller-workflow.md) explains
 the purpose, capsule requirements and checkable acceptance criteria, full
-handoff, terminal result routing, recovery decisions, and optional project
-skill templates. The Work controller can launch a Codex chat or use a terminal
-Codex CLI wrapper. The consumer's capsule remains the execution authority;
-its own workflow determines who commits and publishes the candidate. Poker's
-current direct CLI route leaves those steps to the controller/operator.
+handoff, native subagent completion, recovery decisions, and optional project
+skill templates. The controller verifies the planner's P and implementor's C
+before delegating a fresh read-only review. The consumer's capsule remains the
+execution authority; its own workflow controls publication and integration.
 
 ## Develop and verify
 

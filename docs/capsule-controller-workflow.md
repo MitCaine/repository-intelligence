@@ -3,9 +3,13 @@
 This is a reusable handoff pattern, not an RI execution policy. The consumer
 repository's current capsule contract, runner, issue state, and supported-host
 rules control the work. RI supplies bounded source evidence. The example roles
-are Controller, Implementor, and Independent Reviewer. Consumer projects may
-choose models and effort levels using their own evaluated workflow. Local Codex
-skills do not automatically appear in Work chats.
+are Orchestrator/Controller, Capsule Planner, Implementor, and Independent
+Reviewer. The target model assignment is a Sol Light controller and planner,
+a Luna Max implementor, and a fresh Sol Light reviewer. The RI probe verified
+the three child roles and native completion in Codex; it did not qualify a
+Work-host controller. Confirm model availability and repository access in the
+actual consumer environment. Local
+Codex skills do not automatically appear in Work chats.
 
 ## Why this guide exists
 
@@ -24,11 +28,15 @@ complete structural comparison; it does not by itself cancel otherwise
 authorized work. Use another approved evidence route or replan while keeping
 the obligation visible.
 
-For each capsule, the controller authenticates the base, creates a dedicated
-branch, writes the capsule and planning state P through the consumer's planning
-route, validates P, then publishes the branch and records its exact remote/ref
-and P SHA before dispatch. The implementor commits and pushes candidate work
-to that branch for review. Use forward pushes so earlier candidate SHAs remain
+For each capsule, the controller authenticates the issue and base, then asks a
+capsule-planner subagent to create the dedicated branch and decision-complete
+capsule. The planner returns branch, base, P, capsule path, scope, checks, and
+status. The controller independently verifies those against Git and the
+consumer's planning route before dispatching an implementor subagent. The
+implementor commits and pushes candidate C to that branch where the consumer
+requires a remote review ref. The controller verifies the reported C and
+changed paths, qualifies exact C, and sends a fresh read-only reviewer subagent
+the complete packet. Use forward pushes so earlier candidate SHAs remain
 reachable; preserve failed candidate evidence separately. A push makes a
 candidate available; it does not qualify, approve, or integrate it. The
 consumer's guarded acceptance path controls integration into `main`.
@@ -37,11 +45,15 @@ consumer's guarded acceptance path controls integration into `main`.
 User objective
     |
     v
-Controller
+Controller (one continuing parent)
   authenticate issue + current repository state
-  write decision-complete capsule in consumer's format
-  create dedicated capsule branch from authenticated base
-  validate P, publish branch, record remote/ref + P SHA; dispatch
+    |
+    v
+Capsule Planner subagent -> create branch + decision-complete capsule
+    | native completion: branch, base, P, capsule, scope, checks, status
+    v
+Controller -> independently verify P, validate planning, publish branch
+    | mismatch --> STOP_REPLAN --> repair planning state --> verify again
     |
     v
 Preflight exact capsule/base/planning overlay/scope/host
@@ -50,28 +62,26 @@ Preflight exact capsule/base/planning overlay/scope/host
 RI evidence, if useful: locate -> inspect -> bind to exact Git blob
     |
     v
-Implementor -> commit and push C to capsule branch + tests + return packet
-    | terminal result --> event route --> controller wakes once
+Implementor subagent -> commit and push C to capsule branch + tests
+    | native completion: DONE/STOP_REPLAN, C, paths, checks, status
     |
     v
-Controller verifies pushed C, then qualifies exact C on required host/checks
-    | terminal result --> event route --> controller wakes once
+Controller verifies C metadata + branch head, then qualifies exact C
     | failure --> preserve C/evidence --> correction or revised capsule --+
     v                                                                |
-Independent Reviewer (fresh read-only context)                 |
+Independent Reviewer subagent (fresh read-only context)         |
   exact capsule + P/C + full diff + qualification evidence              |
-    | terminal verdict --> event route --> controller wakes once         |
+    | native completion: per-criterion verdict + exact metadata           |
     | FAIL or missing evidence --> preserve C/findings -----------------+
     v PASS for every active criterion and applicable standard
 Controller reconciles and uses consumer's guarded approval,
 publication, acceptance, and closeout commands
   verify integration and retained evidence; delete completed capsule branch
 
-Event route: use a verified native subagent completion channel when the
-implementor or reviewer is a subagent of this controller. A separate Codex or
-Work chat needs its own verified completion route. capsule-queue can watch an
-external job and notify a Codex session; it does not address a Work chat.
-No repeated controller-turn status polling.
+The parent waits on each native subagent completion; it does not repeatedly
+poll unchanged status. Verify each returned identity and result before the
+next delegation. The capsule-queue watcher is unnecessary for these native
+subagent handoffs.
 ```
 
 ## Author a decision-complete capsule
@@ -142,8 +152,9 @@ drafting example, not a new file format:
       Evidence: <candidate-bound result location to fill after execution>
 ```
 
-The controller authors `Expected` and `Check` before implementation. The implementor may
-check off implementation work, but only candidate-bound check results and the
+The planner drafts `Expected` and `Check`; the controller verifies and owns
+them before implementation. The implementor may check off implementation
+work, but only candidate-bound check results and the
 fresh reviewer can satisfy the AC. If a requirement cannot be made observable,
 resolve it before dispatch rather than leaving the implementor to guess.
 
@@ -162,74 +173,45 @@ applicable standard, all tied to C. The controller records disposition and uses
 the consumer's guarded closeout path. No model role or skill name substitutes
 for an artifact, command result, or required approval.
 
-## Launch the Codex implementor from a terminal
+## Delegate through native subagents
 
-Choose one implementor handoff shape for the consumer's verified environment:
+Keep one controller as the continuing parent. Delegate these roles in order;
+each subagent returns through the host's native completion channel:
 
-| Implementor transport | How the controller starts it | What returns |
+| Subagent | Input from controller | Required return |
 | --- | --- | --- |
-| Native subagent | Delegate the exact capsule to a child with explicit model, effort, and repository access | Result to its parent through the native wait/completion channel |
-| Work to Codex chat | Launch a separate Codex chat with the exact capsule, branch, P and selected context | Candidate handoff through a verified cross-chat completion route; do not assume the parent Work chat is awakened |
-| Terminal Codex CLI | Run the consumer's authenticated wrapper, or the minimal `codex exec` example below after adding its missing checks | Process exit, saved result and terminal notification or a verified queue callback |
+| Capsule planner, Sol Light | Authenticated objective, base, consumer format and branch policy | Branch/ref, base, capsule path, P SHA, owned paths, ACs, checks, planning status |
+| Implementor, Luna Max | Verified P, exact capsule, branch/ref, permitted source context | DONE or STOP_REPLAN, committed C SHA, changed paths, check results, clean/status state |
+| Fresh independent reviewer, Sol Light | Exact P and C, full diff, capsule, qualification logs and standards | Per-AC and standards verdict, exact C and branch metadata, findings or uncertainty |
 
-Use the same capsule, scope, checks and downstream review requirements in
-either route. A `.py` checkpoint command is a separate candidate transaction:
-it consumes C after implementation and does not start a Codex chat or execute
-the capsule for Codex. The controller selects one implementation transport per
-attempt and does not run both over the same workspace.
+The controller checks the planner's P against the actual branch and capsule
+before launching the implementor. After DONE, it checks C against the branch
+head, P..C changed paths, and required checks before launching the reviewer.
+After review, it checks the returned verdict against the same C and rechecks
+the branch head before integration. A completion message is a trigger to
+inspect evidence, never evidence by itself. Use a supported bounded native
+wait for a running child; do not spend repeated controller turns polling.
 
-Native Work/Codex subagents can return results to their parent without repeated
-controller turns. Select the implementor model and effort explicitly and verify
-that the subagent has the required repository access, host, branch, and push
-route before using this transport. A hosted Work subagent does not inherit a
-local Codex checkout merely because the controller can see it. For the fresh
-review lane, a read-only subagent with an independent context may be used only
-when the consumer's independence rules allow it; otherwise dispatch a separate
-review chat with the exact C SHA and a tested return route. A new chat alone
-does not establish a callback to the controller. See OpenAI's
-[subagent guidance](https://learn.chatgpt.com/docs/agent-configuration/subagents)
-and [Work code-review guidance](https://learn.chatgpt.com/docs/code-review).
-
-For a consumer without an owning launcher, the controller can run Codex from
-the checkout at authenticated planning state P. Replace `<capsule-path>` with
-that project's active capsule path. This is a minimal implementation command
-(wrapped for readability); the consumer still owns preflight, qualification,
-review, commit and publication:
-
-```sh
-codex exec -m gpt-6-luna -c 'model_reasoning_effort="max"' \
-  --sandbox workspace-write --approve-for-me \
-  'Read and preflight <capsule-path> against the recorded branch and P. Implement only its authorized scope and report changed paths, test results, and unresolved gaps. STOP_REPLAN on an authority mismatch.'
-```
-
-The controller substitutes the actual capsule path and retains the command's
-terminal output and exit status with the candidate handoff. `--approve-for-me`
-routes eligible tool approvals through automatic review; it does not grant
-wider capsule scope. This example does not supply a complete execution wrapper
-or authorize Codex to commit and push. If the consumer owns a launch command,
-use that exact command and its model/effort settings instead of this example.
-For Poker App, the current literal command owner is
-[CAPSULE_COMMANDS.md](https://github.com/MitCaine/poker-app/blob/main/engineering/workflow/CAPSULE_COMMANDS.md):
-its direct wrapper requests `gpt-5.6-luna` at Max, authenticates the branch,
-planning SHA, capsule and runtime, preserves the process result, and alerts on
-completion. The Poker checkpoint CLI consumes committed C; it does not launch
-implementation. Poker's controller/operator transaction handles commit,
-qualification, review and candidate publication after the direct Codex process.
-The exact command flags and Luna's Max support are documented in
-[OpenAI's CLI settings](https://learn.chatgpt.com/docs/developer-settings),
-[CLI commands](https://learn.chatgpt.com/docs/developer-commands), and
-[Luna model reference](https://developers.openai.com/api/docs/models/gpt-6-luna).
+Use a fresh reviewer context with read-only access that is enforced by the
+consumer's review lane. A role label or request to avoid edits is insufficient
+if the agent still has write tools. If the consumer's independence policy does
+not admit a subagent reviewer, resolve that lane before adoption; do not mark
+review complete from the implementor's self-report. Confirm each subagent's
+host, repository access, branch, model and effort before dispatch. The small
+RI probe demonstrated native completion in Codex; a consumer still has to
+qualify its own host and protected review lane. See OpenAI's
+[subagent guidance](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
 ## Run one objective to completion
 
-1. **Controller:** Establish the objective, current issue and active-capsule
-   state, accepted runner lane, exact base and planning identities, edit/read
-   scope, non-goals, independently expected acceptance results, required checks,
-   supported host, and stop conditions. Create the capsule using the consumer's
-   existing schema. Create its dedicated branch from the authenticated base,
-   put planning state P on it through the consumer's planning route, and run
-   draft/planning checks. Publish the validated branch and record its exact
-   remote/ref and P SHA before dispatch. Use the
+1. **Controller and planner subagent:** The controller establishes the objective,
+   current issue, accepted runner lane, authenticated base, consumer rules,
+   supported host, and unresolved decisions. Delegate capsule drafting and
+   dedicated branch creation to a planner subagent. It returns the capsule,
+   branch/ref, P SHA, edit/read scope, non-goals, independently expected ACs,
+   checks, and stop conditions. The controller inspects the actual planning
+   diff, runs draft/planning checks, resolves omissions, publishes the validated
+   branch, and verifies its remote/ref and P SHA before implementation. Use the
    [capsule preflight template](skill-templates/capsule-preflight/SKILL.md)
    to authenticate the envelope; it cannot supply missing authority.
 2. **Context:** Ask RI a specific source question only where it helps. Bind each
@@ -240,39 +222,33 @@ The exact command flags and Luna's Max support are documented in
    skill to bind selected evidence. See the
    [consumer guide](consumer-guide.md), and the
    [Poker example](poker-capsule-workflow.md).
-3. **Implementor:** Authenticate P and the controller-created branch before
-   editing, using `capsule-preflight` where installed. The Work controller may
-   launch a Codex chat with the exact handoff; the terminal route uses the
-   consumer's wrapper or the example above when no launcher exists. Work only within the
-   capsule's grants. The controller/operator commits and publishes candidate C
-   under the consumer's policy; in Poker's current direct lane, Codex does not
-   commit or push. Return changed paths, authored tests, exact commands
-   and results, unresolved questions, and any scope collision. The controller
+3. **Implementor subagent:** Authenticate P and the planner-created branch
+   before editing, using `capsule-preflight` where installed. Work only within
+   the capsule's grants. Commit and push C to the dedicated branch when that
+   is the consumer's authorized candidate route; never push directly to main.
+   Return DONE or STOP_REPLAN, C SHA, changed paths, authored tests, exact
+   checks and results, unresolved questions, and any scope collision. The
+   controller
    compares planning P to candidate C and keeps the base-to-P planning change
    separate. A structural RI delta is optional; the full P..C Git diff is mandatory.
-   At dispatch, establish how its terminal result reaches the controller. Use
-   native completion when the implementor is a supported subagent of the
-   controller; a separately launched chat requires a tested cross-chat route.
-   For an external job requiring status checks, use the
-   [queue skill](skill-templates/capsule-queue/SKILL.md) with a blocking watcher.
+   Wait for native completion, then authenticate the returned metadata against
+   the branch and repository before treating DONE as a candidate handoff.
 4. **Controller:** Fetch the recorded branch and verify its head equals the
    returned C SHA and that the changed-file inventory matches P..C. Qualify
    exact C using the authored checks on the required host. Route long external
-   gates through the same terminal event pattern. Open or update a review PR
+   gates through their own supported completion mechanism. Open or update a
+   review PR
    when the consumer uses GitHub PRs; confirm that consumer's hosted checks
    actually ran for the candidate. A branch push alone is not a hosted pass.
-   Save raw status and logs, then wake the verified controller session once.
-5. **Fresh reviewer:** Receive the exact capsule/intent, branch/ref, and P/C
+   Save raw status and logs bound to C.
+5. **Fresh reviewer subagent:** Receive the exact capsule/intent, branch/ref, and P/C
    identities, complete diff and changed-file inventory, raw qualification evidence, and
    current standards. Read the candidate independently and return a PASS/FAIL
    disposition for every active criterion and applicable standard. Missing
    evidence is not PASS. Use the
    [independent review skill](skill-templates/capsule-independent-review/SKILL.md)
-   when it is available in the reviewer's Work environment.
-   Arrange its completion route at dispatch as well. A native subagent result
-   can return to its parent; a separate Work reviewer chat needs a verified
-   cross-chat return route. The queue is a notifier, never a substitute for
-   the review verdict.
+   when it is available in the reviewer's environment. Wait for its native
+   completion, then authenticate the verdict's exact candidate metadata.
 6. **Controller:** Recheck the branch head before integration. If it moved
    beyond the reviewed C, bind qualification and fresh review to the new SHA.
    Reconcile findings, then use the consumer's existing guarded
@@ -289,18 +265,10 @@ the authorized repair, checks, and handoff, and surface only an actual decision
 or final result. This does not grant a wider task or bypass a required host,
 reviewer, or approval boundary.
 
-**Queue routing matters:** `codex queue` targets an existing Codex session. It
-does not by itself address an arbitrary ChatGPT Work chat. For a Work
-controller, use its native completion/wait facility for supported subagents or
-an explicitly tested bridge to the controller's exact chat. Official product
-guidance documents subagent return to the parent; it does not establish that
-an independently created Codex or Work chat can wake another Work chat.
-Where a job exposes
-only status polling, attach one bounded watcher with a deadline and terminal
-notification; do not spend repeated controller turns checking unchanged state.
-If no terminal delivery route exists, use one supported blocking wait rather
-than claiming that a queue message reached Work. Never infer a destination
-from a role name or the most recently active chat.
+Native completion returns each child result to the parent controller. The
+controller waits for that result once and verifies its evidence. A long external
+qualification gate may have its own watcher; it is separate from these three
+subagent handoffs and cannot supply a planner, candidate, or reviewer verdict.
 
 ## Recovery without repeated user turns
 
@@ -328,6 +296,6 @@ an RI runtime dependency. Install only the skills useful to that project's
 roles. The consumer's `AGENTS.md` and capsule remain authoritative if a skill
 example disagrees with them. A local Codex installation does not register a
 skill in ChatGPT Work. Verify Work availability separately before relying on
-automatic activation or a cross-chat callback. Follow the
+automatic activation. Follow the
 [new-project setup guide](new-project-setup.md) to install the appropriate
 skills for each role and test the handoff before adoption.

@@ -3,7 +3,7 @@
 RI supplies source evidence. The caller owns source materialization, full diff review, project policy, and acceptance. Use a separate installed RI package rather than copying its modules into each consumer repository. Pin the checkout revision and keep the emitted parser and contract metadata with saved observations.
 
 For the surrounding capsule handoff, qualification, independent review, and
-terminal result routing, see the [controller workflow](capsule-controller-workflow.md).
+native subagent completion, see the [controller workflow](capsule-controller-workflow.md).
 
 ## Install into a consumer environment
 
