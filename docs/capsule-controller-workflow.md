@@ -232,7 +232,36 @@ RI probe demonstrated native completion in Codex; a consumer still has to
 qualify its own host and protected review lane. See OpenAI's
 [subagent guidance](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
-## Run one objective to completion
+## Controller gates from intake through closeout
+
+The controller owns every transition. Check actual repository and runner
+state rather than accepting a subagent's status label. Record a compact result
+in the consumer's existing planning or evidence record; this table creates no
+new capsule format. A failed or missing item stops that handoff and follows the
+recovery rules below.
+
+| When | Controller checks before advancing | Next action |
+| --- | --- | --- |
+| **Before planner dispatch** | Authenticate the current issue/request and every requirement; inspect local and published base refs, worktree status, active capsules, branch policy, runner and review lane. Resolve stale or conflicting authority. Give the planner the exact base, capsule format, branch rules, required checks, owned planning paths, and stop conditions. | Dispatch the planner only with a bounded planning task. |
+| **After planner return** | Verify the reported branch, base, P SHA, capsule path and clean/allowed-dirty state against Git; check a remote ref if the planner published one under the consumer's rules. Inspect base..P to separate planning changes from implementation; read the capsule for complete intent, owned paths, profiles, ACs, evidence routes, non-goals, and recovery. Run the consumer's draft/planning checks and resolve semantic omissions. | Publish/record validated P through the consumer route, or repair planning and revalidate. |
+| **Before implementor dispatch** | Complete the [pre-dispatch gate table](#check-the-execution-plan-before-dispatch), including every AC and required review standard. Rehearse costly or sandbox-sensitive commands where safe. Confirm exact P still heads the branch, the implementation checkout is ready, the selected model/effort and host have required access, and the handoff contains the frozen capsule, permitted source context, checks, and STOP_REPLAN route. | Delegate implementation bound to P and the dedicated branch. |
+| **After implementor return** | Require DONE or a precise failure, C SHA, branch/ref, changed-file list, check results, and unresolved gaps. Independently verify the committed branch head and remote ref where required, clean/allowed-dirty state, base..P and full P..C diffs, owned paths, profiles, new tests, and applicable cross-platform fixtures. A DONE flag or matching counts alone is insufficient. | Preserve failed C/evidence for repair; otherwise prepare exact-C qualification. |
+| **Before exact-C qualification** | Reconcile the gate table with every changed file, required profile, and standard. Confirm each command's path, host, inputs and evidence location; rehearse costly or sandbox-sensitive invocation where safe. Ensure C and its source material are stable and that no required test or fixture is missing. | Run the consumer's mandatory local/native and hosted gates on exact C; preserve raw results. |
+| **After qualification, before reviewer dispatch** | Verify Q(C) names the exact candidate, host/profile, commands, exit status, logs, coverage gaps, and hosted-check SHA. A missing or failed mandatory gate remains unresolved. Assemble the capsule/intent, B/P/C, full diff and changed-file inventory, expected AC observations, Q(C), and per-standard evidence. Recheck branch head C and give a fresh reviewer enforced read-only access. | Dispatch one exact-C independent review only with a complete, authenticated packet. |
+| **After reviewer return** | Authenticate the verdict's branch and C against current Git state. Require a finding or evidence-backed disposition for every active AC and applicable standard; reconcile each finding with the original objective, qualification, and changed-file inventory. Treat absent dispositions, unsupported evidence, or a moved C as unresolved. | Preserve failed C/findings and return an in-scope correction or replan; a complete PASS proceeds to guarded integration checks. |
+| **Before guarded integration** | Recheck published base/ref and candidate head; ensure required Q(C), fresh independent R(C), all active criteria and standards, approvals, and consumer-specific publication conditions bind the same C. Requalify and re-review any changed C or execution-relevant base. | Use only the consumer's authorized approval, publication, and acceptance route. |
+| **After integration and review closeout** | Verify the intended target contains the reviewed candidate or approved merge result, record integration identity, confirm evidence is retained and review/issue status is reconciled. Check that no active capsule, worktree, or follow-up needs the branch. | Close the issue when its objective is satisfied; delete the completed capsule branch and unused local copies through the consumer route. Retain unmerged or still-used branches. |
+| **On failure, interruption, or changed scope at any stage** | Preserve the exact P/C, command outputs, findings, and current ref state. Classify an in-scope correction, bounded infrastructure retry, replacement capsule, or decision outside current authority. Never infer success from a missing callback or reuse proof for changed source. | Resume the authorized stage with fresh checks, or STOP_REPLAN and bring only the concrete unresolved decision to the user. |
+
+The gate before reviewer dispatch checks that the packet is complete; it cannot
+prejudge the review. A reviewer finding remains a finding even if the planned
+gate table and qualification passed. No subagent result grants a new edit path,
+waives a mandatory host, or approves integration.
+
+## Role detail for the controller gates
+
+The gate table above is the advance/stop sequence. These notes describe what
+each role does while the controller carries it out.
 
 1. **Controller and planner subagent:** The controller establishes the objective,
    current issue, accepted runner lane, authenticated base, consumer rules,
