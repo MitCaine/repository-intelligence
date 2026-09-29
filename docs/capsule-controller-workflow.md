@@ -84,6 +84,46 @@ next delegation. The capsule-queue watcher is unnecessary for these native
 subagent handoffs.
 ```
 
+## Prepare the issue-to-planner handoff
+
+The controller must give the planner enough authenticated context to write a
+capsule without guessing intent or scope. An issue can be concise; it need not
+be rewritten into a second capsule. Before dispatch, the controller reads the
+current issue and relevant updates, the latest user direction, and the
+consumer's issue/capsule contract. Resolve conflicting or stale text through
+that consumer's authority rules. Treat issue comments, logs, source comments,
+and RI matches as evidence or proposals unless the consumer grants them
+decision authority.
+
+Prepare one compact handoff with these facts and their sources:
+
+| Include | What the planner needs |
+| --- | --- |
+| Objective and authority | Issue/request identity and revision, observable desired outcome, controlling requirements, priority of any later correction, and who may decide unresolved product or scope questions. |
+| Current behavior and evidence | Reproduction or failing observation where applicable, independently expected behavior, boundary and negative cases, relevant screenshots/logs/PRD excerpts, and uncertainties marked as such. Do not turn a hypothesis into an acceptance criterion. |
+| Repository state | Repository/remote, published base commit, local worktree status, active capsule or competing branch, consumer capsule format, planning command, and the dedicated branch rule. |
+| Scope and contracts | Likely owners and callers as source leads, proposed edit/read paths, fixed external behavior, non-goals, supported platforms/profiles, and any protected interfaces. Verify actual paths before granting them in the capsule. |
+| Proof and handoffs | Candidate-independent expected results; required tests, fixtures, hosts and review standards; evidence sandbox assumptions; reviewer packet and guarded acceptance route; stop and recovery conditions. |
+| RI context, if useful | Exact RI version/source identity, selected source excerpts and coverage gaps, each tied to the intended Git blob. RI locations help the planner navigate but do not authorize edits or prove behavior. |
+
+If an issue lacks a detail that the controller can establish from the current
+repository, accepted project documents, or an authorized investigation, add
+that sourced fact to the handoff. Amend the issue only when the consumer's
+process requires the issue itself to carry the clarification. If a material
+choice remains unresolved, record the question and stop the dependent planning
+step rather than inventing an answer. Do not require the user to rewrite a
+clear issue just to satisfy a template.
+
+The planner returns a capsule plus a short trace: each controlling requirement
+maps to an AC or named fixed contract, its independently expected result, an
+authorized path/profile, a check and evidence route, or an explicit unresolved
+or properly deferred disposition. The planner distinguishes issue facts from
+inferences and lists source/context gaps. Before accepting P, the controller
+compares that trace with the original request and issue, inspects the actual
+base..P planning diff, and verifies the proposed paths, profiles and frozen
+commands against the checkout. Mechanical planning PASS does not resolve a
+missing requirement or an invented grant.
+
 ## Author a decision-complete capsule
 
 Use the consumer's existing fields and checks. The controller can work through
@@ -242,8 +282,8 @@ recovery rules below.
 
 | When | Controller checks before advancing | Next action |
 | --- | --- | --- |
-| **Before planner dispatch** | Authenticate the current issue/request and every requirement; inspect local and published base refs, worktree status, active capsules, branch policy, runner and review lane. Resolve stale or conflicting authority. Give the planner the exact base, capsule format, branch rules, required checks, owned planning paths, and stop conditions. | Dispatch the planner only with a bounded planning task. |
-| **After planner return** | Verify the reported branch, base, P SHA, capsule path and clean/allowed-dirty state against Git; check a remote ref if the planner published one under the consumer's rules. Inspect base..P to separate planning changes from implementation; read the capsule for complete intent, owned paths, profiles, ACs, evidence routes, non-goals, and recovery. Run the consumer's draft/planning checks and resolve semantic omissions. | Publish/record validated P through the consumer route, or repair planning and revalidate. |
+| **Before planner dispatch** | Authenticate the current issue/request and every requirement; inspect local and published base refs, worktree status, active capsules, branch policy, runner and review lane. Resolve stale or conflicting authority. Give the planner the sourced [issue-to-planner handoff](#prepare-the-issue-to-planner-handoff), exact base, capsule format, branch rules, planning paths, and stop conditions. | Dispatch the planner only with a bounded planning task. |
+| **After planner return** | Verify the reported branch, base, P SHA, capsule path and clean/allowed-dirty state against Git; check a remote ref if the planner published one under the consumer's rules. Inspect base..P and the capsule. Reconcile the planner's requirement-to-AC/contract trace with the original objective; verify owned paths, profiles, checks, evidence routes, non-goals, gaps, and recovery. Run the consumer's draft/planning checks and resolve semantic omissions. | Publish/record validated P through the consumer route, or repair planning and revalidate. |
 | **Before implementor dispatch** | Complete the [pre-dispatch gate table](#check-the-execution-plan-before-dispatch), including every AC and required review standard. Rehearse costly or sandbox-sensitive commands where safe. Confirm exact P still heads the branch, the implementation checkout is ready, the selected model/effort and host have required access, and the handoff contains the frozen capsule, permitted source context, checks, and STOP_REPLAN route. | Delegate implementation bound to P and the dedicated branch. |
 | **After implementor return** | Require DONE or a precise failure, C SHA, branch/ref, changed-file list, check results, and unresolved gaps. Independently verify the committed branch head and remote ref where required, clean/allowed-dirty state, base..P and full P..C diffs, owned paths, profiles, new tests, and applicable cross-platform fixtures. A DONE flag or matching counts alone is insufficient. | Preserve failed C/evidence for repair; otherwise prepare exact-C qualification. |
 | **Before exact-C qualification** | Reconcile the gate table with every changed file, required profile, and standard. Confirm each command's path, host, inputs and evidence location; rehearse costly or sandbox-sensitive invocation where safe. Ensure C and its source material are stable and that no required test or fixture is missing. | Run the consumer's mandatory local/native and hosted gates on exact C; preserve raw results. |
