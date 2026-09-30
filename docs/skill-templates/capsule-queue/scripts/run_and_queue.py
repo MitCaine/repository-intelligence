@@ -69,7 +69,8 @@ def notify(config, *, recovery=False):
                 'status_path': str(status_path), 'thread': config['thread']}
     save_json(delivery_path, delivery)
     message = (f"{config['label']}: {status['outcome']}. Status: {status_path}. "
-               f"{config['follow_up']}")
+               f"{config['follow_up']}" + (' Cleanup unresolved; block overlapping follow-up.'
+               if status.get('cleanup_confirmed') is False else ''))
     try:
         queued = subprocess.run(['codex', 'queue', '--thread', config['thread'],
                                  '--message', message], stdout=subprocess.PIPE,
@@ -95,6 +96,7 @@ def watch(config):
     exit_code = None
     detail = ''
     cleanup_confirmed = None
+    cleanup_error = None
     try:
         with output_path.open('wb') as output:
             process = subprocess.Popen(config['command'], cwd=config['cwd'],
@@ -102,30 +104,36 @@ def watch(config):
                                        start_new_session=True)
             try:
                 exit_code = process.wait(timeout=config['timeout_seconds'])
-                outcome = ('success' if exit_code == 0 else
-                           'signal_terminated' if exit_code < 0 else 'failure')
-                if exit_code < 0:
-                    detail = f'terminated by signal {-exit_code}; intent unknown'
-                if exit_code != 0:
-                    original_code = exit_code
-                    _, cleanup_confirmed = terminate_group(process)
-                    exit_code = original_code
-                    detail += ('; process group absent after cleanup' if cleanup_confirmed else
-                               '; cleanup unresolved; do not retry overlapping work')
             except subprocess.TimeoutExpired:
                 outcome = 'timeout'
-                cleanup_confirmed = False
-                exit_code, cleanup_confirmed = terminate_group(process)
-                detail = ('deadline exceeded; process group absent after cleanup' if cleanup_confirmed
-                          else 'deadline exceeded; cleanup unresolved; do not retry overlapping work')
+                detail = 'deadline exceeded'
+            else:
+                outcome = ('success' if exit_code == 0 else
+                           'signal_terminated' if exit_code < 0 else 'failure')
+                detail = f'command outcome {outcome}; exit {exit_code}'
+            cleanup_confirmed = False
+            try:
+                if outcome == 'success' and not group_exists(process.pid):
+                    cleanup_confirmed = True
+                else:
+                    cleanup_code, cleanup_confirmed = terminate_group(process)
+                    if exit_code is None:
+                        exit_code = cleanup_code
+            except Exception as error:
+                cleanup_error = f'{type(error).__name__}: {error}'
+            detail += ('; process group absent after cleanup' if cleanup_confirmed else
+                       '; cleanup unresolved; do not retry overlapping work')
     except Exception as error:
         detail = f'watcher error: {type(error).__name__}: {error}'
-        if outcome != 'timeout':
+        if outcome not in ('success', 'failure', 'signal_terminated', 'timeout'):
             outcome = ('lost_connectivity' if isinstance(error, (ConnectionError, BrokenPipeError))
                        else 'watcher_error')
+        else:
+            cleanup_confirmed = False
+            cleanup_error = f'{type(error).__name__}: {error}'
 
     status = {'outcome': outcome, 'exit_code': exit_code, 'detail': detail,
-              'cleanup_confirmed': cleanup_confirmed,
+              'cleanup_confirmed': cleanup_confirmed, 'cleanup_error': cleanup_error,
               'started_at_epoch': started, 'finished_at_epoch': time.time(),
               'command': config['command'], 'cwd': config['cwd'],
               'thread': config['thread'], 'label': config['label']}

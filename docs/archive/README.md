@@ -6,6 +6,8 @@ commands and capabilities may have been removed; do not use them as setup steps.
 
 | Record | Why retain it |
 | --- | --- |
+| [Workflow audit reconciliation](workflow-audit-reconciliation-2026-09-29.md) | Original audit dispositions and local verification boundaries |
+| [Workflow logic walkthrough](workflow-logic-walkthrough-2026-09-29.md) | Fresh/resumed controller logic checks and subsequent hosted-failure caveat |
 | [Rust locator pilot](rust-function-locator-pilot.md) | Original capsule-first navigation trials, token observations, and measurement limits |
 | [Extraction decision](standalone-core-seam.md) | Why unused governance/security modules were retired; unresolved historical defects remain explicitly unsupported |
 | [Cross-project observations](adoption-observations.md) | Scoped Java/TypeScript/Python adoption examples |

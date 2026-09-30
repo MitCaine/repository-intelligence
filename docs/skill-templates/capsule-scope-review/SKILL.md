@@ -31,3 +31,8 @@ Never edit the capsule, authorize, implement, qualify, approve or integrate from
 this lane. Candidate review later requires a fresh context and exact C.
 
 This lane is conditional on consumer policy, changes crossing module/workflow/profile/infra seams or meaningful scope uncertainty. Review the draft before final READY/P. Material inventory, scope or base changes invalidate your result; the controller must request fresh review of the final identity.
+
+Distinguish lanes supporting pre-freeze protected rehearsal from services requiring
+committed C. For the latter, inspect preparation feasibility and the recorded
+constraint, then require protected qualification on exact C after freeze. Do not
+demand a nonexistent pre-freeze hosted result or accept a host pass in its place.

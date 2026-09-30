@@ -121,6 +121,7 @@ class QueueHelperTests(unittest.TestCase):
     @unittest.skipUnless(os.name == 'posix', 'POSIX process groups required')
     def test_abnormal_leader_exit_stops_descendant(self):
         for ending, outcome, code in [('sys.exit(7)', 'failure', 7),
+                ('sys.exit(0)', 'success', 0),
                 ('os.kill(os.getpid(),15)', 'signal_terminated', -15)]:
             with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as raw:
                 root = Path(raw)
@@ -138,6 +139,21 @@ class QueueHelperTests(unittest.TestCase):
                 before = (root / 'heartbeat').read_text()
                 time.sleep(.1)
                 self.assertEqual((root / 'heartbeat').read_text(), before)
+
+    def test_cleanup_error_preserves_known_command_outcome(self):
+        for code, outcome in [(7, 'failure'), (-15, 'signal_terminated'), (0, 'success')]:
+            with self.subTest(code=code), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                process = mock.Mock(pid=123, wait=mock.Mock(return_value=code))
+                with mock.patch.object(queue.subprocess, 'Popen', return_value=process), \
+                        mock.patch.object(queue, 'group_exists', return_value=True), \
+                        mock.patch.object(queue, 'terminate_group', side_effect=OSError('cleanup fault')), \
+                        mock.patch.object(queue, 'notify'):
+                    queue.watch(self.config(root))
+                status = json.loads((root / 'status.json').read_text())
+                self.assertEqual((status['outcome'], status['exit_code']), (outcome, code))
+                self.assertFalse(status['cleanup_confirmed'])
+                self.assertIn('cleanup fault', status['cleanup_error'])
 
     def test_redelivery_reuses_terminal_result_without_rerunning_job(self):
         with tempfile.TemporaryDirectory() as raw:

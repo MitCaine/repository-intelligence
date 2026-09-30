@@ -38,8 +38,14 @@ phase above without inventing future artifacts or treating missing proof as PASS
 
 ## Mechanical checks and remaining qualification
 
-RI verification passed 310 tests, including macOS descendant cleanup on timeout,
+Local RI verification in the Python 3.14 virtual environment passed 310 tests, including macOS descendant cleanup on timeout,
 nonzero and signal exits, preflight evidence faults and checker fixtures.
 Documentation links and whitespace checks passed. These results do not qualify
 Work-host delivery, consumer report imports, production guarded acceptance or
 issue/ref closeout. Adoption cases require those trials in the actual consumer.
+
+Subsequent audit of hosted `da65574acfb077cb4bf1ecc1f633fdfe63c73063`
+reported a Python 3.14 queue cleanup/classification failure despite the earlier
+local pass. That local result was not evidence of a green hosted matrix. The
+follow-up fixes preserve known command outcomes on cleanup errors; hosted
+requalification of the new committed source remains required.

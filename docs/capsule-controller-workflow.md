@@ -77,7 +77,7 @@ Controller -> verify returned worktree changes/scope
 Consumer-authorized actor -> capture C; publish at the permitted stage
     |
     v
-Controller verifies C metadata + branch head, then qualifies exact C
+Controller authenticates C + lane-required ref state, then qualifies exact C
     | external gate: native terminal callback or one verified queue watcher
     | failure --> preserve C/evidence --> correction or revised capsule --+
     v                                                                |
@@ -316,8 +316,9 @@ before attachment, qualification, or review.
 Compare the frozen execution with its rehearsal: exact command/arguments,
 working directory, configuration, interpreter/toolchain, profiles, isolation
 policy, relevant environment settings, and source identity. A relevant change
-invalidates the earlier rehearsal and requires a new protected run before
-candidate freeze. A rehearsal on planning or preserved candidate bytes checks
+invalidates the earlier rehearsal and requires a fresh protected rehearsal
+before freeze where supported, or the recorded preparation route plus exact-C
+protected qualification in a committed-C-only lane. A rehearsal on planning or preserved candidate bytes checks
 invocation only; new test bytes and the final candidate require their own
 applicable evidence. Record any consumer-approved equivalence rather than
 assuming two environments behave the same.
@@ -349,10 +350,10 @@ each subagent returns through the host's native completion channel:
 | Fresh independent reviewer | Exact P and C, full diff, capsule, qualification logs and standards | Per-AC and standards verdict, exact C and branch metadata, findings or uncertainty |
 
 The controller checks the planner's P against the actual branch and capsule
-before launching the implementor. After DONE, the controller verifies changes and directs authorized capture; it then checks C against the branch
-head, P..C changed paths, and required checks before launching the reviewer.
-After review, it checks the returned verdict against the same C and rechecks
-the branch head before integration. A completion message is a trigger to
+before launching the implementor. After DONE, the controller verifies changes and directs authorized capture; it then authenticates C and lane-required
+ref state, P..C changed paths, and required checks before launching the reviewer.
+After review, it checks the verdict against C and the ref/publication conditions
+required at integration. An immutable promoted C need not advance execution HEAD. A completion message is a trigger to
 inspect evidence, never evidence by itself. Use a supported bounded native
 wait for a running child; do not spend repeated controller turns polling.
 
@@ -436,9 +437,9 @@ recovery rules below.
 | **After candidate capture** | Require exact C, applicable local/remote ref state and current head. Verify base..P and full P..C diffs, changed-file inventory, scope, profiles and checks. Publication occurs only when permitted by the execution map; a remote C is not universally required before review. | Authenticate captured C and prepare exact-C qualification. |
 | **Before exact-C qualification** | Reconcile the gate table with every changed file, required profile, and standard. Confirm each command's path, host, inputs and evidence location; rehearse costly or sandbox-sensitive invocation where safe. Ensure C and its source material are stable and that no required test or fixture is missing. | Run the consumer's mandatory local/native and hosted gates on exact C; preserve raw results. |
 | **At external-gate dispatch** | Select one completion route before starting the job: the runner's reliable terminal callback, or a bounded watcher using `capsule-queue` with the exact verified Codex controller destination. For a Work controller, use only a tested bridge to that exact chat or its supported bounded wait. Bind the job to C, required profiles, deadline, and retained status/log paths. | Launch the gate once and wait for its terminal event; no periodic controller-turn status checks or duplicate native run. |
-| **After qualification, before reviewer dispatch** | Verify Q(C) names the exact candidate, host/profile, commands, exit status, logs, coverage gaps, and hosted-check SHA. A missing or failed mandatory gate remains unresolved. Confirm the accepted report template/validator and complete export/supplement requirements. Assemble the capsule/intent, B/P/C, full diff and changed-file inventory, expected AC observations, Q(C), and per-standard evidence. Recheck branch head C and give a fresh reviewer enforced read-only access. | Dispatch one exact-C independent review only with a complete, authenticated packet. |
+| **After qualification, before reviewer dispatch** | Verify Q(C) names the exact candidate, host/profile, commands, exit status, logs, coverage gaps, and hosted-check SHA. A missing or failed mandatory gate remains unresolved. Confirm the accepted report template/validator and complete export/supplement requirements. Assemble the capsule/intent, B/P/C, full diff and changed-file inventory, expected AC observations, Q(C), and per-standard evidence. Authenticate immutable C and lane-required local/remote refs (head == C only if required there), and give a fresh reviewer enforced read-only access. | Dispatch one exact-C independent review only with a complete, authenticated packet. |
 | **After reviewer return** | Authenticate the verdict's branch and C against current Git state. Require a finding or evidence-backed disposition for every active AC and applicable standard; reconcile each finding with the original objective, qualification, and changed-file inventory. Treat absent dispositions, unsupported evidence, or a moved C as unresolved. | Preserve failed C/findings and return an in-scope correction or replan; a complete PASS proceeds to guarded integration checks. |
-| **Before guarded integration** | Recheck published base/ref and candidate head; ensure required Q(C), fresh independent R(C), all active criteria and standards, approvals, and consumer-specific publication conditions bind the same C. Requalify and re-review any changed C or execution-relevant base. | Use only the consumer's authorized approval, publication, and acceptance route. |
+| **Before guarded integration** | Recheck the base and candidate identity plus ref/publication conditions required by the consumer at integration; ensure required Q(C), fresh independent R(C), all active criteria and standards, approvals, and consumer-specific publication conditions bind the same C. Requalify and re-review any changed C or execution-relevant base. | Use only the consumer's authorized approval, publication, and acceptance route. |
 | **After integration and review closeout** | Verify the intended target contains the reviewed candidate or approved merge result, record integration identity, confirm evidence is retained and review/issue status is reconciled. Verify the closeout predicate below, including retrievable source, issue/primary checkout reconciliation and no active capsule, worktree or follow-up needing the branch. | Close the issue when its objective is satisfied; delete the completed capsule branch and unused local copies through the consumer route. Retain unmerged or still-used branches. |
 | **On failure, interruption, or changed scope at any stage** | Preserve the exact P/C, command outputs, findings, and current ref state. Classify an in-scope correction, bounded infrastructure retry, replacement capsule, or decision outside current authority. Never infer success from a missing callback or reuse proof for changed source. | Resume the authorized stage with fresh checks, or STOP_REPLAN and bring only the concrete unresolved decision to the user. |
 

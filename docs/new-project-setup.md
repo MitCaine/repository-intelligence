@@ -21,8 +21,8 @@ configuration. Examples and historical probe settings are not universal policy.
    guarded integration process. Keep those rules in the consumer project. Adapt
    the RI templates to them before installation.
    Configure the impact inventory, conditional read-only scope challenge before
-   implementation authorization, and protected subprocess rehearsal before
-   candidate attachment. Use mechanical evidence checks where the consumer
+   implementation authorization, and pre-freeze protected rehearsal where the lane supports it, or recorded
+   committed-C-only preparation followed by exact-C protected qualification. Use mechanical evidence checks where the consumer
    supports them; verify missing records block advancement.
 2. **Provision RI separately.** Follow the [consumer guide](consumer-guide.md)
    and pin the installed RI commit or retained bundle. Try one source query and

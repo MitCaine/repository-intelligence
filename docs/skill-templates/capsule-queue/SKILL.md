@@ -75,3 +75,9 @@ Keep watcher artifacts outside the clean candidate checkout. An in-repository
 location is permitted only if consumer-authorized, ignored and outside candidate
 scope, verified before launch. Signal/nonzero leader exits also trigger group
 cleanup; false or unknown cleanup blocks overlapping retries.
+
+Command outcome and cleanup outcome are separate. Cleanup errors preserve a known
+success/failure/signal/timeout, record `cleanup_error`, and leave
+`cleanup_confirmed: false`. Even exit zero checks for remaining group members
+and cleans them up. Success with false/unknown cleanup is not terminal readiness
+for overlapping follow-up; verify termination or isolate remaining work first.

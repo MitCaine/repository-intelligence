@@ -1,5 +1,12 @@
 # Consumer evidence-preflight adapter
 
+The `--repository` argument must name a dedicated/materialized clean candidate
+checkout whose HEAD is C. It need not be the execution worktree; consumers may
+retain execution HEAD at P while holding promoted C as an immutable object.
+Materialize C through the consumer-authorized read/snapshot route before invoking
+this helper. This helper does not change refs or require the execution branch
+to advance.
+
 Use [the helper](../scripts/evidence_preflight.py) after candidate freeze and
 before qualification/review handoff. It reads Git and local files, executes no
 test commands, and writes only a JSON result to stdout. It is a portable source
