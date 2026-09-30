@@ -70,8 +70,10 @@ def check(root: Path = ROOT) -> list[str]:
             errors.append(f'{path.relative_to(root)}: name must match skill folder')
         if not fields.get('description', '').strip():
             errors.append(f'{path.relative_to(root)}: missing description')
-    if len(list(skills.glob('*/SKILL.md'))) != 4:
-        errors.append('docs/skill-templates: expected four skill manifests')
+    expected_skills = {'capsule-preflight', 'capsule-scope-review',
+                       'capsule-independent-review', 'capsule-queue', 'ri-evidence-handoff'}
+    if {p.parent.name for p in skills.glob('*/SKILL.md')} != expected_skills:
+        errors.append('docs/skill-templates: unexpected or missing skill manifests')
     return errors
 
 
@@ -79,4 +81,4 @@ if __name__ == '__main__':
     failures = check()
     if failures:
         raise SystemExit('\n'.join(failures))
-    print('Documentation links and four skill manifests: OK')
+    print('Documentation links and five skill manifests: OK')

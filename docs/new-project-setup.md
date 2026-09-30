@@ -13,6 +13,10 @@ independence, or a completion channel.
    supported hosts, qualification commands, independent review lane, and
    guarded integration process. Keep those rules in the consumer project. Adapt
    the RI templates to them before installation.
+   Configure the impact inventory, separate read-only scope challenge before
+   implementation authorization, and protected subprocess rehearsal before
+   candidate attachment. Use mechanical evidence checks where the consumer
+   supports them; verify missing records block advancement.
 2. **Provision RI separately.** Follow the [consumer guide](consumer-guide.md)
    and pin the installed RI commit or retained bundle. Try one source query and
    inspect its identity and coverage status. RI is source evidence, not the
@@ -27,10 +31,13 @@ independence, or a completion channel.
    and capsule planner need the adapted `capsule-preflight` and
    `ri-evidence-handoff` instructions. The implementor needs preflight and the
    exact capsule. The fresh reviewer needs `capsule-independent-review` and may
-   use `ri-evidence-handoff` for source inspection. Provide these through the
-   environment's supported skill route or in each handoff packet. A local
-   `.agents/skills/` copy does not install skills in a Work chat. Verify actual
-   availability for all four roles.
+   use `ri-evidence-handoff` for source inspection.
+   The separate scope challenger needs `capsule-scope-review`, the draft and
+   impact inventory, and read-only access to the exact base. Provide all roles
+   their instructions through the environment's supported skill route or in
+   each handoff packet. A local `.agents/skills/` copy does not install skills
+   in a Work chat. Verify actual
+   availability for all five roles.
 5. **Test native subagent completion.** The controller should delegate a small
    capsule to a planner, verify returned P, delegate implementation with P,
    verify returned C, then delegate a fresh read-only review with exact P/C.
@@ -59,6 +66,9 @@ permissions in each consuming host before relying on the route.
 | Stage | Skill to use when applicable | Owner |
 | --- | --- | --- |
 | Authenticate capsule, branch, P, and scope | `capsule-preflight` | Controller, planner, and implementor |
+| Challenge impact inventory before implementation authorization | `capsule-scope-review` | Fresh read-only scope challenger |
+| Validate candidate evidence, scope paths, and rehearsal identity | Preflight's evidence checker with consumer adapter | Controller/trusted runner |
+| Draft and validate closeout history; verify required live probe pair | Consumer history builder/validator and preflight's closeout adapter | Planner drafts; controller/trusted runner checks; fresh reviewer judges outcomes |
 | Select and bind source context or P-to-C evidence | `ri-evidence-handoff` | Controller; implementor or reviewer as needed |
 | Judge exact pushed candidate independently | `capsule-independent-review` | Fresh reviewer |
 | Return planner, implementor, and reviewer results | Native subagent completion | Continuing controller verifies each result |

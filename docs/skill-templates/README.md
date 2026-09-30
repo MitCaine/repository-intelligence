@@ -17,9 +17,10 @@ role split and make any different branch policy explicit.
 | Template | Role | Copy when |
 | --- | --- | --- |
 | [capsule-preflight](capsule-preflight/SKILL.md) | Controller, planner, or implementor | The project has an active capsule workflow with exact base/scope checks. |
+| [capsule-scope-review](capsule-scope-review/SKILL.md) | Fresh read-only scope challenger | The impact inventory needs independent challenge before implementation authorization. |
 | [ri-evidence-handoff](ri-evidence-handoff/SKILL.md) | Controller, implementor, or reviewer | RI locations or comparisons will enter a handoff. |
 | [capsule-independent-review](capsule-independent-review/SKILL.md) | Fresh reviewer | The consumer requires candidate-bound independent review. |
-| [capsule-queue](capsule-queue/SKILL.md) | External gate watcher | A long non-subagent job has no native completion and its exact Codex controller destination is verified. Use a tested Work bridge or bounded wait for a Work controller. It is not part of the native three-subagent handoff. |
+| [capsule-queue](capsule-queue/SKILL.md) | External gate watcher | A long non-subagent job has no native completion and its exact Codex controller destination is verified. Use a tested Work bridge or bounded wait for a Work controller. Native subagent handoffs use their completion events. |
 
 For a project-scoped Codex installation, copy the chosen **whole skill folders**
 to that project's `.agents/skills/` (or the skill location supported by its
@@ -45,6 +46,13 @@ same parent controller. Use the queue template for a long external gate that
 lacks native completion and has a verified destination; it is unnecessary for
 these subagents.
 
-Keep the templates narrow. A project need not install all four, and no skill
+The preflight folder includes a read-only [evidence checker and adapter contract](capsule-preflight/references/evidence-contract.md).
+Its [closeout checks](capsule-preflight/references/evidence-contract.md#closeout-and-installed-workflow-probes)
+cover consumer-exported history metadata and required installed-workflow probes.
+Copy its supporting resources with the skill and connect it to the consumer's
+trusted records before treating it as a blocking gate. The scope-review skill
+handles purpose and missing dependencies that deterministic checks cannot infer.
+
+Keep the templates narrow. A project need not install all five, and no skill
 creates capsule authority, review independence, or a successful qualification
 merely by being present.

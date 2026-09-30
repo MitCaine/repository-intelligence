@@ -3,8 +3,8 @@
 This is a reusable handoff pattern, not an RI execution policy. The consumer
 repository's current capsule contract, runner, issue state, and supported-host
 rules control the work. RI supplies bounded source evidence. The example roles
-are Orchestrator/Controller, Capsule Planner, Implementor, and Independent
-Reviewer. The target model assignment is a Sol Light controller and planner,
+are Orchestrator/Controller, Capsule Planner, Independent Scope Challenger,
+Implementor, and Independent Reviewer. The target model assignment is a Sol Light controller and planner,
 a Luna Max implementor, and a fresh Sol Light reviewer. The RI probe verified
 the three child roles and native completion in Codex; it did not qualify a
 Work-host controller. Confirm model availability and repository access in the
@@ -54,6 +54,8 @@ Capsule Planner subagent -> create branch + decision-complete capsule
     v
 Controller -> independently verify P, validate planning, publish branch
     | mismatch --> STOP_REPLAN --> repair planning state --> verify again
+    v
+Independent scope challenge -> resolve inventory gaps -> authorize paths
     |
     v
 Preflight exact capsule/base/planning overlay/scope/host
@@ -128,6 +130,42 @@ commands against the checkout. Mechanical planning PASS does not resolve a
 missing requirement or an invented grant.
 
 ## Author a decision-complete capsule
+
+### Discover and challenge scope before authorization
+
+Before granting implementation paths, the planner prepares an impact inventory
+for each planned behavior change. Inspect implementation, callers, tests,
+fixtures, workflow assertions, documentation, and profile rules. Record actual
+paths, whether each requires editing or inspection only, the reason, and its
+associated requirement. Search explicitly for tests that assert changed workflow
+structures, checkout counts, profile sets, or command layouts. Existing test
+expectations are scope inputs; a source-only inventory is insufficient. RI can
+help locate source and expose coverage gaps, but the inventory also needs direct
+search and inspection of files outside RI's structural mapping.
+
+A separate subagent with fresh context challenges the proposed inventory
+against the objective, exact base, actual source and tests, and consumer rules.
+It returns missing dependencies, unsupported assumptions, or an evidence-backed
+scope disposition. This planning challenge is read-only and does not replace
+the later independent review of C. The controller resolves its findings before
+granting paths or marking the capsule READY. Planning branch/capsule creation
+uses the consumer's separate planning authority; discovery does not itself
+authorize implementation. Record the inventory identity and challenge result in
+the existing planning packet. Unresolved dependencies block dispatch.
+
+Every new subprocess test must run in the final protected evidence environment
+before C is frozen. Record the exact source, command, working directory,
+collection/configuration settings, isolation policy, exit status, skipped-test
+details and capability probes where applicable. An ordinary host pass cannot
+satisfy this rehearsal gate. If the required environment is unavailable, leave
+the gate unresolved. Rehearsal does not replace qualification on frozen C.
+
+The consumer's authorization must reference the completed inventory and scope
+challenge. Candidate attachment must also reference the protected rehearsal
+records and reconcile actual P..C paths with the inventory. Where the consumer
+supports mechanical gates, missing, stale, or mismatched records must block
+advancement. RI documents this evidence requirement; consumer tooling owns its
+enforcement. Do not invent an RI authorization service or another receipt store.
 
 Use the consumer's existing fields and checks. The controller can work through
 this checklist while drafting; each checked item must cite the source or exact
@@ -233,6 +271,39 @@ waive a mandatory check or a substantive reviewer finding.
 
 ## Hand-off packets and done condition
 
+### Check evidence completeness, scope drift, and rehearsal identity
+
+Use the [scope-review skill template](skill-templates/capsule-scope-review/SKILL.md)
+for the independent inventory challenge and the preflight template's
+[evidence checker](skill-templates/capsule-preflight/references/evidence-contract.md)
+for deterministic comparisons. The consumer exports trusted expectations and
+actual observations from its existing records, authenticates their provenance,
+and connects the result to its own gates. RI supplies portable source templates;
+copying them does not automatically enforce a consumer policy.
+
+Before qualification and again before reviewer dispatch, compare the required
+evidence inventory with the actual packet. Check each required command/profile,
+source identity, expected result, raw exit status and log, and every skip's test
+ID, reason and capability-probe result where applicable. Verify retained record
+identities or digests through the consumer's evidence route. A passing count or
+summary cannot stand in for missing detail. Use mechanical completeness checks
+where the consumer supports them; an unexplained omission blocks advancement.
+
+Compare every P..C edit with both the authorized paths and the impact inventory's
+stated purpose. Inspect the full diff, including documentation and generated
+content. An allowed path does not authorize unrelated behavior or prose. Resolve
+any new dependency or purpose outside the capsule through scope revalidation
+before attachment, qualification, or review.
+
+Compare the frozen execution with its rehearsal: exact command/arguments,
+working directory, configuration, interpreter/toolchain, profiles, isolation
+policy, relevant environment settings, and source identity. A relevant change
+invalidates the earlier rehearsal and requires a new protected run before
+candidate freeze. A rehearsal on planning or preserved candidate bytes checks
+invocation only; new test bytes and the final candidate require their own
+applicable evidence. Record any consumer-approved equivalence rather than
+assuming two environments behave the same.
+
 Keep handoffs short but exact. The controller sends the implementor the frozen
 capsule, dedicated branch and remote, exact P, selected authenticated
 source/contract excerpts, permitted repository read route, and how to report a
@@ -254,6 +325,7 @@ each subagent returns through the host's native completion channel:
 | Subagent | Input from controller | Required return |
 | --- | --- | --- |
 | Capsule planner, Sol Light | Authenticated objective, base, consumer format and branch policy | Branch/ref, base, capsule path, P SHA, owned paths, ACs, checks, planning status |
+| Independent scope challenger | Objective, exact base, proposed impact inventory, draft capsule and consumer rules | Read-only findings and scope disposition before implementation authorization |
 | Implementor, Luna Max | Verified P, exact capsule, branch/ref, permitted source context | DONE or STOP_REPLAN, committed C SHA, changed paths, check results, clean/status state |
 | Fresh independent reviewer, Sol Light | Exact P and C, full diff, capsule, qualification logs and standards | Per-AC and standards verdict, exact C and branch metadata, findings or uncertainty |
 
@@ -287,7 +359,8 @@ recovery rules below.
 | --- | --- | --- |
 | **Before planner dispatch** | Authenticate the current issue/request and every requirement; inspect local and published base refs, worktree status, active capsules, branch policy, runner and review lane. Resolve stale or conflicting authority. Give the planner the sourced [issue-to-planner handoff](#prepare-the-issue-to-planner-handoff), exact base, capsule format, branch rules, planning paths, and stop conditions. | Dispatch the planner only with a bounded planning task. |
 | **After planner return** | Verify the reported branch, base, P SHA, capsule path and clean/allowed-dirty state against Git; check a remote ref if the planner published one under the consumer's rules. Inspect base..P and the capsule. Reconcile the planner's requirement-to-AC/contract trace with the original objective; verify owned paths, profiles, checks, evidence routes, non-goals, gaps, and recovery. Run the consumer's draft/planning checks and resolve semantic omissions. | Publish/record validated P through the consumer route, or repair planning and revalidate. |
-| **Before implementor dispatch** | Complete the [pre-dispatch gate table](#check-the-execution-plan-before-dispatch), including every AC and required review standard. Rehearse costly or sandbox-sensitive commands where safe. Confirm exact P still heads the branch, the implementation checkout is ready, the selected model/effort and host have required access, and the handoff contains the frozen capsule, permitted source context, checks, and STOP_REPLAN route. | Delegate implementation bound to P and the dedicated branch. |
+| **Before implementation authorization** | Complete the [impact inventory and independent scope challenge](#discover-and-challenge-scope-before-authorization), including tests asserting changed workflow structures and profiles. Resolve dependencies and bind the inventory and challenge records to the proposed capsule and exact base. | Grant implementation paths through consumer authority only after scope is independently checked. |
+| **Before implementor dispatch** | Complete the [pre-dispatch gate table](#check-the-execution-plan-before-dispatch), including every AC and required review standard. Verify authorization references the completed inventory and scope challenge. Rehearse costly or sandbox-sensitive commands where safe. Confirm exact P still heads the branch, the implementation checkout is ready, the selected model/effort and host have required access, and the handoff contains the frozen capsule, permitted source context, checks, and STOP_REPLAN route. | Delegate implementation bound to P and the dedicated branch. |
 | **After implementor return** | Require DONE or a precise failure, C SHA, branch/ref, changed-file list, check results, and unresolved gaps. Independently verify the committed branch head and remote ref where required, clean/allowed-dirty state, base..P and full P..C diffs, owned paths, profiles, new tests, and applicable cross-platform fixtures. A DONE flag or matching counts alone is insufficient. | Preserve failed C/evidence for repair; otherwise prepare exact-C qualification. |
 | **Before exact-C qualification** | Reconcile the gate table with every changed file, required profile, and standard. Confirm each command's path, host, inputs and evidence location; rehearse costly or sandbox-sensitive invocation where safe. Ensure C and its source material are stable and that no required test or fixture is missing. | Run the consumer's mandatory local/native and hosted gates on exact C; preserve raw results. |
 | **At external-gate dispatch** | Select one completion route before starting the job: the runner's reliable terminal callback, or a bounded watcher using `capsule-queue` with the exact verified Codex controller destination. For a Work controller, use only a tested bridge to that exact chat or its supported bounded wait. Bind the job to C, required profiles, deadline, and retained status/log paths. | Launch the gate once and wait for its terminal event; no periodic controller-turn status checks or duplicate native run. |
@@ -331,6 +404,8 @@ each role does while the controller carries it out.
    the capsule's grants. Commit and push C to the dedicated branch when that
    is the consumer's authorized candidate route; never push directly to main.
    Run new tests and applicable cross-platform fixtures before freezing C.
+   Every new subprocess test must also pass rehearsal in the final protected
+   evidence environment; record its exact source and execution settings.
    Return DONE or STOP_REPLAN, C SHA, changed paths, authored tests, exact
    checks and results, unresolved questions, and any scope collision. The
    controller compares planning P to candidate C and keeps the base-to-P planning change
@@ -385,7 +460,47 @@ candidate SHA and required profiles before deciding Q(C). A queued message
 cannot supply a planner, candidate, qualification PASS, or reviewer verdict.
 Do not restart a completed native run merely to regain notification.
 
+A supported bounded wait must actually wait for an event or block in the
+runner; a deadline around repeated model-driven status requests is still
+controller polling. Record the selected mechanism, destination, job/C identity,
+deadline and retained evidence paths before launch. If the host has no verified
+wake-up route, report that limitation once and use its supported blocking wait;
+do not claim that installing the queue skill creates a Work callback.
+
+While a gate runs, the controller may finish bounded, authorized preparation
+that does not depend on its outcome or alter C, such as assembling the review
+packet or preparing installation probes. After that work is complete, wait for
+the terminal event. Do not query CI jobs, reread unchanged status files, or
+announce "still running" to fill the interval. Report a new failure, timeout,
+delivery problem, requested status, or decision-relevant change. A different
+profile becoming green need not wake the controller when acceptance still
+requires the same final aggregate result. Tool-level resumptions needed to
+receive a blocking command's output are transport handling; they must not
+become repeated CI inspection or new controller decisions.
+
 ## Recovery without repeated user turns
+
+### Validate closeout before returning its draft
+
+When closeout needs a history record, the planner uses the consumer's current
+schema-aware builder where available and runs its history validator immediately
+after drafting, before returning or committing the record. Missing repository
+metadata must fail here. Validate again on exact closeout C before qualification
+and fresh review; retain the validator result with the closeout packet.
+
+For required installed-workflow probes, authenticate the installed workflow/base,
+separate authorized probe candidates and provider checks. Require the selected
+test to execute and fail in the negative case, with no unrelated test failures,
+and to execute and pass in the positive control. Bind history metadata, recovery
+commit/capsule hash and both probe proofs to the retained records. The
+[preflight closeout adapter](skill-templates/capsule-preflight/references/evidence-contract.md#closeout-and-installed-workflow-probes)
+checks these exported expectations and observations. Consumer tooling must
+authenticate exports and enforce missing-record failures; a skill alone cannot.
+The fresh reviewer checks that the proofs satisfy the original outcomes before
+guarded finalization. Installation success does not close an issue whose live
+probes or history gates remain pending.
+
+### Resume or replan from preserved evidence
 
 Put these rules in each consumer's capsule template or controller instructions,
 using that consumer's existing fields rather than adding an RI policy format:
@@ -393,6 +508,7 @@ using that consumer's existing fields rather than adding an RI policy format:
 | Event | Controller action |
 | --- | --- |
 | Transient download, runner, or connection failure | Preserve the attempt and raw error; retry the same gate only when its own policy permits a bounded retry. Never call an absent result PASS. |
+| Missing evidence for unchanged C, with no demonstrated code defect | Preserve the failed/incomplete record. If the consumer permits supplemental evidence, authenticate C and collect only the missing detail through its existing evidence route; bind the supplement to the original run and source as required. Never reconstruct an unrecorded historical observation or change a sealed record silently. Re-submit the complete packet for fresh review when required. An evidence omission alone does not mandate a new implementation revision or repeat native qualification; if the consumer requires a new run or forbids supplementation, follow that rule. |
 | Failing authored test or reviewer finding within scope | Preserve the failed C SHA and evidence. Return the finding to the implementor, have the implementor push a new candidate to the same capsule branch, and rerun applicable qualification and review for the new SHA. |
 | Missing source context or RI coverage gap | Use the capsule's allowed read/expansion lane or ask a narrower question. Keep the incomplete result; do not infer absent behavior. |
 | Fix requires paths or behavior outside the capsule | `STOP_REPLAN`. The controller may draft a replacement capsule for the same authorized objective, then authenticate its new scope/base and run the consumer's planning checks before dispatch. |

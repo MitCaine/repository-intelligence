@@ -17,6 +17,21 @@ Use this skill when an external agent or other process needs a watcher to detect
 
 ## Watcher contract
 
+Before launch, record the mechanism, verified destination, job/candidate identity,
+deadline and retained evidence paths. A bounded wait means an event wait or
+blocking runner operation; putting a deadline around repeated model-driven
+status requests is still polling. If Work lacks a verified completion bridge,
+state that limitation once and use its supported blocking wait.
+
+The controller may prepare authorized review or installation material while
+waiting, provided it neither depends on a pending PASS nor changes the candidate.
+Once useful preparation is complete, wait for the terminal result. Do not query
+individual CI jobs or reread unchanged status files to generate periodic
+"still running" commentary. Intermediate green profiles do not require a wake-up
+when the same aggregate result remains pending. Report actionable failures,
+timeouts, delivery problems or requested status. Necessary tool-level resumptions
+of a blocking wait must not turn into repeated CI inspection.
+
 For a new external command, launch it once through the helper below. For an existing job, watch its blocking completion event or wrap a blocking watch command; never restart it to attach a watcher. If the service exposes only status checks, put bounded polling with backoff and a deadline inside a dedicated watcher script.
 
 Distinguish success, failure, timeout, signal termination, and lost connectivity using authoritative terminal evidence. The helper can classify its own watcher errors; a wrapped command that exits nonzero after losing connectivity is a failure unless its watcher records a more specific outcome. A signal alone does not prove an intentional cancellation. A missing PID or closed connection is not success. Save raw, potentially untrusted logs under an unused project `work/` job directory. Queue exactly one concise terminal message containing outcome, status path, and the controller's next action. The helper records command outcome in `status.json` and notification state in `delivery.json`; `accepted_by_cli` is not proof the controller consumed it.
