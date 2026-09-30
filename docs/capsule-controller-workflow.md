@@ -30,8 +30,9 @@ the obligation visible.
 
 For each capsule, the controller authenticates the issue and base, then asks a
 capsule-planner subagent to draft the capsule and impact inventory on its
-planning branch. Resolve any required scope challenge before final READY/P. The planner returns branch, base, P, capsule path, scope, checks, and
-status. The controller independently verifies those against Git and the
+planning branch. The first return supplies the draft and inventory identities.
+After any required challenge and revision, the planner returns final READY/P,
+branch, base, capsule path, scope, checks, and status. The controller independently verifies those against Git and the
 consumer's planning route before dispatching an implementor subagent. The
 consumer-authorized actor captures candidate C and publishes it at the point
 permitted by the resolved execution map. An implementor may commit and push
