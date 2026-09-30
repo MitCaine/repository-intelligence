@@ -2,6 +2,9 @@
 
 import importlib.util
 import json
+import os
+import sys
+import time
 from pathlib import Path
 import subprocess
 import tempfile
@@ -70,13 +73,49 @@ class QueueHelperTests(unittest.TestCase):
             process = mock.Mock(pid=123)
             process.wait.side_effect = [subprocess.TimeoutExpired('example-command', 3), -15]
             with mock.patch.object(queue.subprocess, 'Popen', return_value=process), \
-                    mock.patch.object(queue.os, 'killpg') as killpg, \
+                    mock.patch.object(queue, 'terminate_group', return_value=(-15, True)) as cleanup, \
                     mock.patch.object(queue, 'notify'):
                 queue.watch(self.config(root))
             status = json.loads((root / 'status.json').read_text())
             self.assertEqual(status['outcome'], 'timeout')
             self.assertEqual(status['exit_code'], -15)
-            killpg.assert_called_once_with(123, 15)
+            cleanup.assert_called_once_with(process)
+            self.assertTrue(status['cleanup_confirmed'])
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX process groups required')
+    def test_timeout_stops_term_ignoring_descendant_writer(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            child = root / 'child.py'
+            child.write_text('import signal,time\nfrom pathlib import Path\n'
+                             'signal.signal(signal.SIGTERM, signal.SIG_IGN)\n'
+                             'while True:\n Path("heartbeat").write_text(str(time.time_ns()))\n time.sleep(.02)\n')
+            config = self.config(root)
+            config['command'] = [sys.executable, '-c',
+                'import subprocess,sys,time; subprocess.Popen([sys.executable,"child.py"]); time.sleep(60)']
+            config['timeout_seconds'] = 0.8
+            with mock.patch.object(queue, 'notify'), \
+                    mock.patch.object(queue, 'TERM_GRACE_SECONDS', 0.2):
+                queue.watch(config)
+            status = json.loads((root / 'status.json').read_text())
+            self.assertEqual(status['outcome'], 'timeout')
+            self.assertEqual(status['exit_code'], -15)
+            before = (root / 'heartbeat').read_text()
+            time.sleep(0.15)
+            self.assertEqual((root / 'heartbeat').read_text(), before)
+
+    def test_unresolved_cleanup_is_not_claimed_terminated(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            process = mock.Mock(pid=123)
+            process.wait.side_effect = subprocess.TimeoutExpired('command', 3)
+            with mock.patch.object(queue.subprocess, 'Popen', return_value=process), \
+                    mock.patch.object(queue, 'terminate_group', return_value=(-15, False)), \
+                    mock.patch.object(queue, 'notify'):
+                queue.watch(self.config(root))
+            status = json.loads((root / 'status.json').read_text())
+            self.assertFalse(status['cleanup_confirmed'])
+            self.assertIn('cleanup unresolved', status['detail'])
 
     def test_redelivery_reuses_terminal_result_without_rerunning_job(self):
         with tempfile.TemporaryDirectory() as raw:

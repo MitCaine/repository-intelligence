@@ -76,6 +76,9 @@ def validate_invocation(invocation, root, candidate):
                                 'isolation', 'environment', 'source_files'},
             'incomplete or unsupported invocation fields')
     relative_path(invocation['cwd'])
+    directory = root / invocation['cwd']
+    require(directory.is_dir() and directory.resolve().is_relative_to(root.resolve()),
+            'invocation cwd missing or escapes candidate')
     for field in ('interpreter', 'isolation'):
         require(isinstance(invocation[field], str) and invocation[field], f'missing {field}')
     nonempty_strings(invocation['profiles'], 'invocation profiles')
@@ -85,10 +88,17 @@ def validate_invocation(invocation, root, candidate):
                     for k, v in invocation[field].items()), f'invalid {field}')
     sources = invocation['source_files']
     require(isinstance(sources, dict) and sources, 'missing rehearsal source files')
-    for path, digest in sources.items():
+    for path, identity in sources.items():
         relative_path(path)
+        require(isinstance(identity, dict) and set(identity) == {'sha256', 'mode'},
+                f'missing rehearsal mode/hash: {path}')
+        entry = git(root, 'ls-tree', '-z', candidate, '--', path).split(b'\0')[0]
+        require(entry and entry.split(b'\t', 1)[-1].decode() == path,
+                f'missing exact rehearsal source: {path}')
+        mode, kind, _ = entry.split(b'\t', 1)[0].decode().split()
+        require(kind == 'blob' and mode == identity['mode'], f'rehearsal mode mismatch: {path}')
         actual = hashlib.sha256(git(root, 'show', f'{candidate}:{path}')).hexdigest()
-        require(actual == digest, f'rehearsal source mismatch: {path}')
+        require(actual == identity['sha256'], f'rehearsal source mismatch: {path}')
 
 
 def validate_log(record, packet_dir, name):
@@ -105,6 +115,11 @@ def validate_closeout(expected, observed, checks, root, packet_dir):
     require(isinstance(expected, dict) and isinstance(observed, dict), 'missing closeout record')
     validator = expected.get('history_check_id')
     require(isinstance(validator, str) and validator in checks, 'missing history validator check')
+    record = checks[validator]
+    require(observed.get('validator_evidence') == {
+        'id': validator, 'candidate': record['candidate'], 'exit_code': record['exit_code'],
+        'log_path': record['log_path'], 'log_sha256': record['log_sha256']},
+        'history validator evidence mismatch')
     fields = nonempty_strings(expected.get('required_metadata'), 'required history metadata')
     metadata = observed.get('metadata')
     frozen = expected.get('metadata')
@@ -207,6 +222,9 @@ def validate(contract, packet, root, packet_dir):
     observed = indexed(packet.get('checks'), 'observed checks')
     require(set(required) == set(observed), 'missing or unexpected check IDs')
     rehearsals = indexed(packet.get('rehearsals'), 'rehearsals')
+    require(set(rehearsals) == {name for name, item in required.items()
+                               if item.get('rehearsal_required') is True},
+            'missing or unexpected rehearsal IDs')
     for name, expected in required.items():
         record = observed[name]
         require(record.get('candidate') == c and record.get('profile') == expected.get('profile')
@@ -246,7 +264,7 @@ def validate(contract, packet, root, packet_dir):
                     rehearsal.get('invocation') == invocation, f'{name}: rehearsal mismatch or failure')
             validate_log(rehearsal, packet_dir, f'{name} rehearsal')
     if 'closeout' in contract:
-        validate_closeout(contract['closeout'], packet.get('closeout'), required, root, packet_dir)
+        validate_closeout(contract['closeout'], packet.get('closeout'), observed, root, packet_dir)
     else:
         require('closeout' not in packet, 'unexpected closeout without trusted expectations')
     return sorted(changed)

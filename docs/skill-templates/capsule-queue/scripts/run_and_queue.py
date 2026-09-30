@@ -15,6 +15,38 @@ import time
 UUID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 DEFAULT_TIMEOUT_SECONDS = 3600
 QUEUE_TIMEOUT_SECONDS = 30
+TERM_GRACE_SECONDS = 5
+CLEANUP_WAIT_SECONDS = 2
+
+
+def group_exists(group):
+    try:
+        os.killpg(group, 0)
+        return True
+    except ProcessLookupError:
+        return False
+
+
+def terminate_group(process):
+    """Leader exit does not imply that its process group has exited."""
+    group = process.pid
+    try:
+        os.killpg(group, 15)
+    except ProcessLookupError:
+        pass
+    deadline = time.monotonic() + TERM_GRACE_SECONDS
+    while group_exists(group) and time.monotonic() < deadline:
+        process.poll()  # reap the leader without using its exit as group proof
+        time.sleep(0.05)
+    try:
+        os.killpg(group, 9)
+    except ProcessLookupError:
+        pass
+    code = process.wait(timeout=CLEANUP_WAIT_SECONDS)
+    deadline = time.monotonic() + CLEANUP_WAIT_SECONDS
+    while group_exists(group) and time.monotonic() < deadline:
+        time.sleep(0.05)
+    return code, not group_exists(group)
 
 
 def save_json(path, data):
@@ -62,6 +94,7 @@ def watch(config):
     outcome = 'watcher_error'
     exit_code = None
     detail = ''
+    cleanup_confirmed = None
     try:
         with output_path.open('wb') as output:
             process = subprocess.Popen(config['command'], cwd=config['cwd'],
@@ -75,25 +108,18 @@ def watch(config):
                     detail = f'terminated by signal {-exit_code}; intent unknown'
             except subprocess.TimeoutExpired:
                 outcome = 'timeout'
-                detail = 'deadline exceeded; process group terminated'
-                try:
-                    os.killpg(process.pid, 15)
-                except ProcessLookupError:
-                    pass
-                try:
-                    exit_code = process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    try:
-                        os.killpg(process.pid, 9)
-                    except ProcessLookupError:
-                        pass
-                    exit_code = process.wait(timeout=5)
+                cleanup_confirmed = False
+                exit_code, cleanup_confirmed = terminate_group(process)
+                detail = ('deadline exceeded; process group absent after cleanup' if cleanup_confirmed
+                          else 'deadline exceeded; cleanup unresolved; do not retry overlapping work')
     except Exception as error:
         detail = f'watcher error: {type(error).__name__}: {error}'
-        outcome = ('lost_connectivity' if isinstance(error, (ConnectionError, BrokenPipeError))
-                   else 'watcher_error')
+        if outcome != 'timeout':
+            outcome = ('lost_connectivity' if isinstance(error, (ConnectionError, BrokenPipeError))
+                       else 'watcher_error')
 
     status = {'outcome': outcome, 'exit_code': exit_code, 'detail': detail,
+              'cleanup_confirmed': cleanup_confirmed,
               'started_at_epoch': started, 'finished_at_epoch': time.time(),
               'command': config['command'], 'cwd': config['cwd'],
               'thread': config['thread'], 'label': config['label']}

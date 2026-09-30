@@ -9,10 +9,10 @@ Poker is the first consumer, not a policy module inside RI. The current
 [task capsule contract](https://github.com/MitCaine/poker-app/blob/main/engineering/workflow/TASK_CAPSULE.md)
 and [context-retention policy](https://github.com/MitCaine/poker-app/blob/main/engineering/workflow/CONTEXT_RETENTION.md)
 remain the owners of edit/read scope and context-page rules. This recipe was
-checked against Poker `b84eacf9fd4450bc1a3bfe142c21d784c0b251bc`; consult current
+checked against Poker `51d148a971e96ada626b6d3c61f9f08547e0f716`; consult current
 Poker source and guidance when authoring a new capsule. The
 [workflow assessment](archive/capsule-workflow-assessment-2026-09-26.md) records
-reproduced integration checks and remaining Poker documentation drift.
+historical reproduced integration checks; its documentation-drift findings are not current command instructions.
 
 ## Roles and the evidence passed between them
 
@@ -22,20 +22,46 @@ intent, all active acceptance criteria and repository standards. The controller
 reconciles findings and authorizes integration. A controller who writes a patch
 still needs someone else to review that candidate; different identity strings
 in a receipt alone cannot establish independent reasoning.
-The planner subagent prepares the dedicated execution branch and capsule under
-the controller's authenticated objective. The controller verifies P before
-dispatch. The implementor subagent commits and pushes C to that branch when
-the consumer's candidate route permits it. The controller verifies and
-qualifies exact C, then sends it to a fresh read-only reviewer subagent.
-Poker's own current capsule contract and acceptance route remain controlling;
-adapt its runner and commit ownership before using this subagent pattern there.
+Poker's accepted command guide at the checked revision assigns candidate capture
+and publication to the controller/operator. Implementation model turns do not
+commit, push, change refs or edit their capsule. Planner work uses the permitted
+planning route; a planning-only published ref is recovery transport. Run authored
+precommit checks, capture C through the authorized actor, run committed checks,
+qualify exact C and obtain fresh review before publishing the candidate. Other
+consumers may explicitly authorize implementor commit/push; this Poker adapter
+must not be used to grant that route.
+
+## Resolved Poker execution and evidence map
+
+The literal owner is
+[CAPSULE_COMMANDS.md](https://github.com/MitCaine/poker-app/blob/51d148a971e96ada626b6d3c61f9f08547e0f716/engineering/workflow/CAPSULE_COMMANDS.md).
+Authenticate the current installed interface before each new task; this checked
+snapshot is not a claim about an updated remote or selected runtime.
+
+| Boundary | Checked consumer route |
+| --- | --- |
+| Runtime | Production macOS lane; accepted Python/SDK paths and lock identities. Mandatory production RI probe accepts inventory 13 and mapping `python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v10`; current RI emits 14/v11 and needs a separately authorized consumer upgrade or a compatible retained RI. |
+| Planning | Authenticated draft/published planning checks and controller-directed non-main branch; planning-only remote ref may be published for recovery. |
+| Capture | Controller/operator performs precommit checks and creates C; implementation model turns provide authorized changes. |
+| Qualification | Accepted checkpoint `qualify`, exact capsule/B/P/C and runtime; mandatory external RI source evidence in production. |
+| Review | `controller_attested_v1` uses `controller-review` and the exact report validator; the alternate Codex-review lane uses `continue`. Do not mix these lanes. |
+| Report | Exact identities, changed paths, runtime/Q digest, all Standards/AC decisions and declaration `structural_dispositions`, including exact `source_change` records and authority/issue/AC/packet bindings. Empty delta requires `structural_dispositions: []`. |
+| Correction | Declared zero-or-one allowance, finalized parent failure, descendant C2 and `--parent-candidate` on `qualify`/`continue`; chat reset never renews allowance. |
+| Export | `export` omits controller-attested review receipt/external report; add and independently verify them in the supplemental evidence inventory. Export success alone is not a complete packet. |
+| Publication/acceptance | Fresh reviewed candidate publication through accepted route; controller-attested lane approves before `publish`, alternate lane permits publication before approval. `accept` requires approved verified published C. |
+| Closeout | Acceptance creates D but does not synchronize the primary checkout or close issues. Verify remote D, HISTORY, active-capsule deletion, retained source/evidence, safe primary synchronization and issue reconciliation before cleanup. |
+
+Validate review/export specimens with the accepted parser before adoption;
+production report identities come only from the actual qualified candidate.
+The command guide places `--repo` before the subcommand. Resolve literal argument
+shapes there; RI does not duplicate a launcher or accept legacy `run`/`resume`.
 
 | Step and owner | Useful RI contribution | Required evidence outside RI |
 | --- | --- | --- |
 | Triage and draft — controller | Locate the owning declaration and likely callers/tests; expose parser gaps | Resolved intent, actual callers/types/contracts, read/edit scope and independent acceptance oracles |
 | Context preparation — controller | Suggest exact source envelopes and conditional native questions | Base Git blobs, authenticated excerpts, selected transport and installed prerequisites |
-| Implementation — implementor | Narrow navigation within permitted reads; refresh locations after edits | Frozen capsule, authorized edits, tests, committed C and branch/ref metadata |
-| Qualification — controller/runner | Source delta can focus additional inspection | Required compiler/runtime tests against exact candidate C and actual feature/target configuration |
+| Implementation — implementor | Narrow navigation within permitted reads; refresh locations after edits | Frozen capsule, authorized edits, tests, authorized patch and controller-captured C/ref metadata |
+| Qualification — controller/runner | Mandatory production source delta supplements full-diff inspection | Required compiler/runtime tests against exact candidate C and actual feature/target configuration |
 | Review — fresh reviewer | Independently regenerate navigation or P-to-C comparison when useful | Full Git diff, exact capsule/intent, qualification Q(C), all-AC and Standards findings |
 | Correction and integration — controller | Explain structural changes in the new candidate | Fresh required proof/review for changed C, approval and existing guarded closeout |
 
@@ -44,9 +70,7 @@ The checked Poker entry point dispatches to the checkpoint implementation:
 `publish`, and `accept` are separate interfaces. A capsule declaring
 `review_authority = "controller_attested_v1"` uses the external review-report
 lane; it must not be sent to the Codex-review `continue` lane. Those decisions
-belong to Poker. Some standing guides still describe legacy `run`/`resume`:
-resolve a disagreement against the accepted implementation and controlling
-policy before launch. RI neither supplies a launcher nor changes the chosen lane.
+belong to Poker. Legacy `run`/`resume` are not accepted by the checked command guide. RI neither supplies a launcher nor changes the chosen lane.
 
 ## What belongs in the capsule
 
@@ -107,10 +131,11 @@ authorized output, never an unowned tracked ledger.
 6. During execution, use supplied pages and only the expansion mechanism the
    selected subagent host supports; otherwise use the authorized repository-read lane. RI does
    not add a new read permission or permit missing context to be invented.
-7. After the implementor subagent returns DONE, have the controller verify its
-   committed C and run authored checks, binding qualification and independent review to it.
+7. After the implementor returns authorized changes, run authored precommit
+   checks and have the controller capture C, then run committed checks and
+   qualification, binding fresh independent review to it.
    Review that SHA with the full changed-file list, tests, and—when useful—
-   RI's structural delta from stable planning/candidate trees with equal policy.
+   the mandatory production RI structural delta from stable planning/candidate trees with equal policy.
    Configuration, imports, type definitions, unsupported files, and enclosing
    state can change behavior even when all callable hashes are unchanged.
 

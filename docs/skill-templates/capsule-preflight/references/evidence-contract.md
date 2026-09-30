@@ -54,11 +54,10 @@ For a check requiring rehearsal, include `invocation` with exactly these fields:
 | `profiles` | Nonempty list of unique profiles |
 | `isolation` | Exact protected policy identity/digest |
 | `environment` | String-to-string mapping of relevant nonsecret settings; never export credentials |
-| `source_files` | Nonempty path-to-SHA256 mapping covering every rehearsal-sensitive test, fixture, runner and configuration file; the helper compares these hashes to Git C blobs |
+| `source_files` | Nonempty path-to-identity mapping (`mode`: Git mode string, `sha256`: raw-byte hash) covering every rehearsal-sensitive test, fixture, runner and configuration file; the helper compares modes/types and hashes to Git C entries |
 
 The consumer decides relevant source/configuration coverage. Equal incomplete
-maps cannot prove complete rehearsal equivalence. New subprocess checks require
-`rehearsal_required: true` under the documented workflow. Do not turn it off to
+maps cannot prove complete rehearsal equivalence. New subprocess checks require `rehearsal_required: true` where the protected lane supports pre-freeze rehearsal; services requiring committed C instead retain their constraint and exact-C protected proof. Do not turn it off to
 pass a failing gate. Ordinary host evidence must not be relabeled as protected.
 
 Packet fields:
@@ -70,7 +69,7 @@ Packet fields:
 | each skip | Unique nonempty `id` and nonempty `reason`; IDs must be permitted by the contract |
 | `capability_probe` | Required when requested: boolean `available` and nonempty factual `detail` |
 | `invocation` | Required for rehearsed checks: exact frozen invocation from contract |
-| `rehearsals` | List with unique check `id`, integer `exit_code`, exact `invocation`, `log_path` and `log_sha256` for each required rehearsal |
+| `rehearsals` | Exactly the IDs requiring rehearsal, each with unique check `id`, integer `exit_code`, exact `invocation`, `log_path` and `log_sha256` for each required rehearsal |
 
 Log paths are relative to the packet directory. Logs must be regular files,
 remain within that directory, and match SHA256. Records are limited to 2 MB,
@@ -140,3 +139,5 @@ For missing evidence on unchanged C, use only the consumer's permitted
 supplementation or rerun route. Re-export the complete observed packet and
 recheck it, preserving failed records and required fresh review. The helper
 never supplements records, changes C, retries native work, or approves a repair.
+
+Closeout `validator_evidence` must exactly copy the observed history-validator check's `id`, `candidate`, `exit_code`, `log_path` and `log_sha256`. The trusted adapter must bind that check to validation of the retained history bytes; name membership alone is insufficient. Invocation `cwd` must exist as a directory and physically resolve inside the candidate checkout. Source modes distinguish regular files, executable files and symlinks even when stored bytes match.

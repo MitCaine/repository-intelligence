@@ -29,3 +29,5 @@ authorization or a guarantee of complete impact discovery. The controller must
 resolve findings through consumer authority before granting implementation paths.
 Never edit the capsule, authorize, implement, qualify, approve or integrate from
 this lane. Candidate review later requires a fresh context and exact C.
+
+This lane is conditional on consumer policy, changes crossing module/workflow/profile/infra seams or meaningful scope uncertainty. Review the draft before final READY/P. Material inventory, scope or base changes invalidate your result; the controller must request fresh review of the final identity.

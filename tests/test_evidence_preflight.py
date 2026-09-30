@@ -38,8 +38,8 @@ class EvidencePreflightTests(unittest.TestCase):
         invocation = {'argv': ['python', '-m', 'pytest', 'tests'], 'cwd': '.',
                       'config': {'collection': 'tests'}, 'interpreter': '/fixed/python',
                       'profiles': ['repository'], 'isolation': 'protected-v1',
-                      'environment': {}, 'source_files': {'task.py': hashlib.sha256(
-                          b'new independently expected bytes\n').hexdigest()}}
+                      'environment': {}, 'source_files': {'task.py': {'mode': '100644', 'sha256': hashlib.sha256(
+                          b'new independently expected bytes\n').hexdigest()}}}
         self.contract = {'schema_version': 1,
                          'identity': {'task_id': 'fixture', 'revision': 1,
                                       'base': b, 'planning': b, 'candidate': c},
@@ -96,6 +96,8 @@ class EvidencePreflightTests(unittest.TestCase):
         observed = {key: copy.deepcopy(expected[key]) for key in
                     ('metadata', 'installed_base', 'recovery_commit', 'capsule_sha256')}
         observed.update(proof)
+        observed['validator_evidence'] = {'id': 'focused', 'candidate': recovery,
+            'exit_code': 0, **proof}
         observed['probes'] = []
         for name, candidate, outcome, code, failures in [
                 ('negative', negative, 'failed', 1, ['test_controller']),
@@ -219,8 +221,63 @@ class EvidencePreflightTests(unittest.TestCase):
             self.check()
 
     def test_source_hash_checked_against_git(self):
-        self.contract['checks'][0]['invocation']['source_files']['task.py'] = '0' * 64
+        self.contract['checks'][0]['invocation']['source_files']['task.py']['sha256'] = '0' * 64
         with self.assertRaisesRegex(gate.Blocked, 'source mismatch'):
+            self.check()
+
+    def test_rehearsal_mode_identity(self):
+        self.contract['checks'][0]['invocation']['source_files']['task.py']['mode'] = '100755'
+        with self.assertRaisesRegex(gate.Blocked, 'mode mismatch'):
+            self.check()
+
+    def test_identical_bytes_after_executable_or_symlink_transition(self):
+        source = self.root / 'task.py'
+        source.chmod(0o755)
+        self.git('add', 'task.py')
+        self.git('update-index', '--chmod=+x', 'task.py')
+        self.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                 'commit', '-qm', 'executable source')
+        invocation = self.contract['checks'][0]['invocation']
+        invocation['source_files']['task.py']['mode'] = '100755'
+        gate.validate_invocation(invocation, self.root, self.git('rev-parse', 'HEAD').strip())
+        source.chmod(0o644)
+        self.git('add', 'task.py')
+        self.git('update-index', '--chmod=-x', 'task.py')
+        self.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                 'commit', '-qm', 'mode only change')
+        with self.assertRaisesRegex(gate.Blocked, 'mode mismatch'):
+            gate.validate_invocation(invocation, self.root, self.git('rev-parse', 'HEAD').strip())
+        raw = source.read_text()
+        source.unlink()
+        source.symlink_to(raw)
+        self.git('add', 'task.py')
+        self.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                 'commit', '-qm', 'symlink with same stored bytes')
+        invocation['source_files']['task.py']['mode'] = '100644'
+        with self.assertRaisesRegex(gate.Blocked, 'mode mismatch'):
+            gate.validate_invocation(invocation, self.root, self.git('rev-parse', 'HEAD').strip())
+
+    def test_cwd_escape_and_missing_directory(self):
+        for cwd in ('missing', 'outside'):
+            with self.subTest(cwd=cwd):
+                if cwd == 'outside':
+                    (self.root / cwd).symlink_to(self.records, target_is_directory=True)
+                invocation = self.contract['checks'][0]['invocation']
+                invocation['cwd'] = cwd
+                with self.assertRaisesRegex(gate.Blocked, 'cwd missing or escapes'):
+                    gate.validate_invocation(invocation, self.root, self.contract['identity']['candidate'])
+
+    def test_extra_rehearsal_rejected(self):
+        extra = copy.deepcopy(self.packet['rehearsals'][0])
+        extra['id'] = 'stale'
+        self.packet['rehearsals'].append(extra)
+        with self.assertRaisesRegex(gate.Blocked, 'rehearsal IDs'):
+            self.check()
+
+    def test_history_validator_evidence_binding(self):
+        self.closeout_fixture()
+        self.packet['closeout']['validator_evidence']['log_sha256'] = '0' * 64
+        with self.assertRaisesRegex(gate.Blocked, 'validator evidence'):
             self.check()
 
     def test_dirty_and_wrong_head(self):

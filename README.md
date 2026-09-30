@@ -122,3 +122,7 @@ identify behavior more precisely than package version `0.1.0`; pin the RI revisi
 RI originated in [Poker App](https://github.com/MitCaine/poker-app).
 [Historical measurements](docs/archive/README.md) retain their original scope.
 RI has no project license file yet; distribution notes are in maintenance.
+
+The capsule workflow always records an impact inventory before final READY/P;
+a fresh scope challenger is used when required by consumer policy, cross-seam
+changes or meaningful scope uncertainty. See the [controller guide](docs/capsule-controller-workflow.md#discover-and-challenge-scope-before-authorization).

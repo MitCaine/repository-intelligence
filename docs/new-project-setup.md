@@ -8,12 +8,19 @@ independence, or a completion channel.
 
 ## One-time project setup
 
+Resolve the [consumer execution map, compatibility and review/export interfaces](capsule-controller-workflow.md#resolve-the-consumer-interfaces-before-planning)
+before the trial. Validate parser-shaped review/export specimens in an isolated
+fixture; authenticate runtime compatibility through the consumer's own probe.
+Record model/effort and enforced role permissions once in the consumer deployment
+configuration. Examples and historical probe settings are not universal policy.
+
+
 1. **Establish the consumer's authority.** Identify its issue source, capsule
    format and runner, base/planning checks, permitted branch and push route,
    supported hosts, qualification commands, independent review lane, and
    guarded integration process. Keep those rules in the consumer project. Adapt
    the RI templates to them before installation.
-   Configure the impact inventory, separate read-only scope challenge before
+   Configure the impact inventory, conditional read-only scope challenge before
    implementation authorization, and protected subprocess rehearsal before
    candidate attachment. Use mechanical evidence checks where the consumer
    supports them; verify missing records block advancement.
@@ -37,14 +44,14 @@ independence, or a completion channel.
    their instructions through the environment's supported skill route or in
    each handoff packet. A local `.agents/skills/` copy does not install skills
    in a Work chat. Verify actual
-   availability for all five roles.
+   availability for the four core roles and the scope challenger when its lane is required.
 5. **Test native subagent completion.** The controller should delegate a small
    capsule to a planner, verify returned P, delegate implementation with P,
    verify returned C, then delegate a fresh read-only review with exact P/C.
    Confirm branch and SHA metadata at every return. Test both successful and
    failed subagent returns in the actual host. Use native completion rather
    than repeated controller status checks; no queue helper is needed for these
-   three handoffs.
+   core handoffs. Also test challenger success/failure on a triggered task, inventory-change invalidation, and final P after its return.
 6. **Test the external qualification return route.** If a long hosted gate has
    no reliable native completion, install the whole `capsule-queue` template
    including its helper and test one terminal success and failure to the exact
@@ -59,7 +66,7 @@ independence, or a completion channel.
 
 The [native subagent handoff](capsule-controller-workflow.md#delegate-through-native-subagents)
 uses one continuing controller, a capsule planner, a Luna Max implementor, and
-a fresh read-only reviewer. Sol Light is the target controller model and the
+a fresh read-only reviewer, plus a scope challenger for consumer-required, cross-seam or uncertain scope. Sol Light is the target controller model and the
 tested planner and reviewer model; confirm model names, efforts, repository access, and enforced review
 permissions in each consuming host before relying on the route.
 
@@ -94,3 +101,12 @@ This is a terminal step of each completed capsule, so routine successful work
 does not leave a growing collection of capsule branches. Repository settings
 such as automatic branch deletion are optional; they do not replace the
 controller's verification that cleanup happened.
+
+## Fresh chats, resumed chats and updated instructions
+
+Use the [phase selection and resume gate](capsule-controller-workflow.md#phase-selection-and-resume)
+before the next action. Copy the accepted checkpoint and role instructions into
+the consuming host; verify installed references/helpers are retrievable there.
+Test fresh-chat intake, active-candidate resume, an externally running gate, and
+rule adoption by an existing chat. Each must reconstruct the same authorized
+next action without resetting allowances or restarting completed work.

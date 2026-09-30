@@ -57,3 +57,15 @@ Pass a blocking watcher command after `--` for an existing job. Compound logic b
 If `delivery.json` reports `rejected_by_cli` or `uncertain`, the completed command must **not** be restarted to regain notification. Inspect the saved status and delivery evidence through a separate controller-visible route. The controller may use `python3 path/to/run_and_queue.py --redeliver /path/to/job/config.json` after checking the exact destination and accepting possible duplicate notification. This command sends only the saved terminal result; it never reruns the job. A host with no delivery acknowledgement cannot guarantee autonomous wake-up. For that host, retain a bounded external monitor or supported blocking wait and report the limitation.
 
 For a job managed by another runner, save its terminal evidence first and call `codex queue --thread "$origin_thread" --message "$completion_message"` once. Remote watchers need verified Codex access; otherwise run the watcher locally. If no reliable callback or detached watcher is available, use the environment's supported blocking wait and state that limit.
+
+## Process containment and retry safety
+
+Timeout cleanup sends TERM, waits a bounded grace, then sends KILL to remaining
+members of the original POSIX process group even if its leader already exited.
+`cleanup_confirmed` reports whether that group is absent after cleanup. False or
+unknown cleanup is not permission to retry overlapping writes: establish that
+previous work is stopped or isolated first. Descendants that create another
+session/group and remote jobs are outside this local boundary; their accepted
+runner must cancel or isolate them separately. A success exit describes the
+wrapped command, not arbitrary detached descendants. Notification/redelivery
+remains separate from command outcome and never reruns the command.

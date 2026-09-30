@@ -14,3 +14,5 @@ Report a disposition for every active acceptance criterion and for applicable re
 Account for the controlling objective beyond RI's selected source contract. Check relevant configuration, manifests, workflows, build conditions, and unsupported source through the full diff and suitable evidence. If a capsule revision silently drops a requirement, return a finding instead of treating the narrower list as complete.
 
 Return the complete review to the controller. Do not edit the candidate, approve, publish, accept, merge, or close the capsule from the reviewer lane.
+
+Receive the consumer's accepted review-report template and validator requirements, including declaration dispositions when required and explicit empty arrays for empty deltas. Return importable evidence in that format; semantic PASS alone is insufficient. Identify any export supplements needed for the complete handoff. Specimen validation does not supply future candidate/qualification proof.

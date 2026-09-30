@@ -19,17 +19,26 @@ before measuring turns or tokens. Repeat any case used as a reliability claim.
 
 | Case | Expected behavior |
 | --- | --- |
+| Incompatible mandatory RI runtime | Consumer probe rejects before accepting P/dispatch; keep compatible runtime or authorize upgrade without weakening contract checks. |
+| Consumer-specific capture/publication route | Execution map prevents unauthorized implementor Git mutations while permitting consumers that explicitly grant them. |
+| Malformed review report or incomplete export | Accepted parser rejects missing declaration dispositions; supplements are verified before declaring the packet complete. |
+| Fresh/resumed controller and rule adoption | Retained checkpoint and current Git/runner state identify the same next action; preserve running jobs, revisions and remaining allowance. |
+| Zero-test or deselected required profile | Rehearsal detects missing collection/fixtures; a baseline expected failure is distinct from infrastructure failure. |
+| Hosted cancelled/inapplicable or wrong-source job | Required event/workflow/job and actual tested source mismatch blocks qualification. |
+| History draft missing metadata or wrong-test probe failure | Consumer validator rejects draft before return/commit; adapter rejects unrelated failures, skipped selected tests and mismatched installed identities. |
+| Missing retained source before cleanup | Retrieval check fails and needed refs/worktrees are preserved, including squash/rebase cases. |
+| Queue timeout with TERM-ignoring descendant | Real POSIX writer stops; unresolved cleanup blocks overlapping retry. Escaped sessions and remote jobs require their own containment. |
 | Ordinary source question in a project without capsules | Install/select RI, inspect the returned status and source, and answer without inventing a capsule runner or treating zero matches as absence proof. |
 | Sparse or conflicting issue before capsule planning | Controller obtains missing facts from authorized source and marks assumptions; a material unresolved product choice stops dependent planning. Planner does not silently narrow the issue or turn a source hint into edit authority. |
 | Native planner to controller handoff | Planner creates the dedicated branch and capsule, returns base/P/path/scope/checks; controller verifies the actual commit and planning checks before implementation. |
-| Workflow/profile change with hidden test dependencies | Inventory includes tests asserting profile sets, checkout counts and workflow layout. A separate scope challenger finds omitted paths before implementation authorization; unresolved dependencies block dispatch. |
+| Workflow/profile change with hidden test dependencies | Inventory includes tests asserting profile sets, checkout counts and workflow layout. When triggered, a fresh scope challenger finds omitted paths before implementation authorization; unresolved dependencies block dispatch. |
 | New subprocess test passes only on ordinary host | Final protected-environment rehearsal remains mandatory before freeze/attachment. Preserve the failure and repair within scope; a host pass cannot substitute for it. |
 | Passing summary omits skip or profile detail | Completeness check blocks qualification/reviewer dispatch until required IDs, reasons, probes and candidate-bound records are present. |
 | Allowed documentation path contains unrelated changes | Full diff and inventory-purpose check rejects the drift even though the path allowlist matches. |
 | Frozen invocation differs from successful rehearsal | Recheck command, directory, configuration, interpreter, isolation and source; relevant drift requires fresh protected rehearsal. |
 | Missing evidence on unchanged candidate | Preserve the failed record and use permitted supplementation or rerun, then required fresh review; avoid a new implementation revision unless source or consumer rules require it. |
 | Pre-dispatch gate with a hidden environment dependency | Controller maps each AC and required review standard to its check, host, evidence and assumptions; a rehearsal exposes an unavailable profile, sandbox permission, or Git setting before remote qualification. Planning-state output is not counted as Q(C). |
-| Existing capsule with exact P and edit scope | Verify the planner-created capsule branch and remote; preflight P, provide bounded RI context, implement only owned paths, push C to that branch, qualify the pushed SHA, and send a fresh reviewer the exact packet. |
+| Existing capsule with exact P and edit scope | Verify the planner-created capsule branch and remote; preflight P, provide bounded RI context, implement only owned paths, capture/publish C through the consumer-authorized actor and stage, qualify exact C, and send a fresh reviewer the exact packet. |
 | Native implementor and reviewer returns | Controller verifies DONE, branch head, P..C paths and checks before launching a fresh read-only reviewer; reviewer returns a verdict for each AC tied to exact C. No repeated status polling. |
 | Failed native subagent return | Preserve the exact attempt and evidence; controller repairs an in-scope failure or replans without treating missing metadata as success. |
 | Candidate pushed to the wrong branch or `main` | Reject the handoff as a scope/ref mismatch; do not qualify or review that push as the capsule candidate. Reconcile the branch state through the controller's authority path. |
@@ -60,9 +69,15 @@ missing evidence instead of inventing it.
 | `capsule-preflight` | Authenticate an active capsule and exact planning state before implementation. | An ordinary RI source question in a project with no capsule. |
 | `ri-evidence-handoff` | Bind a selected RI location to the exact consumer blob for a capsule handoff. | A request to treat RI output as approval or to grant new edit paths. |
 | `capsule-independent-review` | Review a frozen candidate and full packet in a fresh read-only context. | A request for the implementor to self-certify an incomplete candidate. |
+| `capsule-scope-review` | Independently challenge the draft impact inventory before grants. | Candidate approval or permission to edit/authorize. |
 | `capsule-queue` | Watch an external qualification job with a verified controller destination and no native callback. | An ordinary command or native agent whose completion already reaches the controller. |
 
 For each positive case, repeat once with a missing identity, packet, or delivery
 route. The correct outcome is a precise gap or stop condition, never a guessed
 commit, verdict, or destination. These trials remain unverified until run and
 recorded in the consumer environment.
+
+Scope freshness trial: materially change a challenged inventory and verify that
+its prior verdict cannot finalize READY/P. Rechallenge the final identity. A
+protected service requiring committed source instead runs exact-C qualification;
+do not invent pre-freeze hosted evidence.

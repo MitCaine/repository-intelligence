@@ -10,9 +10,9 @@ Start with the [new-project setup checklist](../new-project-setup.md) when
 adopting the workflow in a consumer repository.
 In the documented handoff, the controller delegates dedicated branch and
 capsule creation to a planner subagent, then verifies its remote and planning
-state. The implementor pushes candidate commits to that branch for review. A
-consumer adaptation should retain this
-role split and make any different branch policy explicit.
+state. The consumer execution map assigns candidate capture and publication
+to its authorized actor and stage; implementor commit/push requires an explicit
+grant. Keep planning, implementation and fresh review roles separate.
 
 | Template | Role | Copy when |
 | --- | --- | --- |
@@ -39,7 +39,7 @@ workspace, verify that a fresh agent discovers the intended instructions and
 selects the intended skill for a representative request.
 
 ChatGPT Work has a separate skill lifecycle; copying files into a Mac checkout
-does not make them available in a Work chat. Give the controller, planner,
+does not make them available in a Work chat. Give the conditional scope challenger, controller, planner,
 implementor, and reviewer their applicable instructions through the supported
 workspace route, then verify availability. The native subagents return to the
 same parent controller. Use the queue template for a long external gate that
@@ -56,3 +56,14 @@ handles purpose and missing dependencies that deterministic checks cannot infer.
 Keep the templates narrow. A project need not install all five, and no skill
 creates capsule authority, review independence, or a successful qualification
 merely by being present.
+
+## Mechanical validation boundary
+
+The offline checker supports inline and reference links, same-page fragments
+and visible inline-code words in heading anchors. RI template frontmatter uses
+a deliberately narrow YAML subset: exactly one top-level `name` and
+`description`, each a nonempty single-line plain or quoted string. Complex YAML,
+extra/nested fields, duplicate keys and ambiguous scalars are rejected; double
+quoted strings use JSON-compatible escapes. This subset is not a general YAML
+parser or validation of arbitrary installed skills. Linked helpers must exist.
+Installation trials still check actual copied resources and skill behavior.
