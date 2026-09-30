@@ -45,13 +45,15 @@ configuration. Examples and historical probe settings are not universal policy.
    each handoff packet. A local `.agents/skills/` copy does not install skills
    in a Work chat. Verify actual
    availability for the four core roles and the scope challenger when its lane is required.
-5. **Test native subagent completion.** The controller should delegate a small
-   capsule to a planner, verify returned P, delegate implementation with P,
-   verify returned C, then delegate a fresh read-only review with exact P/C.
-   Confirm branch and SHA metadata at every return. Test both successful and
-   failed subagent returns in the actual host. Use native completion rather
-   than repeated controller status checks; no queue helper is needed for these
-   core handoffs. Also test challenger success/failure on a triggered task, inventory-change invalidation, and final P after its return.
+5. **Test native subagent completion.** Delegate draft/inventory preparation,
+   exercise the conditional challenge and planner revision/rechallenge where
+   triggered, then authenticate final READY/P. Delegate implementation with P;
+   verify returned changes and capture C through the consumer-authorized actor.
+   Require implementor-returned C only if that lane grants capture authority.
+   Delegate fresh read-only review with exact P/C and applicable ref state.
+   Test success/failure returns, changed-inventory invalidation and metadata
+   verification in the actual host. Use native completion rather than repeated
+   controller checks; no queue helper is needed for those handoffs.
 6. **Test the external qualification return route.** If a long hosted gate has
    no reliable native completion, install the whole `capsule-queue` template
    including its helper and test one terminal success and failure to the exact
@@ -59,7 +61,7 @@ configuration. Examples and historical probe settings are not universal policy.
    controller needs a tested bridge or supported bounded wait. Select the
    route at dispatch so one hosted run does not cause repeated controller turns.
 7. **Run a trial capsule.** Use the [adoption cases](adoption-cases.md) to check
-   correct and incorrect skill activation, branch creation and candidate push,
+   correct and incorrect skill activation, branch creation, authorized candidate capture and lane-correct publication,
    all [controller gates](capsule-controller-workflow.md#controller-gates-from-intake-through-closeout),
    command rehearsal, exact-SHA qualification, fresh review, correction, and closeout. Record the
    result before calling the setup reliable.
@@ -77,7 +79,7 @@ permissions in each consuming host before relying on the route.
 | Validate candidate evidence, scope paths, and rehearsal identity | Preflight's evidence checker with consumer adapter | Controller/trusted runner |
 | Draft and validate closeout history; verify required live probe pair | Consumer history builder/validator and preflight's closeout adapter | Planner drafts; controller/trusted runner checks; fresh reviewer judges outcomes |
 | Select and bind source context or P-to-C evidence | `ri-evidence-handoff` | Controller; implementor or reviewer as needed |
-| Judge exact pushed candidate independently | `capsule-independent-review` | Fresh reviewer |
+| Judge exact captured candidate independently | `capsule-independent-review` | Fresh reviewer |
 | Return planner, implementor, and reviewer results | Native subagent completion | Continuing controller verifies each result |
 | Return a long external gate result without native completion | `capsule-queue` with verified destination | Controller verifies retained terminal evidence |
 

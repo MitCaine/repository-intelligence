@@ -74,7 +74,7 @@ handoff through its existing context-page helper.
 The [capsule controller workflow](docs/capsule-controller-workflow.md) explains
 the purpose, capsule requirements and checkable acceptance criteria, full
 handoff, native subagent completion, recovery decisions, and optional project
-skill templates. The controller verifies the planner's P and implementor's C
+skill templates. The controller verifies the planner's P and authorized captured C
 before delegating a fresh read-only review. The consumer's capsule remains the
 execution authority; its own workflow controls publication and integration.
 

@@ -34,7 +34,8 @@ class DocsCheckerTests(unittest.TestCase):
         self.assertEqual(self.fixture('`[bad](missing.md)`\n```md\n[bad](missing.md)\n```\n'), [])
 
     def test_manifest_rejects_malformed_or_unsupported_yaml(self):
-        for value in ('[unterminated', '"unterminated', 'true', '42', 'text: nested'):
+        for value in ('[unterminated', '"unterminated', 'true', '42', 'text: nested',
+                      '- foo', '? foo', ':foo', '#foo'):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 checker.scalar_manifest(f'---\nname: fixture\ndescription: {value}\n---\n')
         for value in ('plain description', '"quoted: description"', "'single ''quote''' "):
@@ -45,3 +46,7 @@ class DocsCheckerTests(unittest.TestCase):
 
     def test_missing_helper_link(self):
         self.assertIn('missing link', self.fixture('[helper](scripts/missing.py)\n')[0])
+
+    def test_duplicate_reference_definition(self):
+        self.assertIn('duplicate reference', self.fixture(
+            '# Guide\n[ok][target]\n[target]: #guide\n[TARGET]: #guide\n')[0])

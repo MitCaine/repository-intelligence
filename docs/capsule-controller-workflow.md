@@ -53,7 +53,7 @@ Controller (one continuing parent)
 Capsule Planner subagent -> draft capsule + impact inventory; planning branch
     | native completion: draft/inventory identities, base, gaps, status
     v
-Scope challenge when required -> resolve findings -> recheck final inventory
+Scope challenge when required -> planner revises findings -> rechallenge final inventory
     | material inventory change invalidates previous challenge
     v
 Finalize READY capsule/P -> controller validates and publishes permitted P ref
@@ -69,8 +69,12 @@ RI evidence, if useful: locate -> inspect -> bind to exact Git blob
     |
     v
 Implementor subagent -> authorized edits + tests
+    | native completion: DONE/gap, changes, paths, checks, status
+    v
+Controller -> verify returned worktree changes/scope
+    | require C here only if implementor is the authorized capture actor
+    v
 Consumer-authorized actor -> capture C; publish at the permitted stage
-    | native completion: DONE/STOP_REPLAN, C, paths, checks, status
     |
     v
 Controller verifies C metadata + branch head, then qualifies exact C
@@ -157,7 +161,7 @@ Resolve findings before finalizing READY/P or granting implementation paths.
 Material changes to inventory/scope/base invalidate the earlier challenge:
 challenge the final inventory identity again before freezing P. An early planning
 branch or draft commit may support recovery; it is not authoritative READY/P.
-Record the final inventory and applicable challenge result in existing planning
+The planner owns draft revision after controller-returned findings and supplies the final READY/P return only after any required rechallenge. Record the final inventory and applicable challenge result in existing planning
 records. Unresolved dependencies block dispatch; candidate review remains fresh.
 
 For new subprocess tests, rehearse invocation, collection, fixtures, isolation,
@@ -168,9 +172,9 @@ mandatory protected qualification on exact C after freeze. An ordinary host
 pass cannot substitute for that final gate. Capture source modes and bytes,
 command/settings, skips and probes. Rehearsal never replaces exact-C qualification.
 
-The consumer's authorization must reference the completed inventory and scope
-challenge. Candidate attachment must also reference the protected rehearsal
-records and reconcile actual P..C paths with the inventory. Where the consumer
+The consumer's authorization must reference the completed inventory and any required final scope
+challenge. Candidate attachment references applicable protected rehearsal
+records or the recorded committed-C-only constraint and mandatory exact-C proof and reconcile actual P..C paths with the inventory. Where the consumer
 supports mechanical gates, missing, stale, or mismatched records must block
 advancement. RI documents this evidence requirement; consumer tooling owns its
 enforcement. Do not invent an RI authorization service or another receipt store.
@@ -187,7 +191,7 @@ fields already cover it. A checkmark is a planning aid, not acceptance evidence.
   branch and record its remote/ref, planning object/overlay P and SHA, and
   expected clean or allowed-dirty state. Keep the base-to-P planning change
   separate from the P-to-C implementation change. State which ref the
-  implementor may push and how the controller will verify its head against C.
+  authorized capture/publication actor may publish and how the controller verifies C.
 - [ ] **Bounded access:** List owned edit paths and permitted reads, plus
   explicit non-goals and protected interfaces. Include the supported host,
   runtime, feature/target settings, and allowed context expansion route.
@@ -275,7 +279,7 @@ Verify actual checked-out/tested source; absent, cancelled or inapplicable jobs
 remain unresolved. Rehearse costly or sandbox-sensitive frozen commands in the intended evidence
 environment when safe: verify invocation, fixtures, permissions, and output
 capture without treating a planning-state result as qualification of C. Run
-applicable cross-platform fixtures before C is frozen, and rerun them on C when
+applicable cross-platform fixtures before freeze where the lane supports it, and rerun them on C when
 the capsule requires candidate-bound proof. New tests should run before C is frozen where the accepted lane permits it;
 services requiring committed C need mandatory exact-C qualification after freeze. Keep machine-global settings out of an isolated evidence run unless
 the consumer explicitly requires them; record any unavoidable assumption.
@@ -339,13 +343,13 @@ each subagent returns through the host's native completion channel:
 
 | Subagent | Input from controller | Required return |
 | --- | --- | --- |
-| Capsule planner | Authenticated objective, base, consumer format and branch policy | Branch/ref, base, capsule path, P SHA, owned paths, ACs, checks, planning status |
+| Capsule planner | Authenticated objective, base, consumer format and branch policy; returned scope findings | First return: draft/inventory identities, branch/base and gaps. After revisions and any fresh challenge: final READY/P, capsule/scope/check identities and status. |
 | Independent scope challenger | Objective, exact base, proposed impact inventory, draft capsule and consumer rules | Read-only findings and scope disposition before implementation authorization |
 | Implementor | Verified P, exact capsule, branch/ref, permitted source context | DONE or precise gap, authorized changes, C SHA when permitted, changed paths, checks and worktree state |
 | Fresh independent reviewer | Exact P and C, full diff, capsule, qualification logs and standards | Per-AC and standards verdict, exact C and branch metadata, findings or uncertainty |
 
 The controller checks the planner's P against the actual branch and capsule
-before launching the implementor. After DONE, it checks C against the branch
+before launching the implementor. After DONE, the controller verifies changes and directs authorized capture; it then checks C against the branch
 head, P..C changed paths, and required checks before launching the reviewer.
 After review, it checks the returned verdict against the same C and rechecks
 the branch head before integration. A completion message is a trigger to
@@ -391,7 +395,7 @@ exist at that stage; a missing future P or C is not an intake failure.
 | Phase | Required inputs and permitted next step |
 | --- | --- |
 | Intake | Current objective/authority, base, planning permissions and resolved execution map; dispatch planning without requiring P/C. |
-| Planning acceptance | Actual draft/P, full objective trace, independently challenged scope, runtime compatibility and feasible evidence routes; resolve findings before implementation. |
+| Planning acceptance | Actual draft/P, full objective trace, inventory and any required final scope challenge, runtime compatibility and feasible evidence routes; resolve findings before implementation. |
 | Implementation | Ready P, authorized worktree/read/edit scope and candidate-capture owner; implement through the permitted transport. |
 | Qualification | Exact C, frozen commands, profiles and runner; collect candidate-bound proof. |
 | Review | Exact C/Q, full diff, complete packet and accepted report schema; request fresh enforced read-only review. |
@@ -428,7 +432,8 @@ recovery rules below.
 | **Before final READY/P and implementation authorization** | Complete the impact inventory and any required independent scope challenge (see [scope discovery](#discover-and-challenge-scope-before-authorization)), including tests asserting changed workflow structures and profiles. Resolve dependencies and bind the inventory and challenge records to the proposed capsule and exact base. | Recheck materially changed inventories in the conditional challenge lane; finalize READY/P only when gaps are resolved. |
 | **After final P return** | Verify capsule/P/base, full planning diff and permitted branch/ref, final inventory/challenge identity and mandatory runtime compatibility. Run draft/published planning checks through the consumer route. | Publish validated P where permitted, then grant implementation paths and dispatch. |
 | **Before implementor dispatch** | Complete the [pre-dispatch gate table](#check-the-execution-plan-before-dispatch), including every AC and required review standard. Verify authorization references the completed inventory and any required final scope challenge. Rehearse costly or sandbox-sensitive commands where safe. Confirm exact P still heads the branch, the implementation checkout is ready, the selected model/effort and host have required access, and the handoff contains the frozen capsule, permitted source context, checks, and STOP_REPLAN route. | Delegate implementation bound to P and the dedicated branch. |
-| **After implementor return** | Require DONE or a precise failure, C SHA, branch/ref, changed-file list, check results, and unresolved gaps. Independently verify the committed branch head and remote ref where required, clean/allowed-dirty state, base..P and full P..C diffs, owned paths, profiles, new tests, and applicable cross-platform fixtures. A DONE flag or matching counts alone is insufficient. | Preserve failed C/evidence for repair; otherwise prepare exact-C qualification. |
+| **After implementor return** | Require DONE or a precise failure, authorized worktree changes, changed paths, checks and gaps. Verify actual diff/status against P and scope; require C only if the implementor was the authorized capture actor. | Preserve failed work/evidence or send verified changes through the authorized candidate-capture route. |
+| **After candidate capture** | Require exact C, applicable local/remote ref state and current head. Verify base..P and full P..C diffs, changed-file inventory, scope, profiles and checks. Publication occurs only when permitted by the execution map; a remote C is not universally required before review. | Authenticate captured C and prepare exact-C qualification. |
 | **Before exact-C qualification** | Reconcile the gate table with every changed file, required profile, and standard. Confirm each command's path, host, inputs and evidence location; rehearse costly or sandbox-sensitive invocation where safe. Ensure C and its source material are stable and that no required test or fixture is missing. | Run the consumer's mandatory local/native and hosted gates on exact C; preserve raw results. |
 | **At external-gate dispatch** | Select one completion route before starting the job: the runner's reliable terminal callback, or a bounded watcher using `capsule-queue` with the exact verified Codex controller destination. For a Work controller, use only a tested bridge to that exact chat or its supported bounded wait. Bind the job to C, required profiles, deadline, and retained status/log paths. | Launch the gate once and wait for its terminal event; no periodic controller-turn status checks or duplicate native run. |
 | **After qualification, before reviewer dispatch** | Verify Q(C) names the exact candidate, host/profile, commands, exit status, logs, coverage gaps, and hosted-check SHA. A missing or failed mandatory gate remains unresolved. Confirm the accepted report template/validator and complete export/supplement requirements. Assemble the capsule/intent, B/P/C, full diff and changed-file inventory, expected AC observations, Q(C), and per-standard evidence. Recheck branch head C and give a fresh reviewer enforced read-only access. | Dispatch one exact-C independent review only with a complete, authenticated packet. |

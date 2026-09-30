@@ -106,6 +106,12 @@ def watch(config):
                            'signal_terminated' if exit_code < 0 else 'failure')
                 if exit_code < 0:
                     detail = f'terminated by signal {-exit_code}; intent unknown'
+                if exit_code != 0:
+                    original_code = exit_code
+                    _, cleanup_confirmed = terminate_group(process)
+                    exit_code = original_code
+                    detail += ('; process group absent after cleanup' if cleanup_confirmed else
+                               '; cleanup unresolved; do not retry overlapping work')
             except subprocess.TimeoutExpired:
                 outcome = 'timeout'
                 cleanup_confirmed = False

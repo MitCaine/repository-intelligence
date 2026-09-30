@@ -34,7 +34,7 @@ of a blocking wait must not turn into repeated CI inspection.
 
 For a new external command, launch it once through the helper below. For an existing job, watch its blocking completion event or wrap a blocking watch command; never restart it to attach a watcher. If the service exposes only status checks, put bounded polling with backoff and a deadline inside a dedicated watcher script.
 
-Distinguish success, failure, timeout, signal termination, and lost connectivity using authoritative terminal evidence. The helper can classify its own watcher errors; a wrapped command that exits nonzero after losing connectivity is a failure unless its watcher records a more specific outcome. A signal alone does not prove an intentional cancellation. A missing PID or closed connection is not success. Save raw, potentially untrusted logs under an unused project `work/` job directory. Queue exactly one concise terminal message containing outcome, status path, and the controller's next action. The helper records command outcome in `status.json` and notification state in `delivery.json`; `accepted_by_cli` is not proof the controller consumed it.
+Distinguish success, failure, timeout, signal termination, and lost connectivity using authoritative terminal evidence. The helper can classify its own watcher errors; a wrapped command that exits nonzero after losing connectivity is a failure unless its watcher records a more specific outcome. A signal alone does not prove an intentional cancellation. A missing PID or closed connection is not success. Save raw, potentially untrusted logs under an unused directory under the consumer-authorized external evidence root. Queue exactly one concise terminal message containing outcome, status path, and the controller's next action. The helper records command outcome in `status.json` and notification state in `delivery.json`; `accepted_by_cli` is not proof the controller consumed it.
 
 After launch, end the waiting turn only if the host has a verified terminal delivery route. Do not poll from later model turns or post periodic updates. On receipt, read `status.json`, `delivery.json`, and relevant `output.log`, verify the exact capsule/candidate/check identity, then continue the controller workflow. Failure or missing evidence blocks the affected qualification gate; it does not turn into a PASS. Preserve the failed candidate and evidence for independent review or replan.
 
@@ -44,9 +44,10 @@ Use [scripts/run_and_queue.py](scripts/run_and_queue.py) with an unused job dire
 
 ```sh
 origin_thread="${CODEX_THREAD_ID:?verified task UUID required}"
+evidence_root="${EVIDENCE_ROOT:?authorized external evidence root required}"
 python3 path/to/capsule-queue/scripts/run_and_queue.py \
   --thread "$origin_thread" --cwd "$PWD" \
-  --job-dir "$PWD/work/qualification-watch-001" \
+  --job-dir "$evidence_root/qualification-watch-001" \
   --label 'Capsule qualification' --timeout-seconds 3600 \
   --follow-up 'Controller: inspect the saved gate result and continue the capsule workflow.' \
   -- ./scripts/capsule-check.sh
@@ -69,3 +70,8 @@ session/group and remote jobs are outside this local boundary; their accepted
 runner must cancel or isolate them separately. A success exit describes the
 wrapped command, not arbitrary detached descendants. Notification/redelivery
 remains separate from command outcome and never reruns the command.
+
+Keep watcher artifacts outside the clean candidate checkout. An in-repository
+location is permitted only if consumer-authorized, ignored and outside candidate
+scope, verified before launch. Signal/nonzero leader exits also trigger group
+cleanup; false or unknown cleanup blocks overlapping retries.

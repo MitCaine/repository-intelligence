@@ -64,7 +64,7 @@ def scalar_manifest(content):
             if not re.fullmatch(r"'(?:[^']|'')*'", value):
                 raise ValueError('invalid quoted manifest scalar')
             value = value[1:-1].replace("''", "'")
-        elif value[0] in '[]{}&*!|>@`%' or re.search(r':\s|\s#', value) or value.lower() in {
+        elif value[0] in '[]{}&*!|>@`%#?:' or value.startswith(('- ', '-\t')) or re.search(r':\s|\s#', value) or value.lower() in {
                 'null', '~', 'true', 'false', 'yes', 'no', 'on', 'off'} or re.fullmatch(r'[-+]?\d+(?:\.\d+)?', value):
             raise ValueError('unsupported manifest scalar; use a quoted string')
         if not isinstance(value, str) or not value.strip():
@@ -81,8 +81,14 @@ def check(root=ROOT):
         if any(part.startswith('.') for part in path.relative_to(root).parts):
             continue
         lines = visible_lines(path.read_text(encoding='utf-8'))
-        references = {m[1].strip().casefold(): m[2] for line in lines
-                      if (m := REFERENCE.match(line))}
+        references = {}
+        for line in lines:
+            match = REFERENCE.match(line)
+            if match:
+                label = match[1].strip().casefold()
+                if label in references:
+                    errors.append(f'{path.relative_to(root)}: duplicate reference {label}')
+                references[label] = match[2]
         targets = list(references.values())
         for line in lines:
             if REFERENCE.match(line):

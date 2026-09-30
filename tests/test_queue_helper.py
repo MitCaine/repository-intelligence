@@ -58,6 +58,7 @@ class QueueHelperTests(unittest.TestCase):
             process = mock.Mock(pid=123, wait=mock.Mock(return_value=-15))
             rejected = subprocess.CompletedProcess([], 7, 'not delivered')
             with mock.patch.object(queue.subprocess, 'Popen', return_value=process), \
+                    mock.patch.object(queue, 'terminate_group', return_value=(-15, True)), \
                     mock.patch.object(queue.subprocess, 'run', return_value=rejected) as run:
                 queue.watch(self.config(root))
             status = json.loads((root / 'status.json').read_text())
@@ -116,6 +117,27 @@ class QueueHelperTests(unittest.TestCase):
             status = json.loads((root / 'status.json').read_text())
             self.assertFalse(status['cleanup_confirmed'])
             self.assertIn('cleanup unresolved', status['detail'])
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX process groups required')
+    def test_abnormal_leader_exit_stops_descendant(self):
+        for ending, outcome, code in [('sys.exit(7)', 'failure', 7),
+                ('os.kill(os.getpid(),15)', 'signal_terminated', -15)]:
+            with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                (root / 'child.py').write_text('import signal,time\nfrom pathlib import Path\n'
+                    'signal.signal(signal.SIGTERM,signal.SIG_IGN)\n'
+                    'while True:\n Path("heartbeat").write_text(str(time.time_ns()))\n time.sleep(.02)\n')
+                config = self.config(root)
+                config['command'] = [sys.executable, '-c',
+                    'import os,sys,subprocess,time; subprocess.Popen([sys.executable,"child.py"]); time.sleep(.5); ' + ending]
+                with mock.patch.object(queue, 'notify'), \
+                        mock.patch.object(queue, 'TERM_GRACE_SECONDS', 0.2):
+                    queue.watch(config)
+                status = json.loads((root / 'status.json').read_text())
+                self.assertEqual((status['outcome'], status['exit_code']), (outcome, code))
+                before = (root / 'heartbeat').read_text()
+                time.sleep(.1)
+                self.assertEqual((root / 'heartbeat').read_text(), before)
 
     def test_redelivery_reuses_terminal_result_without_rerunning_job(self):
         with tempfile.TemporaryDirectory() as raw:
