@@ -166,10 +166,12 @@ The adapter authenticates/reconciles these observations with raw results.
 
 The same helper exposes small pure predicates for consumer-authorized reuse:
 `equivalent_inputs(previous, current)` requires complete SHA256 maps with exactly
-`code`, `dependencies`, `selector`, `configuration`, `toolchain`, `environment`,
+`code`, `dependencies`, `selector`, `selecting_gate`, `configuration`, `toolchain`, `environment`,
 `isolation`, and `timeout_policy`. Missing/unknown inputs disable reuse.
-`carry_review(previous, current_inputs, requirements_sha256)` additionally requires
-an exported PASS receipt digest and matching requirements. The consumer must
+`carry_review(previous, current_inputs, requirements_sha256,
+evidence_sha256=..., policy_version=...)` additionally requires an exported PASS
+receipt digest, matching requirements, retained-evidence digest and adopted policy
+version. Both keyword arguments are required. The consumer must
 resolve and authenticate that prior receipt and its provenance before calling;
 a matching string or this predicate alone never grants acceptance. Keep the
 original tested/reviewed candidate in retained proof; bind the reuse decision to
@@ -195,3 +197,7 @@ IDs remain pending, never passed; self-supersession is rejected. A replacement
 obligation must preserve the original requirement and cannot silently move its
 deadline. These helpers neither authenticate authority nor maintain workflow state.
 See the [effectiveness guidance](../../../workflow-effectiveness.md).
+
+Terminal carry-forward also requires unchanged retained-evidence digest and adopted
+policy version. Selecting-gate identity is a separate required input, not inferred
+from an unchanged test selector. Existing exporters must supply it explicitly.

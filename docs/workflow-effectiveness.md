@@ -245,3 +245,40 @@ Obligation deadlines alone are insufficient. External prerequisites must pass
 before review intake; obligations that review is authorized to satisfy can enter
 review and must pass by completion. The template checks these two phases without
 adding a workflow stage. Consumer adoption remains separately authorized.
+
+Terminal carry-forward also requires unchanged retained-evidence digest and adopted
+policy version. Selecting-gate identity is a separate required input, not inferred
+from an unchanged test selector. Existing exporters must supply it explicitly.
+
+## Optional actual-store boundary probe (#92)
+
+Run the small [Poker attempt-store probe](../scripts/probes/poker_attempt_boundaries.py)
+against a retained checkout when evaluating its published helper. It reads only
+tracked `HEAD` scripts into temporary scratch; it never dispatches a model or
+changes the consumer checkout, permission allocations or product refs.
+
+```sh
+python scripts/probes/poker_attempt_boundaries.py --consumer /path/to/poker-app
+```
+
+The specimen exercises the actual `Store.allocate_review`, immutable publisher
+and verified reader. A synthetic eligibility response isolates allocation from
+qualification. The fixtures reconcile a retained allocation after a lost response,
+reconcile identical completion bytes, reject conflicting publication, preserve the
+finite retry allowance across reopen, and observe an existing disposable Git ref
+instead of applying integration a second time. An allocation is not model startup.
+
+At published Poker `d9a9bda480b4e8131438c89ffbf6e1871f64f7be`, all five cases
+passed. The store has immutable allocations and finalized receipts, but the
+allocation does not separately establish dispatch or model start. These results
+do **not** establish remote guarded integration, actual SDK dispatch/startup,
+accepted report import, or host consumption. Those remaining transitions require
+the consumer's existing transport/store fixture; do not add another RI store.
+
+The current published worker imports its consumer helper modules before
+`main()` performs live-runtime validation. That observation alone does not prove
+the outer launcher's authority check failed: evaluate the complete accepted
+launcher and shared startup prerequisite, rather than patching this worker in
+isolation. Poker #250 remains open and its successor startup proof is still
+pending. Nutrition #246 also remains open. Their final reconciliation and the
+explicitly deferred #80–#82 evaluation remain pending.

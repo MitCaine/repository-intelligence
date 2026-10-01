@@ -24,13 +24,14 @@ class WorkflowEquivalenceTests(unittest.TestCase):
     def test_terminal_carries_only_unchanged_authenticated_exported_judgment(self):
         inputs = {key: 'a' * 64 for key in checks.REUSE_INPUTS}
         prior = {'verdict': 'PASS', 'receipt_sha256': 'b' * 64,
-                 'requirements_sha256': 'c' * 64, 'inputs': inputs}
-        self.assertTrue(checks.carry_review(prior, inputs, 'c' * 64))
-        self.assertFalse(checks.carry_review(prior, {**inputs, 'code': 'd' * 64}, 'c' * 64))
-        self.assertFalse(checks.carry_review(prior, inputs, 'd' * 64))
-        for field in ('receipt_sha256', 'inputs', 'verdict'):
+                 'requirements_sha256': 'c' * 64, 'inputs': inputs,
+                 'evidence_sha256': 'e' * 64, 'policy_version': 'adopted-v1'}
+        self.assertTrue(checks.carry_review(prior, inputs, 'c' * 64, evidence_sha256='e' * 64, policy_version='adopted-v1'))
+        self.assertFalse(checks.carry_review(prior, {**inputs, 'code': 'd' * 64}, 'c' * 64, evidence_sha256='e' * 64, policy_version='adopted-v1'))
+        self.assertFalse(checks.carry_review(prior, inputs, 'd' * 64, evidence_sha256='e' * 64, policy_version='adopted-v1'))
+        for field in ('receipt_sha256', 'inputs', 'verdict', 'evidence_sha256', 'policy_version'):
             missing = dict(prior); missing.pop(field)
-            self.assertFalse(checks.carry_review(missing, inputs, 'c' * 64))
+            self.assertFalse(checks.carry_review(missing, inputs, 'c' * 64, evidence_sha256='e' * 64, policy_version='adopted-v1'))
 
     def test_future_events_do_not_create_candidate_approval_cycle(self):
         obligations = [{'id': 'implementation', 'deadline_stage': 'candidate', 'satisfied_by': 'external', 'status': 'passed'},
@@ -59,3 +60,13 @@ class WorkflowEquivalenceTests(unittest.TestCase):
             checks.validate_obligation_stage([{**obligation, 'supersedes': 'standards'}], 'candidate', phase='intake')
         with self.assertRaises(checks.Blocked):
             checks.validate_obligation_stage([{**obligation, 'status': 'failed'}], 'candidate', phase='intake')
+
+    def test_terminal_cannot_inherit_changed_evidence_or_policy(self):
+        inputs = {key: 'a' * 64 for key in checks.REUSE_INPUTS}
+        prior = {'verdict': 'PASS', 'receipt_sha256': 'b' * 64,
+                 'requirements_sha256': 'c' * 64, 'inputs': inputs,
+                 'evidence_sha256': 'e' * 64, 'policy_version': 'adopted-v1'}
+        self.assertFalse(checks.carry_review(prior, inputs, 'c' * 64,
+            evidence_sha256='f' * 64, policy_version='adopted-v1'))
+        self.assertFalse(checks.carry_review(prior, inputs, 'c' * 64,
+            evidence_sha256='e' * 64, policy_version='adopted-v2'))

@@ -25,3 +25,17 @@ Local unpublished work; no consumer adoption, hosted CI, merge or issue closure 
 ## Verification
 
 The current local checkout passed `scripts/maintain.py verify`: 346 tests, no skips. Documentation links, five skill manifests and `git diff --check` passed. These results do not establish hosted CI or consumer adoption.
+
+## Publication and continuation
+
+The first batch was published in `b32dc4fa7a607e446288f6043bea9c9273568bd5`.
+Issues #83–#88 and #93–#94 were closed after verifying published source and the
+local 346-test result. Hosted Verify was still running at that disposition, then passed all three
+Python 3.12, 3.13 and 3.14 jobs (run `36812038211`).
+
+The next local batch strengthens #90/#91 with distinct selecting-gate identity,
+retained-evidence digest and adopted-policy matching, and adds #92's optional
+actual Poker-store probe. Its five disposable cases passed on published Poker
+`d9a9bda480b4e8131438c89ffbf6e1871f64f7be`; actual dispatch/startup/import/remote
+integration remain outside that probe. Both live trials remain open. No consumer
+source, active evidence, authority or runtime pin was changed.

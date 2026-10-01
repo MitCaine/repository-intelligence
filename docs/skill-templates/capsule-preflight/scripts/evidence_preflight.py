@@ -125,7 +125,7 @@ def validate_observations(expected, observed, name):
                 record.get('outcome') == 'passed', f'{name}: mandatory observation not executed successfully: {identifier}')
 
 
-REUSE_INPUTS = {'code', 'dependencies', 'selector', 'configuration', 'toolchain',
+REUSE_INPUTS = {'code', 'dependencies', 'selector', 'selecting_gate', 'configuration', 'toolchain',
                 'environment', 'isolation', 'timeout_policy'}
 
 
@@ -138,7 +138,8 @@ def equivalent_inputs(previous, current):
     return complete(previous) and complete(current) and previous == current
 
 
-def carry_review(previous, current_inputs, requirements_sha256):
+def carry_review(previous, current_inputs, requirements_sha256, *,
+                 evidence_sha256, policy_version):
     """An authenticated exported receipt may support unchanged implementation judgment."""
     return (isinstance(previous, dict) and previous.get('verdict') == 'PASS' and
             isinstance(previous.get('receipt_sha256'), str) and
@@ -147,6 +148,11 @@ def carry_review(previous, current_inputs, requirements_sha256):
             isinstance(requirements_sha256, str) and len(requirements_sha256) == 64 and
             all(c in '0123456789abcdef' for c in requirements_sha256) and
             previous.get('requirements_sha256') == requirements_sha256 and
+            isinstance(evidence_sha256, str) and len(evidence_sha256) == 64 and
+            all(c in '0123456789abcdef' for c in evidence_sha256) and
+            previous.get('evidence_sha256') == evidence_sha256 and
+            isinstance(policy_version, str) and bool(policy_version) and
+            previous.get('policy_version') == policy_version and
             equivalent_inputs(previous.get('inputs'), current_inputs))
 
 
