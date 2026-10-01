@@ -50,7 +50,7 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                         "lexical_call_candidates": [], "syntax_kind": node.type,
                         **extra, **declaration(source, kind, qualified, start, end)})
 
-    def visit(node, owners: tuple[str, ...]) -> None:
+    def visit(node, owners: tuple[str, ...], levels=None) -> None:
         nonlocal promised
         if node.type in METADATA:
             promised += 1
@@ -84,8 +84,9 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
         # Some grammar containers hold several Setext headings rather than sections.
         # Walk every heading and retain only its direct section body before the next unit.
         siblings = node.named_children
-        local_owners = owners
-        levels = []
+        if levels is None:
+            levels = []
+        local_owners = (*owners, *(title for _, title in levels))
         for index, child in enumerate(siblings):
             if child.type in HEADINGS:
                 promised += 1
@@ -110,7 +111,14 @@ def index_source(path: Path, source: bytes, *, tree) -> dict:
                         unhandled.append({"syntax_kind": child.type,
                                       "byte_range": {"start": child.start_byte, "end": boundary}})
             else:
-                visit(child, local_owners)
+                if child.type == "section":
+                    # Grammar sections are transparent: heading levels, not CST
+                    # containers, determine mixed ATX/Setext ownership.
+                    visit(child, owners, levels)
+                    local_owners = (*owners, *(title for _, title in levels))
+                else:
+                    # Quotes/lists are separate scopes and cannot pop outer headings.
+                    visit(child, local_owners)
 
     visit(tree, ())
     assign_named_ids(entries)

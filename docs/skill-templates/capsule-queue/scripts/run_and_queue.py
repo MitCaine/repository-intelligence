@@ -184,7 +184,12 @@ def watch(config):
             if process is not None:
                 cleanup_confirmed = False
                 try:
-                    if outcome == 'success' and not group_exists(process.pid):
+                    try:
+                        absent = outcome == 'success' and not group_exists(process.pid)
+                    except PermissionError:
+                        # First observation uncertainty must enter bounded cleanup too.
+                        absent = False
+                    if absent:
                         cleanup_confirmed = True
                     else:
                         cleanup_code, cleanup_confirmed = terminate_group(process)

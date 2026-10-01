@@ -24,7 +24,9 @@ the heading node, so the first quote prefix lies outside that range. All raw
 body bytes and later quote prefixes remain intact. LF, CRLF and CR-only inputs
 use raw-byte slices with logical line coordinates. Checklist items have
 their own overlapping ranges and `task_state`. Fenced code examples do not
-create headings or checklist entries. Section identity uses its heading path;
+create headings or checklist entries. Mixed Setext/ATX headings share a logical
+level stack across grammar sections; quote/list scopes cannot pop outer headings.
+Section identity uses its heading path;
 checklist identity uses its ordinal within that path. Repeated headings and
 inserted checklist items can therefore produce conservative add/remove deltas.
 

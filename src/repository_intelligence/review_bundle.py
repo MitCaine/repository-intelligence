@@ -163,6 +163,7 @@ def validate_review_bundle(bundle):
                     value = resolve(reference['record'], depth + 1)
             except (KeyError, IndexError, TypeError) as error:
                 raise ValueError('invalid evidence path') from error
+        _check_depth(value)  # References can expand a shallow envelope past the bound.
         return value
 
     result = {}
@@ -176,7 +177,7 @@ def validate_review_bundle(bundle):
         result[name] = value
     if used != set(records):
         raise ValueError('unreferenced evidence records')
-    if result['comparison'] != compare_inventories(result['planning'], result['candidate']):
+    if canonical(result['comparison']) != canonical(compare_inventories(result['planning'], result['candidate'])):
         raise ValueError('comparison does not match inventories')
     return result
 

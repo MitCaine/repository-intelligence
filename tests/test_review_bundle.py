@@ -136,3 +136,81 @@ class ReviewBundleTests(unittest.TestCase):
         self.assertNotIn('record_ids', index)
         for groups in (index['delta']['file_changes'], index['delta']['declaration_changes']):
             for entry in groups.values(): self.assertLessEqual(len(entry['sample']), 1)
+
+    def test_recomputed_comparison_uses_exact_json_types(self):
+        documents = rb.validate_review_bundle(self.bundle)
+        plain = {'review_bundle_schema_version': 1, 'records': {}, 'documents': {
+            name: {'value': value, 'references': [], 'sha256': rb.digest(value)}
+            for name, value in documents.items()}}
+        self.assertEqual(rb.validate_review_bundle(plain), documents)
+        def scalars(value, path=()):
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    yield from scalars(child, (*path, key))
+            elif isinstance(value, list):
+                for index, child in enumerate(value):
+                    yield from scalars(child, (*path, index))
+            elif type(value) is int:
+                yield path, value
+        selected = {}
+        for path, original in scalars(documents['comparison']):
+            category = original if original in (0, 1) else 'other_integer'
+            selected.setdefault(category, (path, original))
+        self.assertIn(0, selected)
+        for path, original in selected.values():
+            for substitute in ([float(original), bool(original)] if original in (0, 1) else [float(original)]):
+                with self.subTest(path=path, substitute=substitute):
+                    altered = deepcopy(plain)
+                    envelope = altered['documents']['comparison']
+                    parent = envelope['value']
+                    for segment in path[:-1]:
+                        parent = parent[segment]
+                    parent[path[-1]] = substitute
+                    envelope['sha256'] = rb.digest(envelope['value'])
+                    with self.assertRaisesRegex(ValueError, 'comparison does not match'):
+                        rb.validate_review_bundle(altered)
+                    # Actual CLI paths must reject rather than expose the substituted value.
+                    bundle_path = Path(self.temp.name) / 'altered.json'
+                    bundle_path.write_bytes(rb.canonical(altered))
+                    for command in ('verify', 'read'):
+                        arguments = [command, str(bundle_path)]
+                        if command == 'read':
+                            arguments += ['--document', 'comparison']
+                        output = io.StringIO()
+                        with contextlib.redirect_stdout(output), self.assertRaises(ValueError):
+                            rb.main(arguments)
+                        self.assertEqual(output.getvalue(), '')
+
+    def test_expanded_depth_is_bounded_even_with_shallow_reference_envelope(self):
+        def specimen(depth):
+            tail = 'leaf'
+            for _ in range(depth - 60):
+                tail = {'child': tail}
+            placeholder = None
+            for _ in range(60):
+                placeholder = {'child': placeholder}
+            planning = deepcopy(self.planning)
+            planning['depth_probe'] = placeholder
+            expanded = deepcopy(self.planning)
+            full = 'leaf'
+            for _ in range(depth):
+                full = {'child': full}
+            expanded['depth_probe'] = full
+            documents = {'planning': expanded, 'candidate': self.candidate,
+                         'comparison': compare_inventories(expanded, self.candidate)}
+            bundle = {'review_bundle_schema_version': 1, 'records': {
+                rb.digest(tail): {'value': tail, 'references': []}}, 'documents': {
+                name: {'value': deepcopy(value), 'references': [], 'sha256': rb.digest(value)}
+                for name, value in documents.items()}}
+            bundle['documents']['planning']['value'] = planning
+            bundle['documents']['planning']['references'] = [{
+                'path': ['depth_probe'] + ['child'] * 60, 'record': rb.digest(tail)}]
+            return bundle, expanded
+        valid, expanded = specimen(79)  # Root property adds one level: decoded depth 80.
+        self.assertEqual(rb.validate_review_bundle(valid)['planning'], expanded)
+        invalid, expanded = specimen(120)
+        rb._check_depth(invalid)  # Wire representation is within its separate bound.
+        with self.assertRaisesRegex(ValueError, 'nesting exceeds'):
+            rb.validate_review_bundle(invalid)
+        with self.assertRaisesRegex(ValueError, 'nesting exceeds'):
+            rb.build_review_bundle(expanded, self.candidate)

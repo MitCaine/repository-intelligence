@@ -18,8 +18,8 @@ from .source import SCHEMA_VERSION, git_object_format
 from .structural import MAX_DECLARATION_DETAILS, ScanSetup
 
 
-INVENTORY_SCHEMA_VERSION = 15
-MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-markdown-source-units-v12"
+INVENTORY_SCHEMA_VERSION = 16
+MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-markdown-source-units-v13"
 
 
 def _digest(scope: dict, files: list[dict]) -> str:

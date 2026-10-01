@@ -106,3 +106,7 @@ failures retain `cleanup_confirmed: false` with diagnostics. The helper is POSIX
 qualify the actual host's signalling policy rather than assume a nested sandbox
 permits cleanup. A terminal status file prevents worker rerun; use delivery
 recovery for that existing completed job.
+
+A permission failure on the first post-success group inspection also enters the
+bounded cleanup routine. It cannot skip retries; persistent uncertainty still
+records unconfirmed cleanup and never permits overlapping follow-up.

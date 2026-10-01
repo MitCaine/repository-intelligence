@@ -201,3 +201,7 @@ See the [effectiveness guidance](../../../workflow-effectiveness.md).
 Terminal carry-forward also requires unchanged retained-evidence digest and adopted
 policy version. Selecting-gate identity is a separate required input, not inferred
 from an unchanged test selector. Existing exporters must supply it explicitly.
+
+Reuse claims must be nonempty strings, and `allowed_claims` must be a nonempty
+list of unique nonempty strings. Membership is exact; string substring matching,
+empty/numeric claims, dictionaries and duplicate entries are rejected.

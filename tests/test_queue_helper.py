@@ -314,6 +314,57 @@ class QueueHelperTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'do not resend'):
                 queue.notify(config, recovery=True)
 
+    def test_first_success_inspection_error_enters_bounded_cleanup(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            config = self.config(root)
+            config['command'] = [sys.executable, '-c', 'pass']
+            with mock.patch.object(queue, 'group_exists', side_effect=[PermissionError('transient'), False]) as inspect, \
+                    mock.patch.object(queue, 'terminate_group', wraps=queue.terminate_group) as cleanup, \
+                    mock.patch.object(queue, 'notify'):
+                queue.watch(config)
+            status = json.loads((root / 'status.json').read_text())
+            self.assertEqual((status['outcome'], status['exit_code']), ('success', 0))
+            self.assertTrue(status['cleanup_confirmed'])
+            self.assertIsNone(status['cleanup_error'])
+            self.assertGreaterEqual(inspect.call_count, 2)
+            cleanup.assert_called_once()
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX process groups required')
+    def test_transient_first_success_inspection_still_stops_real_descendant(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / 'child.py').write_text('import signal,time\nfrom pathlib import Path\n'
+                'signal.signal(signal.SIGTERM,signal.SIG_IGN)\n'
+                'until=time.monotonic()+8\n'
+                'while time.monotonic()<until:\n Path("heartbeat").write_text(str(time.time_ns()))\n time.sleep(.02)\n')
+            config = self.config(root)
+            config['command'] = [sys.executable, '-c',
+                'import subprocess,sys,time; subprocess.Popen([sys.executable,"child.py"]); time.sleep(.4)']
+            actual = queue.group_exists
+            observed = []
+            def first_error(group):
+                observed.append(group)
+                if len(observed) == 1:
+                    raise PermissionError('transient first inspection')
+                return actual(group)
+            with mock.patch.object(queue, 'group_exists', side_effect=first_error), \
+                    mock.patch.object(queue, 'terminate_group', wraps=queue.terminate_group) as cleanup, \
+                    mock.patch.object(queue, 'TERM_GRACE_SECONDS', .2), \
+                    mock.patch.object(queue, 'CLEANUP_WAIT_SECONDS', .5), \
+                    mock.patch.object(queue, 'notify'):
+                queue.watch(config)
+            status = json.loads((root / 'status.json').read_text())
+            self.assertEqual((status['outcome'], status['exit_code']), ('success', 0))
+            cleanup.assert_called_once()
+            self.assertGreaterEqual(len(observed), 2)
+            heartbeat = (root / 'heartbeat').read_bytes()
+            time.sleep(.15)
+            self.assertEqual((root / 'heartbeat').read_bytes(), heartbeat)
+            # A zombie-only group may remain visible: never convert that into absence.
+            if not status['cleanup_confirmed']:
+                self.assertIn('cleanup unresolved', status['detail'])
+
 
 if __name__ == '__main__':
     unittest.main()

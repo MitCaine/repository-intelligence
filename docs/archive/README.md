@@ -22,3 +22,5 @@ architecture; native syntax and definition lookup share one native-analysis guid
 Old guide filenames were deliberately retired rather than retained as duplicate
 redirect pages. Update saved links to the current index; this documentation move
 does not itself change a result schema or runtime behavior.
+
+- [Implemented-fixes audit corrections](implemented-fixes-audit-corrections-2026-09-30.md): five targeted defects and their local regression controls.

@@ -40,7 +40,7 @@ snapshot is not a claim about an updated remote or selected runtime.
 
 | Boundary | Checked consumer route |
 | --- | --- |
-| Runtime | Production macOS lane; accepted Python/SDK paths and lock identities. Mandatory production RI probe accepts inventory 13 and mapping `python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v10`; current RI emits 15/v12 and needs a separately authorized consumer upgrade or a compatible retained RI. |
+| Runtime | Production macOS lane; accepted Python/SDK paths and lock identities. Mandatory production RI probe accepts inventory 13 and mapping `python-rust-javascript-typescript-java-go-csharp-c-cpp-source-callables-v10`; current RI emits 16/v13 and needs a separately authorized consumer upgrade or a compatible retained RI. |
 | Planning | Authenticated draft/published planning checks and controller-directed non-main branch; planning-only remote ref may be published for recovery. |
 | Capture | Controller/operator performs precommit checks and creates C; implementation model turns provide authorized changes. |
 | Qualification | Accepted checkpoint `qualify`, exact capsule/B/P/C and runtime; mandatory external RI source evidence in production. |

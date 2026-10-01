@@ -88,6 +88,56 @@ class MarkdownTests(unittest.TestCase):
             self.assertEqual([v['candidate']['name'] for v in delta['declaration_changes']['modified']], ['Two'])
             self.assertEqual([v['candidate']['name'] for v in delta['declaration_changes']['unchanged']], ['One'])
 
+    def test_mixed_heading_paths_and_unambiguous_delta(self):
+        import itertools
+        kinds = {'a1': 1, 'a2': 2, 'a3': 3, 's1': 1, 's2': 2}
+        import random
+        sequences = list(itertools.product(kinds, repeat=2))
+        for seed in (1977, 2309, 8031):
+            generator = random.Random(seed)
+            sequences.extend(tuple(generator.choice(list(kinds)) for _ in range(8)) for _ in range(15))
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / 'mixed.md'
+            for pair in sequences:
+                blocks, expected, stack = [], [], []
+                for i, kind in enumerate(pair):
+                    name, level = f'H{i}', kinds[kind]
+                    while stack and stack[-1][0] >= level:
+                        stack.pop()
+                    stack.append((level, name))
+                    expected.append(' / '.join(title for _, title in stack))
+                    heading = (f'{"#" * level} {name}\n' if kind[0] == 'a' else
+                               name + '\n' + ('===' if level == 1 else '---') + '\n')
+                    blocks.append(heading + f'Body{i}\n\n')
+                for newline in ('\n', '\r\n', '\r'):
+                    with self.subTest(pair=pair, newline=repr(newline)):
+                        source = ''.join(blocks).replace('\n', newline).encode()
+                        path.write_bytes(source)
+                        units = index_file(path)['functions']
+                        self.assertEqual([u['qualified_name'] for u in units], expected)
+                        self.assertEqual([source[u['byte_range']['start']:u['byte_range']['end']] for u in units],
+                                         [b.replace('\n', newline).encode() for b in blocks])
+            before, after = Path(raw) / 'p', Path(raw) / 'c'
+            before.mkdir(); after.mkdir()
+            source = 'A\n===\n\n## Details\nfirst\n\nB\n===\n\n## Details\nsecond\n'
+            (before / 'a.md').write_text(source)
+            (after / 'a.md').write_text(source.replace('second', 'changed'))
+            units = index_file(before / 'a.md')['functions']
+            self.assertEqual([u['qualified_name'] for u in units], ['A', 'A / Details', 'B', 'B / Details'])
+            self.assertTrue(all(not u['identity_ambiguous'] for u in units))
+            delta = compare_inventories(inventory_tree(before, stable=True), inventory_tree(after, stable=True))
+            self.assertEqual([v['candidate']['qualified_name'] for v in delta['declaration_changes']['modified']], ['B / Details'])
+            self.assertEqual(delta['declaration_changes']['added'], [])
+            self.assertEqual(delta['declaration_changes']['removed'], [])
+
+    def test_quote_heading_stack_does_not_escape_to_document(self):
+        source = b'Parent\n===\n\n> Quote\n> =====\n> ## Inner\n> body\n\n## Outside\nbody\n'
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / 'quote.md'
+            path.write_bytes(source)
+            self.assertEqual([u['qualified_name'] for u in index_file(path)['functions']],
+                             ['Parent', 'Parent / Quote', 'Parent / Quote / Inner', 'Parent / Outside'])
+
     def test_markdown_candidate_delta_and_invalid_utf8(self):
         with tempfile.TemporaryDirectory() as raw:
             planning = Path(raw) / "planning"

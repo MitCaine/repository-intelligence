@@ -10,9 +10,9 @@ The shared entry points are `repository_intelligence.locator.index_file` and
 | Contract | Current value |
 | --- | --- |
 | Navigation `schema_version` | `7` |
-| `inventory_schema_version` | `15` |
+| `inventory_schema_version` | `16` |
 | `adapter_version` | `11` |
-| `mapping_contract` | `python-rust-javascript-typescript-java-go-csharp-c-cpp-markdown-source-units-v12` |
+| `mapping_contract` | `python-rust-javascript-typescript-java-go-csharp-c-cpp-markdown-source-units-v13` |
 
 Package metadata remains `0.1.0`; pin the RI revision and retain emitted parser
 metadata. Navigation schema alone does not identify all mapping behavior. Check
@@ -125,3 +125,7 @@ navigation cannot be silently combined into a current complete inventory.
 Within navigation schema 7, adapter/mapping 12 and inventory 15 correct repeated
 Setext/quoted heading coverage, preamble boundaries and CR-only end lines.
 Do not compare old 14/v11 inventories as if they used these corrected ranges.
+
+Adapter/mapping 13 and inventory 16 additionally preserve mixed Setext/ATX
+heading ancestry. The v12/15 discovery/range fix alone did not establish correct
+parent identities. Navigation schema 7 retains its shape.

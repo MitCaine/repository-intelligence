@@ -3,13 +3,14 @@
 `repository_intelligence.inventory.inventory_tree(root, stable=False,
 logical_root=".")` scans supported Python, Rust, JavaScript, JSX, TypeScript,
 TSX, Java, Go, C#, C, C++, and Markdown source without query terms. The current inventory
-schema is version 15; older packets are incompatible with it. `.mts` and `.cts`
+schema is version 16; older packets are incompatible with it. `.mts` and `.cts`
 use the TypeScript adapter. Ambiguous `.h` files are not guessed: pass
 `language_choices={"include/api.h": "cpp"}` (or `"c"`) for exact relative
 header paths in both directory queries and inventories. Unselected `.h` files
 are listed in `observed_unsupported_paths`.
-Mapping contract v12 corrects Markdown heading discovery and raw section ranges,
+Mapping contract v12 corrected heading discovery and raw section ranges,
 including repeated Setext headings, quoted headings and CR-only line endings.
+Mapping v13 additionally preserves mixed Setext/ATX parent paths and identities.
 Version 11 introduced Markdown front matter, section and checklist units
 to the existing source-callable mappings documented in
 [navigation reference](navigation.md).
@@ -144,3 +145,7 @@ changes itself.
 ## Optional deduplicated transport
 
 Compare also accepts `--review-bundle-json`. See [review evidence transport](review-evidence.md) for lossless reconstruction, integrity checks and selective reads. This does not replace the existing JSON outputs or change inventory compatibility.
+
+Mapping v13/inventory 16 preserves logical Markdown parent paths across mixed
+Setext/ATX grammar containers. Qualified identities and delta classification can
+change relative to v12/15, so old packets remain explicitly incompatible.

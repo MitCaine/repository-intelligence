@@ -400,3 +400,21 @@ class EvidencePreflightTests(unittest.TestCase):
             gate.validate_reuse(execution, authorization, {**policy, 'adopted': False}, self.root, self.records, current)
         with self.assertRaises(gate.Blocked):
             gate.validate_reuse(execution, {**authorization, 'inputs': {**authorization['inputs'], 'environment': 'b' * 64}}, policy, self.root, self.records, current)
+
+    def test_reuse_rejects_malformed_claim_allowlists(self):
+        execution = copy.deepcopy(self.packet['checks'][0])
+        execution['inputs'] = {key: 'a' * 64 for key in gate.REUSE_INPUTS}
+        candidate = execution['candidate']
+        authorization = {'candidate': candidate, 'execution_sha256': hashlib.sha256(
+            json.dumps(execution, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest(),
+            'policy_version': 'v1', 'claim': 'unit', 'trusted': True, 'fresh': True,
+            'inputs': execution['inputs']}
+        policy = {'adopted': True, 'version': 'v1', 'allowed_claims': ['unit']}
+        gate.validate_reuse(execution, authorization, policy, self.root, self.records, candidate)
+        cases = [('unit', 'not-unit'), ('', ['']), (7, [7]),
+                 ('unit', ['unit', 'unit']), ('unit', []), ('unit', {'unit': True}),
+                 ('unit', ['not-unit']), (None, [None])]
+        for claim, allowed in cases:
+            with self.subTest(claim=claim, allowed=allowed), self.assertRaises(gate.Blocked):
+                gate.validate_reuse(execution, {**authorization, 'claim': claim},
+                    {**policy, 'allowed_claims': allowed}, self.root, self.records, candidate)

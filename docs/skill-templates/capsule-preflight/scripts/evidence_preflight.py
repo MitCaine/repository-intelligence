@@ -167,6 +167,9 @@ def validate_reuse(execution, authorization, policy, root, packet_dir, candidate
             'reuse requires an adopted versioned policy')
     require(isinstance(execution, dict) and isinstance(authorization, dict),
             'missing separate reuse records')
+    nonempty_strings(policy.get('allowed_claims'), 'reuse allowed claims')
+    require(isinstance(authorization.get('claim'), str) and authorization['claim'],
+            'invalid reuse claim')
     origin = execution.get('candidate')
     current = authorization.get('candidate')
     require(current == candidate, 'reuse authorization names another current candidate')

@@ -26,7 +26,7 @@ from .adapters import PARSERS
 from .source import RawOffsets, python_source_encoding
 
 
-ADAPTER_VERSION = 12
+ADAPTER_VERSION = 13
 MAX_DECLARATION_DETAILS = 100
 MAX_DIAGNOSTIC_DETAILS = 50
 GRAMMARS = {

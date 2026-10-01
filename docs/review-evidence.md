@@ -4,7 +4,7 @@ Use this optional transport when repeated inventory records make a handoff large
 It retains the complete planning inventory, candidate inventory and recomputed
 comparison. Repeated JSON objects are stored once and referenced by SHA-256.
 No persistent index, service, compression layer or new approval authority is added.
-Inventory schema 15 and mapping v12 describe the current Markdown semantics;
+Inventory schema 16 and mapping v13 describe the current Markdown semantics;
 the transport has its own
 `review_bundle_schema_version: 1`. Existing consumer contracts require an explicit
 adapter/prerequisite before adopting it. A retained 13/v10 consumer must continue
@@ -37,6 +37,9 @@ reconstructs exactly to that data. The verifier rejects missing, extra, cyclic,
 overlapping or altered references and recomputes the comparison from both
 inventories. These checks prove internal consistency, not source authenticity;
 consumers still bind P/C, raw source hashes, full Git diff and qualification.
+Recomputed comparisons must match canonical JSON bytes, including scalar types:
+`0`, `false` and `0.0` are distinct. The 80-level nesting limit is checked on both
+the wire envelope and the expanded documents/records; references cannot evade it.
 Limits are 64 MB stored and a conservative 128 MB decoded allocation budget,
 including reconstructed references. They are RI transport limits, not permission
 to increase a consumer's evidence budget. There is no external-file lookup.
