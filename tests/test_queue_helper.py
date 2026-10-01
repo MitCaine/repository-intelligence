@@ -119,7 +119,9 @@ class QueueHelperTests(unittest.TestCase):
                 config['command'] = [sys.executable, '-c',
                     'import subprocess,sys,time,signal\nfrom pathlib import Path\n'
                     'child=subprocess.Popen([sys.executable,"child.py"])\n'
-                    'def stop(signum,frame):\n child.kill(); child.wait(); time.sleep(.1); sys.exit(0)\n'
+                    'def stop(signum,frame):\n child.kill(); child.wait(); Path("cleanup_active").touch()\n'
+                    ' while not Path("release_cleanup").exists(): time.sleep(.01)\n'
+                    ' sys.exit(0)\n'
                     'signal.signal(signal.SIGTERM,stop)\nPath("ready").touch()\ntime.sleep(60)']
                 config_path = root / 'config.json'
                 config_path.write_text(json.dumps(config))
@@ -127,7 +129,7 @@ class QueueHelperTests(unittest.TestCase):
                 launcher = ('import importlib.util,json,sys; '
                     f's=importlib.util.spec_from_file_location("queue",{str(SCRIPT)!r}); '
                     'm=importlib.util.module_from_spec(s); s.loader.exec_module(m); '
-                    'm.TERM_GRACE_SECONDS=.2; m.notify=lambda config: None; '
+                    'm.TERM_GRACE_SECONDS=7; m.notify=lambda config: None; '
                     'm.watch(json.load(open(sys.argv[1])))')
                 watcher = subprocess.Popen([sys.executable, '-c', launcher, str(config_path)],
                                            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -136,10 +138,16 @@ class QueueHelperTests(unittest.TestCase):
                     while not ((root / 'heartbeat').exists() and (root / 'ready').exists()) and time.monotonic() < deadline:
                         time.sleep(.02)
                     self.assertTrue((root / 'heartbeat').exists())
+                    self.assertTrue((root / 'ready').exists())
                     watcher.send_signal(signum)
-                    time.sleep(.05)
-                    if watcher.poll() is None:
-                        watcher.send_signal(signum)
+                    # Prove cleanup is active rather than race an elapsed delay.
+                    deadline = time.monotonic() + 5
+                    while not (root / 'cleanup_active').exists() and time.monotonic() < deadline:
+                        time.sleep(.01)
+                    self.assertTrue((root / 'cleanup_active').exists())
+                    self.assertIsNone(watcher.poll())
+                    watcher.send_signal(signum)
+                    (root / 'release_cleanup').touch()
                     _, error = watcher.communicate(timeout=5)
                     self.assertEqual(watcher.returncode, 0, error.decode())
                     status = json.loads((root / 'status.json').read_text())
@@ -150,6 +158,7 @@ class QueueHelperTests(unittest.TestCase):
                     time.sleep(.12)
                     self.assertEqual((root / 'heartbeat').read_bytes(), before)
                 finally:
+                    (root / 'release_cleanup').touch()
                     if watcher.poll() is None:
                         watcher.kill(); watcher.communicate()
 

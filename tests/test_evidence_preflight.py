@@ -418,3 +418,43 @@ class EvidencePreflightTests(unittest.TestCase):
             with self.subTest(claim=claim, allowed=allowed), self.assertRaises(gate.Blocked):
                 gate.validate_reuse(execution, {**authorization, 'claim': claim},
                     {**policy, 'allowed_claims': allowed}, self.root, self.records, candidate)
+
+    def test_json_scalar_aliases_reject_in_preflight_and_closeout_cli(self):
+        import sys
+        self.closeout_fixture()
+        for document in (self.contract, self.packet):
+            document['closeout']['metadata']['issue'] = 1
+            document['closeout']['metadata']['accepted'] = True
+        self.contract['closeout']['required_metadata'].append('accepted')
+        original = copy.deepcopy(self.packet)
+        contract_path, packet_path = self.records / 'contract.json', self.records / 'packet.json'
+        contract_path.write_text(json.dumps(self.contract))
+        def invoke():
+            packet_path.write_text(json.dumps(self.packet))
+            result = subprocess.run([sys.executable, str(SCRIPT), '--repository', str(self.root),
+                '--contract', str(contract_path), '--packet', str(packet_path)],
+                capture_output=True, text=True, timeout=30, env=self.env)
+            return result.returncode, json.loads(result.stdout)
+        self.assertEqual(invoke()[0], 0)
+        self.assertEqual(self.check(), ['task.py'])
+        cases = [(('identity', 'revision'), True), (('identity', 'revision'), 1.0),
+                 (('closeout', 'metadata', 'issue'), True),
+                 (('closeout', 'metadata', 'issue'), 1.0),
+                 (('closeout', 'metadata', 'accepted'), 1),
+                 (('closeout', 'validator_evidence', 'exit_code'), False),
+                 (('closeout', 'validator_evidence', 'exit_code'), 0.0),
+                 (('identity', 'revision'), 2)]
+        for path, substitute in cases:
+            with self.subTest(path=path, substitute=substitute):
+                self.packet = copy.deepcopy(original)
+                parent = self.packet
+                for field in path[:-1]:
+                    parent = parent[field]
+                parent[path[-1]] = substitute
+                code, result = invoke()
+                self.assertEqual(code, 2, result)
+                self.assertEqual(result['disposition'], 'blocked')
+                with self.assertRaises(gate.Blocked):
+                    self.check()
+        self.packet = original
+        self.assertEqual(invoke()[0], 0)

@@ -205,3 +205,9 @@ from an unchanged test selector. Existing exporters must supply it explicitly.
 Reuse claims must be nonempty strings, and `allowed_claims` must be a nonempty
 list of unique nonempty strings. Membership is exact; string substring matching,
 empty/numeric claims, dictionaries and duplicate entries are rejected.
+
+Identity, invocation, closeout metadata and validator-evidence comparisons use
+canonical JSON matching. Boolean, integer and float aliases are distinct:
+`true`, `1`, and `1.0` cannot substitute for one another, nor can `false`, `0`,
+and `0.0`. This matches authenticated exported expectations; consumers still
+own provenance and their metadata schema. The adapter wire schema remains 1.

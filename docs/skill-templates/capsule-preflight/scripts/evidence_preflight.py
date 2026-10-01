@@ -18,6 +18,14 @@ def require(condition, message):
         raise Blocked(message)
 
 
+def same_json(left, right):
+    """Match JSON identities without Python's bool/int/float aliases."""
+    def canonical(value):
+        return json.dumps(value, sort_keys=True, separators=(',', ':'),
+                          ensure_ascii=False, allow_nan=False)
+    return canonical(left) == canonical(right)
+
+
 def unique_object(pairs):
     result = {}
     for key, value in pairs:
@@ -224,16 +232,16 @@ def validate_closeout(expected, observed, checks, root, packet_dir):
     validator = expected.get('history_check_id')
     require(isinstance(validator, str) and validator in checks, 'missing history validator check')
     record = checks[validator]
-    require(observed.get('validator_evidence') == {
+    require(same_json(observed.get('validator_evidence'), {
         'id': validator, 'candidate': record['candidate'], 'exit_code': record['exit_code'],
-        'log_path': record['log_path'], 'log_sha256': record['log_sha256']},
+        'log_path': record['log_path'], 'log_sha256': record['log_sha256']}),
         'history validator evidence mismatch')
     fields = nonempty_strings(expected.get('required_metadata'), 'required history metadata')
     metadata = observed.get('metadata')
     frozen = expected.get('metadata')
     require(isinstance(metadata, dict) and isinstance(frozen, dict) and
             all(key in metadata and metadata[key] not in (None, '', [], {}) for key in fields)
-            and all(key in frozen for key in fields) and metadata == frozen,
+            and all(key in frozen for key in fields) and same_json(metadata, frozen),
             'history metadata missing or mismatched')
     validate_log(observed, packet_dir, 'history')
     recovery = expected.get('recovery_commit')
@@ -291,7 +299,7 @@ def validate(contract, packet, root, packet_dir):
             {'task_id', 'revision', 'base', 'planning', 'candidate'}, 'invalid contract identity')
     require(isinstance(identity['task_id'], str) and identity['task_id'] and
             type(identity['revision']) is int and identity['revision'] > 0, 'invalid task/revision')
-    require(packet.get('identity') == identity, 'packet identity differs from trusted contract')
+    require(same_json(packet.get('identity'), identity), 'packet identity differs from trusted contract')
     for field in ('base', 'planning', 'candidate'):
         sha = identity[field]
         require(isinstance(sha, str) and len(sha) in (40, 64) and
@@ -366,11 +374,11 @@ def validate(contract, packet, root, packet_dir):
                     f'{name}: missing capability probe result')
         invocation = expected.get('invocation')
         validate_invocation(invocation, root, c)
-        require(record.get('invocation') == invocation, f'{name}: frozen invocation drift')
+        require(same_json(record.get('invocation'), invocation), f'{name}: frozen invocation drift')
         if rehearsal_required:
             rehearsal = rehearsals.get(name, {})
             require(type(rehearsal.get('exit_code')) is int and rehearsal['exit_code'] == 0 and
-                    rehearsal.get('invocation') == invocation, f'{name}: rehearsal mismatch or failure')
+                    same_json(rehearsal.get('invocation'), invocation), f'{name}: rehearsal mismatch or failure')
             validate_log(rehearsal, packet_dir, f'{name} rehearsal')
     if 'closeout' in contract:
         validate_closeout(contract['closeout'], packet.get('closeout'), observed, root, packet_dir)
