@@ -6,6 +6,71 @@ source lookup without capsules or these skills. A skill helps an agent follow a
 procedure; it does not create a capsule runner, repository permission, review
 independence, or a completion channel.
 
+## Adopt one shared procedure
+
+Keep the shared controller sequence and five role skills at one immutable RI
+commit. Keep a small consumer execution map in an existing entrypoint or command
+guide; do not copy the shared sequence into a second manual. The consumer retains
+its authority, executable contracts, product standards and guarded acceptance.
+An unresolved conflict blocks the affected stage; neither a moving RI `main` nor
+an older local summary silently overrides the adopted baseline.
+
+The map records:
+
+| Binding | Required local fact |
+| --- | --- |
+| Shared procedure | RI repository, full commit and immutable controller/skill locations |
+| Runtime | Separate source/wheel/toolchain identity and actual consumer compatibility probe |
+| Roles | Actor, model/effort, permissions, whole skill folder/helper identity and retrieval route |
+| Execution | Each stage's literal interface, inputs, outputs, candidate capture/publication owner |
+| Evidence | Qualification logs, standards, report schema/import/export, supplements and retention |
+| Completion | Verified destination and callback or bounded watcher; cancellation and deadline |
+| Recovery | Stop transitions, finite correction allowance, integration and terminal cleanup |
+
+Retain an immutable RI checkout with its relative resources intact, or supply
+verified pinned instruction bytes through the role's supported handoff. A URL is
+not proof of access: exercise retrieval in the actual protected reviewer lane.
+Do not remove local instructions until their unique requirements have an owner,
+references are repaired, and the replacement route works. Compare complete skill
+folders; preserve deliberate adaptations and qualify affected helpers before use.
+
+### Existing attempts and compaction
+
+Use existing capsule body, planning and evidence records. Record the workflow
+commit and local map snapshot/hash; that map resolves skills, helper adaptations
+and the independent runtime pin. Retain phase, issue/revision, existing B/P/C,
+refs, jobs, completion destination, evidence, obligations, consumed allowances
+and next authorized action. Do not add unsupported parser keys or a parallel
+mandatory state store. After compaction, reread the relevant pinned instructions
+and local bindings, authenticate live state, then resume that phase. Compaction,
+a new chat or an adoption repair never resets an attempt or retry budget.
+
+A valid authenticated `STOP_REPLAN` for the active attempt halts implementation,
+qualification, review, publication and integration. Only bounded cancellation,
+cleanup, evidence preservation and recording the stop may continue. Later
+success cannot clear it; a replacement needs explicit authority and a distinct
+attempt. Quoted, stale or unrelated text does not constitute an active stop.
+
+### Repair an adoption before a product trial
+
+Preserve paused product attempts. If the owner explicitly authorizes repairing a
+broken adoption outside its capsule lifecycle, bound that exception to adoption
+repair; keep repository safety, separate implementation and fresh independent
+review. Resolve the actual map and affected interfaces before product dispatch.
+Run a small specimen through actual planning, implementation, review, report
+import and terminal disposition, with source identities and completion delivery.
+A specimen does not approve production work or prove an unexercised remote merge.
+Use a disposable remote branch only when that integration test is authorized.
+Editorial changes need documentation checks; executable changes need focused
+interface tests. Do not impose broad native reruns on unchanged interfaces.
+
+For a pending role or external gate, use the completion route in the map. After
+any explicitly named, bounded preparation is finished, suspend through the host's
+supported wait or end the turn where delivery is verified. Do not invent work or
+poll unchanged status to stay active. CLI notification acceptance alone does not
+prove host consumption. Missing delivery capability remains a disclosed blocker
+to autonomous adoption, not permission to claim it works.
+
 ## One-time project setup
 
 Resolve the [consumer execution map, compatibility and review/export interfaces](capsule-controller-workflow.md#resolve-the-consumer-interfaces-before-planning)

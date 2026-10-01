@@ -370,6 +370,10 @@ qualify its own host and protected review lane. See OpenAI's
 
 ## Resolve the consumer interfaces before planning
 
+Adopt the [shared procedure and local map](new-project-setup.md#adopt-one-shared-procedure)
+at an immutable pin. This also defines instruction delivery, active stop handling
+and compaction/resume bindings; local executable authority remains consumer-owned.
+
 Use the consumer's accepted command guide and parser revision to record an
 execution map in its existing planning record: who creates planning refs and P,
 who edits, who captures C, when publication is permitted, qualification entry
