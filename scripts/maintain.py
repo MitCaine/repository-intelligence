@@ -231,6 +231,9 @@ def main(argv: list[str] | None = None) -> int:
             return bundle(pins, args.wheelhouse, args.output,
                           require_native=args.require_native, allow_dirty=args.allow_dirty)
         return verify(pins, args.wheelhouse, require_native=args.require_native)
+    except subprocess.TimeoutExpired as error:
+        print(f'Maintenance temporarily unavailable: {error}', file=sys.stderr)
+        return 75
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         print(f'Maintenance failed: {error}', file=sys.stderr)
         return 1

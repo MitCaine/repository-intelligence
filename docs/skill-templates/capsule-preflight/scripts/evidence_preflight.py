@@ -110,6 +110,105 @@ def validate_log(record, packet_dir, name):
             f'{name}: retained log digest mismatch')
 
 
+def validate_observations(expected, observed, name):
+    """Compare trusted mandatory nodes with actual runner-exported observations."""
+    required = indexed(expected.get('mandatory_observations', []), f'{name} mandatory observations')
+    actual = indexed(observed.get('observations', []), f'{name} observations')
+    for identifier, item in required.items():
+        record = actual.get(identifier, {})
+        require(item.get('stage') in ('incumbent', 'proposed', 'installed') and
+                isinstance(item.get('gate_identity'), str) and item['gate_identity'],
+                f'{name}: missing selecting gate/stage')
+        require(record.get('gate_identity') == item['gate_identity'] and
+                record.get('stage') == item['stage'], f'{name}: observation gate/stage mismatch')
+        require(record.get('collected') is True and record.get('executed') is True and
+                record.get('outcome') == 'passed', f'{name}: mandatory observation not executed successfully: {identifier}')
+
+
+REUSE_INPUTS = {'code', 'dependencies', 'selector', 'configuration', 'toolchain',
+                'environment', 'isolation', 'timeout_policy'}
+
+
+def equivalent_inputs(previous, current):
+    """Eligibility only; caller must authenticate prior proof and authorize reuse."""
+    def complete(value):
+        return (isinstance(value, dict) and set(value) == REUSE_INPUTS and
+                all(isinstance(digest, str) and len(digest) == 64 and
+                    all(c in '0123456789abcdef' for c in digest) for digest in value.values()))
+    return complete(previous) and complete(current) and previous == current
+
+
+def carry_review(previous, current_inputs, requirements_sha256):
+    """An authenticated exported receipt may support unchanged implementation judgment."""
+    return (isinstance(previous, dict) and previous.get('verdict') == 'PASS' and
+            isinstance(previous.get('receipt_sha256'), str) and
+            len(previous['receipt_sha256']) == 64 and
+            all(c in '0123456789abcdef' for c in previous['receipt_sha256']) and
+            isinstance(requirements_sha256, str) and len(requirements_sha256) == 64 and
+            all(c in '0123456789abcdef' for c in requirements_sha256) and
+            previous.get('requirements_sha256') == requirements_sha256 and
+            equivalent_inputs(previous.get('inputs'), current_inputs))
+
+
+def validate_reuse(execution, authorization, policy, root, packet_dir, candidate):
+    """Validate authenticated consumer exports without relabeling old execution.
+
+    The consumer authenticates policy, freshness, trust and both records before
+    calling. This is an eligibility check, never execution or acceptance.
+    """
+    require(isinstance(policy, dict) and policy.get('adopted') is True and
+            isinstance(policy.get('version'), str) and policy['version'],
+            'reuse requires an adopted versioned policy')
+    require(isinstance(execution, dict) and isinstance(authorization, dict),
+            'missing separate reuse records')
+    origin = execution.get('candidate')
+    current = authorization.get('candidate')
+    require(current == candidate, 'reuse authorization names another current candidate')
+    for value in (origin, current):
+        require(isinstance(value, str) and len(value) in (40, 64) and
+                all(c in '0123456789abcdef' for c in value) and
+                git(root, 'rev-parse', f'{value}^{{commit}}').decode().strip() == value,
+                'unresolved reuse candidate')
+    require(execution.get('exit_code') == 0 and type(execution.get('exit_code')) is int,
+            'original execution did not pass')
+    validate_invocation(execution.get('invocation'), root, origin)
+    validate_log(execution, packet_dir, 'original execution')
+    digest = hashlib.sha256(json.dumps(execution, sort_keys=True,
+        separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+    require(authorization.get('execution_sha256') == digest and
+            authorization.get('policy_version') == policy['version'] and
+            authorization.get('claim') in policy.get('allowed_claims', []) and
+            authorization.get('trusted') is True and authorization.get('fresh') is True,
+            'reuse authorization does not bind eligible original proof')
+    require(equivalent_inputs(execution.get('inputs'), authorization.get('inputs')),
+            'changed or unknown reuse inputs')
+    return {'execution_candidate': origin, 'authorization_candidate': current,
+            'execution_sha256': digest}
+
+
+def validate_obligation_stage(obligations, stage, *, phase='complete'):
+    """At intake allow review to satisfy its own obligations; never defer completion."""
+    stages = ['candidate', 'installed', 'terminal']
+    require(stage in stages and phase in ('intake', 'complete'), 'invalid obligation stage/phase')
+    records = indexed(obligations, 'obligations')
+    deferred = []
+    for identifier, item in records.items():
+        deadline = item.get('deadline_stage')
+        route = item.get('satisfied_by')
+        require(deadline in stages and route in ('external', 'review') and
+                item.get('status') in ('passed', 'pending', 'failed'),
+                f'{identifier}: missing obligation deadline/route/status')
+        require(item.get('supersedes') != identifier, f'{identifier}: self-superseding obligation')
+        due = stages.index(deadline) <= stages.index(stage)
+        review_can_resolve = (phase == 'intake' and route == 'review' and
+                              deadline == stage and item['status'] == 'pending')
+        if due and not review_can_resolve:
+            require(item['status'] == 'passed', f'{identifier}: unresolved applicable obligation')
+        if item['status'] != 'passed':
+            deferred.append(identifier)
+    return sorted(deferred)
+
+
 def validate_closeout(expected, observed, checks, root, packet_dir):
     """Check consumer-normalized history/probes; consumer authenticates exports."""
     require(isinstance(expected, dict) and isinstance(observed, dict), 'missing closeout record')
@@ -233,6 +332,7 @@ def validate(contract, packet, root, packet_dir):
         require(type(record.get('exit_code')) is int and record['exit_code'] == 0,
                 f'{name}: unsuccessful or missing exit status')
         validate_log(record, packet_dir, name)
+        validate_observations(expected, record, name)
         count = record.get('skip_count')
         skips = record.get('skips')
         require(type(count) is int and count >= 0 and isinstance(skips, list) and
@@ -255,10 +355,10 @@ def validate(contract, packet, root, packet_dir):
             require(isinstance(probe, dict) and type(probe.get('available')) is bool and
                     isinstance(probe.get('detail'), str) and probe['detail'].strip(),
                     f'{name}: missing capability probe result')
+        invocation = expected.get('invocation')
+        validate_invocation(invocation, root, c)
+        require(record.get('invocation') == invocation, f'{name}: frozen invocation drift')
         if rehearsal_required:
-            invocation = expected.get('invocation')
-            validate_invocation(invocation, root, c)
-            require(record.get('invocation') == invocation, f'{name}: frozen invocation drift')
             rehearsal = rehearsals.get(name, {})
             require(type(rehearsal.get('exit_code')) is int and rehearsal['exit_code'] == 0 and
                     rehearsal.get('invocation') == invocation, f'{name}: rehearsal mismatch or failure')

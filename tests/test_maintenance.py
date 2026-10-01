@@ -28,6 +28,16 @@ def prepared_report(*, native='available'):
 
 
 class MaintenanceTests(unittest.TestCase):
+    def test_timeout_has_distinct_retryable_process_status(self):
+        with mock.patch.object(maintenance, 'load_pins', return_value=PINS), \
+                mock.patch.object(maintenance, 'verify',
+                                  side_effect=subprocess.TimeoutExpired('test', .01)):
+            self.assertEqual(maintenance.main(['verify']), 75)
+        with mock.patch.object(maintenance, 'load_pins', return_value=PINS), \
+                mock.patch.object(maintenance, 'verify',
+                                  side_effect=subprocess.CalledProcessError(1, 'test')):
+            self.assertEqual(maintenance.main(['verify']), 1)
+
     def test_manifest_is_the_only_pin_list_and_accepts_a_new_build_dependency(self):
         with tempfile.TemporaryDirectory() as raw:
             project = Path(raw) / 'pyproject.toml'

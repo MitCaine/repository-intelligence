@@ -29,7 +29,7 @@ if sys.version_info < (3, 12):
                 os.execv(executable, [executable, __file__, *sys.argv[1:]])
     raise SystemExit('Install Python 3.12, 3.13, or 3.14 before running updates')
 
-from update_modules import actions, editor, native, python_packages
+from update_modules import actions, editor, native, python_packages, review_obligations
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,7 +46,12 @@ GRAMMAR_NAMES = {'tree-sitter', 'tree-sitter-python', 'tree-sitter-rust',
 
 
 def run(*args: str, env: dict[str, str] | None = None) -> None:
-    subprocess.run(args, cwd=ROOT, env=env, check=True)
+    try:
+        subprocess.run(args, cwd=ROOT, env=env, check=True)
+    except subprocess.CalledProcessError as error:
+        if error.returncode == 75 and len(args) > 1 and Path(args[1]) == ROOT / 'scripts' / 'maintain.py':
+            raise subprocess.TimeoutExpired(args, None) from error
+        raise
 
 
 def atomic_write(path: Path, data: bytes) -> None:
@@ -111,7 +116,7 @@ def workflow_paths() -> list[Path]:
 def begin_recovery() -> None:
     if JOURNAL.exists():
         raise ValueError('An update recovery record already exists')
-    paths = [ROOT / 'pyproject.toml', SELECTION, *workflow_paths()]
+    paths = [ROOT / 'pyproject.toml', SELECTION, pending_path(), *workflow_paths()]
     snapshot = {str(path.relative_to(ROOT)): (base64.b64encode(path.read_bytes()).decode()
                                               if path.exists() else None)
                 for path in paths}
@@ -207,14 +212,14 @@ def rejection_context(manifest: bytes, python: Path) -> str:
                              capture_output=True, text=True, check=True, timeout=10).stdout.strip()
     revision = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
                               capture_output=True, text=True, check=True, timeout=10).stdout.strip()
-    diff = subprocess.run(['git', 'diff', '--binary', '--', 'src', 'scripts', 'tests'],
+    diff = subprocess.run(['git', 'diff', '--binary', 'HEAD', '--', 'src', 'scripts', 'tests'],
                           cwd=ROOT, capture_output=True, check=True, timeout=20).stdout
     identity = (revision + '\n' + version + '\n' + platform.platform()).encode() + manifest + diff
     return hashlib.sha256(identity).hexdigest()
 
 
 def update_packages(python: Path, manifest: Path, proposals: list[tuple[str, str, str]],
-                    rejected_versions: dict) -> tuple[Path, list[str], list[str]]:
+                    rejected_versions: dict, *, commit: str | None = None) -> tuple[Path, list[str], list[str]]:
     review = []
     changed = []
     for name, old, new in proposals:
@@ -233,6 +238,8 @@ def update_packages(python: Path, manifest: Path, proposals: list[tuple[str, str
             run(str(candidate), str(ROOT / 'scripts' / 'maintain.py'), 'verify')
             stage = 'promote'
             select_python(candidate)
+            if name in GRAMMAR_NAMES:
+                retain_reviews(commit or source_commit(), [name], [])
             JOURNAL.unlink()
             python = candidate
             changed.append(name)
@@ -256,6 +263,28 @@ def update_packages(python: Path, manifest: Path, proposals: list[tuple[str, str
     return python, review, changed
 
 
+def pending_path() -> Path:
+    return CACHE / 'pending-reviews.json'
+
+
+def save_pending(pending: dict) -> None:
+    atomic_write(pending_path(), (json.dumps({'schema_version': 1, 'pending': pending},
+                                           indent=2) + '\n').encode())
+
+
+def retain_reviews(commit: str, changed: list[str], action_changes: list[str]) -> dict:
+    pending = review_obligations.refresh(ROOT, commit, review_obligations.load(pending_path()))
+    for name in changed:
+        if name in GRAMMAR_NAMES:
+            review_obligations.add(ROOT, commit, pending, 'grammar', name,
+                                   'upstream grammar and node review')
+    if action_changes:
+        review_obligations.add(ROOT, commit, pending, 'actions', 'workflows',
+                               'hosted Verify for changed GitHub Actions')
+    save_pending(pending)
+    return pending
+
+
 def readiness_result(python: Path, changed: list[str], action_changes: list[str],
                      editor_ready: bool, review: list[str]) -> dict:
     outstanding = []
@@ -276,6 +305,8 @@ def main() -> int:
     parser.add_argument('--migrate-python', action='store_true',
                         help='qualify a newer Python in a separate environment before selecting it')
     parser.add_argument('--skip-actions', action='store_true', help='leave CI action pins unchanged')
+    parser.add_argument('--resolve-review', action='append', default=[], metavar='ID=SHA256',
+                        help='acknowledge completed external review for a printed current identity')
     parser.add_argument('--run-id', help='caller-selected unique run ID for the structured result')
     args = parser.parse_args()
     if args.run_id is not None and (not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}', args.run_id)
@@ -287,11 +318,24 @@ def main() -> int:
     commit = None
     try:
         with update_lock():
-            RESULT.unlink(missing_ok=True)
-            commit = source_commit()
+            # Upgrade old success-only state before clearing the per-invocation result.
+            try:
+                commit = source_commit()
+                previous = (json.loads(RESULT.read_text())
+                            if RESULT.exists() and not pending_path().exists() else {})
+                if not isinstance(previous, dict):
+                    raise ValueError('Invalid previous updater result')
+            finally:
+                RESULT.unlink(missing_ok=True)
             recovered = recover()
             if recovered:
                 print('Restored an interrupted update; verifying the selected environment', flush=True)
+            pending = retain_reviews(commit, previous.get('package_changes', [])
+                                     if not pending_path().exists() else [],
+                                     previous.get('action_changes', [])
+                                     if not pending_path().exists() else [])
+            review_obligations.resolve(pending, args.resolve_review)
+            save_pending(pending)
             manifest = ROOT / 'pyproject.toml'
             python, migrating = ensure_python(migrate=args.migrate_python)
             try:
@@ -313,7 +357,7 @@ def main() -> int:
             rejected_versions = json.loads(REJECTIONS.read_text(encoding='utf-8')) if REJECTIONS.exists() else {}
             proposals = [] if args.offline else python_packages.proposals(manifest)
             python, review, changed = update_packages(python, manifest, proposals,
-                                                      rejected_versions)
+                                                      rejected_versions, commit=commit)
             if args.native:
                 native.update()
                 run(str(python), str(ROOT / 'scripts' / 'maintain.py'), 'verify', '--require-native',
@@ -323,6 +367,7 @@ def main() -> int:
                 begin_recovery()
                 try:
                     action_changes = actions.update(ROOT / '.github' / 'workflows')
+                    retain_reviews(commit, [], action_changes)
                     JOURNAL.unlink()
                 except BaseException:
                     recover()
@@ -334,6 +379,9 @@ def main() -> int:
                 editor_ready = False
                 print(f'Editor setting unchanged: {error}', file=sys.stderr)
             readiness = readiness_result(python, changed, action_changes, editor_ready, review)
+            pending = retain_reviews(commit, changed, action_changes)
+            readiness['pending_reviews'] = pending
+            readiness['outstanding_qualification'] = sorted({item['reason'] for item in pending.values()})
             disposition = ('review_required' if review or readiness['outstanding_qualification']
                            else 'completed')
             result = write_result(run_id, commit, disposition, **readiness)

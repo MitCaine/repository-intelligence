@@ -69,6 +69,59 @@ class EvidencePreflightTests(unittest.TestCase):
     def check(self):
         return gate.validate(self.contract, self.packet, self.root, self.records)
 
+    def test_committed_candidate_final_identity_is_always_required(self):
+        self.contract['checks'][0]['rehearsal_required'] = False
+        self.packet['rehearsals'] = []
+        self.assertEqual(self.check(), ['task.py'])
+        original = copy.deepcopy(self.packet['checks'][0]['invocation'])
+        for field in ('argv', 'interpreter', 'isolation', 'config', 'environment', 'source_files'):
+            with self.subTest(field=field):
+                self.packet['checks'][0]['invocation'] = copy.deepcopy(original)
+                self.packet['checks'][0]['invocation'][field] = 'wrong'
+                with self.assertRaises(gate.Blocked):
+                    self.check()
+        self.packet['checks'][0].pop('invocation')
+        with self.assertRaises(gate.Blocked):
+            self.check()
+        self.packet['checks'][0]['invocation'] = original
+        self.contract['checks'][0]['invocation']['source_files']['task.py']['sha256'] = '0' * 64
+        with self.assertRaisesRegex(gate.Blocked, 'source mismatch'):
+            self.check()
+
+    def test_green_packet_requires_real_mandatory_node_execution(self):
+        # Execute a real fixture selector. Both runs exit zero; one omits the node.
+        import sys
+        selector = self.records / 'selector.py'
+        selector.write_text('import json,sys,unittest\n'
+            'class Suite(unittest.TestCase):\n def test_required(self): self.assertTrue(True)\n def test_other(self): self.assertTrue(True)\n'
+            'suite=unittest.defaultTestLoader.loadTestsFromName("Suite.test_required" if sys.argv[1]=="select" else "Suite.test_other", sys.modules["__main__"])\n'
+            'ids=[test.id() for test in suite]\nexecuted=[]\n'
+            'class Recording(unittest.TextTestResult):\n def startTest(self,test): executed.append(test.id()); super().startTest(test)\n'
+            'result=unittest.TextTestRunner(resultclass=Recording).run(suite)\n'
+            'print(json.dumps({"collected":"__main__.Suite.test_required" in ids,"executed":"__main__.Suite.test_required" in executed,"outcome":"passed" if result.wasSuccessful() else "failed","ids":ids,"executed_ids":executed}))\n')
+        selecting_gate = hashlib.sha256(selector.read_bytes()).hexdigest()
+        self.contract['checks'][0]['mandatory_observations'] = [
+            {'id': '__main__.Suite.test_required', 'stage': 'incumbent', 'gate_identity': selecting_gate}]
+        for mode in ('omit', 'select'):
+            run = subprocess.run([sys.executable, str(selector), mode], check=True, capture_output=True)
+            observation = json.loads(run.stdout)
+            self.packet['checks'][0]['observations'] = [
+                {'id': '__main__.Suite.test_required', 'stage': 'incumbent', 'gate_identity': selecting_gate,
+                 **observation}]
+            log = run.stdout + run.stderr
+            (self.records / 'run.log').write_bytes(log)
+            digest = hashlib.sha256(log).hexdigest()
+            self.packet['checks'][0]['log_sha256'] = digest
+            self.packet['rehearsals'][0]['log_sha256'] = digest
+            if mode == 'omit':
+                with self.assertRaisesRegex(gate.Blocked, 'not executed'):
+                    self.check()
+            else:
+                self.assertEqual(self.check(), ['task.py'])
+                self.packet['checks'][0]['observations'][0]['stage'] = 'installed'
+                with self.assertRaisesRegex(gate.Blocked, 'stage mismatch'):
+                    self.check()
+
     def test_complete_packet(self):
         self.assertEqual(self.check(), ['task.py'])
 
@@ -318,3 +371,32 @@ class EvidencePreflightTests(unittest.TestCase):
         result = subprocess.run(cmd, capture_output=True, text=True)
         self.assertEqual(result.returncode, 2)
         self.assertEqual(json.loads(result.stdout)['disposition'], 'blocked')
+
+    def test_reuse_retains_origin_and_separate_current_authorization(self):
+        execution = copy.deepcopy(self.packet['checks'][0])
+        execution['inputs'] = {key: 'a' * 64 for key in gate.REUSE_INPUTS}
+        origin = execution['candidate']
+        (self.root / 'lifecycle.md').write_text('closeout only\n')
+        self.git('add', '.')
+        self.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'lifecycle')
+        current = self.git('rev-parse', 'HEAD').strip()
+        digest = hashlib.sha256(json.dumps(execution, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+        authorization = {'candidate': current, 'execution_sha256': digest,
+                         'policy_version': 'fixture-v1', 'claim': 'focused',
+                         'trusted': True, 'fresh': True, 'inputs': copy.deepcopy(execution['inputs'])}
+        policy = {'adopted': True, 'version': 'fixture-v1', 'allowed_claims': ['focused']}
+        before = copy.deepcopy(execution)
+        result = gate.validate_reuse(execution, authorization, policy, self.root, self.records, current)
+        self.assertEqual(result['execution_candidate'], origin)
+        self.assertEqual(result['authorization_candidate'], current)
+        self.assertEqual(execution, before)
+        for field, value in [('execution_sha256', '0' * 64), ('policy_version', 'other'),
+                             ('trusted', False), ('fresh', False), ('candidate', '0' * 40)]:
+            with self.subTest(field=field), self.assertRaises((gate.Blocked, subprocess.CalledProcessError)):
+                gate.validate_reuse(execution, {**authorization, field: value}, policy, self.root, self.records, current)
+        with self.assertRaises(gate.Blocked):
+            gate.validate_reuse({**execution, 'candidate': current}, authorization, policy, self.root, self.records, current)
+        with self.assertRaises(gate.Blocked):
+            gate.validate_reuse(execution, authorization, {**policy, 'adopted': False}, self.root, self.records, current)
+        with self.assertRaises(gate.Blocked):
+            gate.validate_reuse(execution, {**authorization, 'inputs': {**authorization['inputs'], 'environment': 'b' * 64}}, policy, self.root, self.records, current)

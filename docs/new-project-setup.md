@@ -112,3 +112,12 @@ the consuming host; verify installed references/helpers are retrievable there.
 Test fresh-chat intake, active-candidate resume, an externally running gate, and
 rule adoption by an existing chat. Each must reconstruct the same authorized
 next action without resetting allowances or restarting completed work.
+
+## Qualify and reuse the actual adopted route
+
+Use the [adoption specimen recipe](workflow-effectiveness.md#before-starting-an-issue)
+once per relevant host/runtime/helper configuration, through actual consumer
+callsites. Keep mutable qualification scratch out of authenticated startup
+authority. Pin compatibility and record invalidation inputs; fresh chats resume
+from stored state rather than redo setup or renew allowances. A local fixture
+or skill installation does not qualify the production route.

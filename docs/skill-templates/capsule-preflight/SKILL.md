@@ -45,3 +45,9 @@ Return a compact preflight record: verified capsule and repository identities, p
 Before accepting P when RI is mandatory, require the consumer runtime probe and representative comparison with the selected interpreter; runtime/harness changes invalidate dependent readiness. Supply the accepted review/report/export format and fixture validation record. Where rehearsal is applicable, it must show selected test collection, fixtures and skips/deselection, rather than only successful command launch. Committed-C-only hosted workflow/source identities are verified during exact-C qualification.
 
 When a protected service requires committed C, record that constraint and use permitted preparation before freeze, then mandatory protected qualification on C. Do not invent a pre-freeze run or substitute ordinary host evidence.
+
+Require final observed invocation/source identity for every check, including
+committed-C-only lanes. Where exported, check mandatory node collection and
+execution under the actual selecting gate, not green totals. Use the
+[effectiveness guidance](../../workflow-effectiveness.md) for validate-before-P
+ordering and staged obligations; existing consumer contracts govern adoption.

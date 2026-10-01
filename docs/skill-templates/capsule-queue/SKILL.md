@@ -81,3 +81,28 @@ success/failure/signal/timeout, record `cleanup_error`, and leave
 `cleanup_confirmed: false`. Even exit zero checks for remaining group members
 and cleans them up. Success with false/unknown cleanup is not terminal readiness
 for overlapping follow-up; verify termination or isolate remaining work first.
+
+Notification recovery is serialized per job using a local POSIX file lock.
+Accepted notification attempts cannot be resent by concurrent recovery callers.
+Diagnostic output uses escaped replacement for invalid encoded bytes; it does
+not modify retained command logs or source evidence. CLI acceptance still does
+not prove controller consumption. Recovery only retries delivery, never the
+completed command. A terminated delivery attempt can remain uncertain; inspect
+its saved state before authorizing another attempt.
+
+The watcher owns cancellation of its original local command process group.
+SIGTERM or SIGINT/KeyboardInterrupt retains an interrupted record and performs
+bounded TERM/KILL cleanup; repeated cancellation during cleanup does not restart
+or interrupt that cleanup. Known completed outcomes remain separate from
+cleanup/cancellation flags. SIGKILL, host loss, escaped sessions and remote jobs
+cannot be contained by this handler. Use the accepted remote cancellation route
+when applicable. End-of-turn consumption still requires an actual host probe;
+see [completion and waiting](../../workflow-effectiveness.md#completion-and-waiting).
+
+The cleanup wait reaps the leader before checking group absence. Temporary
+permission failures in group inspection are retried only within the existing
+cleanup deadline; they never count as absence. Unresolved permission or signal
+failures retain `cleanup_confirmed: false` with diagnostics. The helper is POSIX;
+qualify the actual host's signalling policy rather than assume a nested sandbox
+permits cleanup. A terminal status file prevents worker rerun; use delivery
+recovery for that existing completed job.

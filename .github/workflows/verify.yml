@@ -17,7 +17,7 @@ concurrency:
 jobs:
   test:
     runs-on: macos-15
-    timeout-minutes: 15
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -51,3 +51,4 @@ jobs:
         run: |
           git diff --check
           git diff --exit-code
+          git diff --cached --exit-code

@@ -67,3 +67,7 @@ review decisions, and capsule execution in the consumer. A persistent index,
 daemon, generic graph/LSP framework, receipt registry, or security/governance
 subsystem requires a separate demonstrated need; it is not a prerequisite for
 source orientation. Historical extraction decisions are in the [archive](archive/README.md).
+
+## Review transport
+
+[`review_bundle.py`](../src/repository_intelligence/review_bundle.py) factors repeated inventory/comparison JSON objects into content-addressed records. It owns only transport integrity and selective access; inventory comparison and consumer authority remain at their existing seams. See [review evidence](review-evidence.md).

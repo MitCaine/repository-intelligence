@@ -56,6 +56,38 @@ class MarkdownTests(unittest.TestCase):
             self.assertEqual(source[result["functions"][1]["byte_range"]["start"]:],
                              b"- [ ] V\xc3\xa9rifier l\xe2\x80\x99identit\xc3\xa9\r\n")
 
+    def test_every_heading_preamble_quotes_and_newline_ranges(self):
+        text = 'Preamble\n\nOne\n===\nBody\n\nTwo\n---\nTail\n# Three\n> Quoted\n> ======\n> End\n'
+        for newline in ('\n', '\r\n', '\r'):
+            with self.subTest(newline=repr(newline)), tempfile.TemporaryDirectory() as raw:
+                source = text.replace('\n', newline).encode()
+                path = Path(raw) / 'notes.md'
+                path.write_bytes(source)
+                result = index_file(path)
+                units = result['functions']
+                self.assertEqual([unit['name'] for unit in units], ['One', 'Two', 'Three', 'Quoted'])
+                expected = ['One\n===\nBody\n\n', 'Two\n---\nTail\n',
+                            '# Three\n> Quoted\n> ======\n> End\n',
+                            'Quoted\n> ======\n> End\n']
+                self.assertEqual([source[u['byte_range']['start']:u['byte_range']['end']] for u in units],
+                                 [value.replace('\n', newline).encode() for value in expected])
+                self.assertEqual([(u['line'], u['end_line']) for u in units],
+                                 [(3, 6), (7, 9), (10, 13), (11, 13)])
+                inventory = inventory_tree(Path(raw), stable=True)
+                self.assertEqual(inventory['status'], 'complete')
+                self.assertEqual([u['name'] for u in inventory['files'][0]['declarations']],
+                                 ['One', 'Two', 'Three', 'Quoted'])
+
+    def test_repeated_setext_inventory_delta(self):
+        with tempfile.TemporaryDirectory() as raw:
+            before, after = Path(raw) / 'before', Path(raw) / 'after'
+            before.mkdir(); after.mkdir()
+            (before / 'a.md').write_text('One\n===\nFirst\n\nTwo\n===\nSecond\n')
+            (after / 'a.md').write_text('One\n===\nFirst\n\nTwo\n===\nChanged\n')
+            delta = compare_inventories(inventory_tree(before, stable=True), inventory_tree(after, stable=True))
+            self.assertEqual([v['candidate']['name'] for v in delta['declaration_changes']['modified']], ['Two'])
+            self.assertEqual([v['candidate']['name'] for v in delta['declaration_changes']['unchanged']], ['One'])
+
     def test_markdown_candidate_delta_and_invalid_utf8(self):
         with tempfile.TemporaryDirectory() as raw:
             planning = Path(raw) / "planning"

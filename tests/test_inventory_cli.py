@@ -32,7 +32,7 @@ class InventoryCliTests(unittest.TestCase):
             compact = self._run(*command)
             self.assertEqual(compact.returncode, 0, compact.stderr)
             self.assertIn("comparison comparable_candidate_delta", compact.stdout)
-            self.assertIn("schema=14 navigation_schema=7", compact.stdout)
+            self.assertIn("schema=15 navigation_schema=7", compact.stdout)
             self.assertIn("logical_root=example extensions=.c,.cc,.cjs,.cpp,.cs,.cts,.cxx,.go,.hh,.hpp,.hxx,.java,.js,.jsx,.md,.mjs,.mts,.py,.rs,.ts,.tsx",
                           compact.stdout)
             self.assertIn("files: added=1 removed=1 modified=1 unchanged=0", compact.stdout)
@@ -43,7 +43,7 @@ class InventoryCliTests(unittest.TestCase):
             delta = json.loads(full.stdout)
             self.assertEqual(delta["status"], "comparable_candidate_delta")
             self.assertEqual(delta["planning"]["scope"]["logical_root"], "example")
-            self.assertEqual(delta["planning"]["inventory_schema_version"], 14)
+            self.assertEqual(delta["planning"]["inventory_schema_version"], 15)
             self.assertEqual(delta["planning"]["mapping_contract"],
                              delta["candidate"]["mapping_contract"])
             self.assertEqual(len(delta["file_changes"]["added"]), 1)
@@ -68,7 +68,7 @@ class InventoryCliTests(unittest.TestCase):
                              "--assert-stable-materialization", "--json")
             self.assertEqual(scan.returncode, 0, scan.stderr)
             inventory = json.loads(scan.stdout)
-            self.assertEqual(inventory["inventory_schema_version"], 14)
+            self.assertEqual(inventory["inventory_schema_version"], 15)
             self.assertEqual(inventory["scope"]["logical_root"], "example")
 
     def test_non_atomic_incomplete_and_incompatible_have_no_delta(self):

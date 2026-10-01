@@ -25,13 +25,15 @@ last selected environment intact; a recovery record restores manifest/selection
 bytes at the next launch. A second updater run exits while another holds the
 single-run lock. A package candidate failure leaves the former environment and
 selection in place. Later native-tool failure can leave already qualified
-package changes selected, but no overall readiness result is written.
+package changes selected, but the overall result is failed and retained review
+obligations remain unresolved.
 The updater asks PyPI for the latest stable release of each exact pin in
 `pyproject.toml`, ignores lower versions, then tries changes one at a time with
 `prepare` and `verify`.
 An available wheel on PyPI does not guarantee one for this host; preparation
-checks that. A failed candidate is restored and the full verification is rerun
-before the updater continues. Releases that prepare successfully but fail
+checks that. A failed candidate is restored to the last qualified pin/selection before the
+updater continues; candidate verification never counts as readiness for a
+failed run. Releases that prepare successfully but fail
 verification are recorded in ignored `.ri-cache/rejected-updates.json` with the
 RI HEAD and tracked code diff, manifest, Python version, and platform context. The same
 version is retried when that context changes. Download or preparation failures
@@ -320,3 +322,44 @@ files in distribution metadata (grammar metadata identified MIT; the runtime
 had a license file without a `License` field). This is a historical packaging
 observation, not legal clearance. Review the actual notices when distributing
 new artifacts; do not invent a license as part of maintenance.
+
+### Timeout and tracked-source checks
+
+Maintenance commands return exit status 75 when a child operation times out;
+the updater treats that status as retryable infrastructure failure rather than
+persisting a rejected package release. Ordinary verification failures retain
+status 1. The hosted job allows 45 minutes for preparation, the bounded
+15-minute source verification, bundling, cleanup and reporting. This budget is
+not a guarantee that an externally cancelled job can retain a terminal record.
+CI checks both the working tree against the index and the index against HEAD.
+Updater rejection context instead binds tracked working-tree source to HEAD,
+so staging a correction does not hide it. Untracked source is not included in
+that cache identity; add relevant source to Git before relying on cached rejection.
+
+## Persistent maintenance review
+
+`pending-reviews.json` in the existing `.ri-cache` retains unresolved grammar and
+Actions obligations independently of the per-run result. Successful no-change
+and offline runs continue to report `review_required` until those obligations
+are resolved. `pending_reviews` is an additive result-schema-1 field; the existing
+`outstanding_qualification` list includes retained reasons. Consumers must still
+validate the source commit/run ID/process status and retain the actual result.
+
+Each pending ID has a subject SHA256 bound to the current RI commit, tracked source/test/maintenance/manifest changes against HEAD,
+and grammar pin or complete workflow contents. Relevant untracked source must be
+added to Git before relying on that identity. New source/pins supersede that subject,
+not the obligation. After completing the indicated external review/hosted check
+through the existing authorized route, acknowledge its current printed identity:
+
+```sh
+python3 scripts/update.py --offline --resolve-review 'grammar:tree-sitter=PRINTED_SHA256'
+```
+
+Repeat `--resolve-review` for independently completed obligations. The updater
+validates the exact current identity; this explicit operator acknowledgement is
+not automated hosted verification or proof of consumer adoption. Changed subject
+identities reject stale acknowledgement. Pending state participates in rollback,
+persists through later failures/interruption, and imports unresolved grammar or
+Actions changes from the preceding schema-1 result on first use. Preserve this
+cache with the checkout; deleting it removes local history and requires external
+reconciliation before claiming readiness.

@@ -38,7 +38,9 @@ changes; they do not authenticate the person or process that supplied them.
 
 ## Export fields
 
-Both documents are JSON objects with `schema_version: 1`. Duplicate keys,
+Both documents are JSON objects with `schema_version: 1`. This corrected
+template requires final invocation fields in committed-C-only exports as well;
+a consumer replacing its pinned helper must update those exporters explicitly. Duplicate keys,
 unsupported versions, malformed JSON and missing required data block.
 
 Contract fields:
@@ -50,7 +52,7 @@ Contract fields:
 | `inventory` | Nonempty list of unique `path`, `disposition` (`edit` or `inspect`), and nonempty `purpose` rows from accepted scope review |
 | `checks` | Nonempty list with unique `id`, nonempty `profile`, booleans `probe_required` and `rehearsal_required`, and `allowed_skip_ids` (possibly empty) |
 
-For a check requiring rehearsal, include `invocation` with exactly these fields:
+For every check, including a committed-C-only check, include `invocation` with exactly these fields:
 
 | Field | Value |
 | --- | --- |
@@ -75,7 +77,7 @@ Packet fields:
 | `checks` | Exactly the required check IDs, each with `candidate`, `profile`, integer `exit_code`, `log_path`, `log_sha256`, integer `skip_count`, and `skips` list |
 | each skip | Unique nonempty `id` and nonempty `reason`; IDs must be permitted by the contract |
 | `capability_probe` | Required when requested: boolean `available` and nonempty factual `detail` |
-| `invocation` | Required for rehearsed checks: exact frozen invocation from contract |
+| `invocation` | Required for every check: exact frozen invocation from contract |
 | `rehearsals` | Exactly the IDs requiring rehearsal, each with unique check `id`, integer `exit_code`, exact `invocation`, `log_path` and `log_sha256` for each required rehearsal |
 
 Log paths are relative to the packet directory. Logs must be regular files,
@@ -148,3 +150,48 @@ recheck it, preserving failed records and required fresh review. The helper
 never supplements records, changes C, retries native work, or approves a repair.
 
 Closeout `validator_evidence` must exactly copy the observed history-validator check's `id`, `candidate`, `exit_code`, `log_path` and `log_sha256`. The trusted adapter must bind that check to validation of the retained history bytes; name membership alone is insufficient. Invocation `cwd` must exist as a directory and physically resolve inside the candidate checkout. Source modes distinguish regular files, executable files and symlinks even when stored bytes match.
+
+## Mandatory observations and scoped carry-forward
+
+A check can additionally export `mandatory_observations`: unique `{id,
+gate_identity, stage}` objects. `stage` is `incumbent`, `proposed` or `installed`;
+the selecting gate identity comes from the trusted consumer, not the candidate.
+The corresponding check record exports `observations` with those fields plus
+boolean `collected`, boolean `executed`, and `outcome`. Each required observation
+must actually execute and pass under its specified selecting gate and stage.
+A green aggregate, a skipped/deselected node or the candidate's proposed selector
+cannot establish incumbent execution. Optional fields preserve old adapter inputs;
+consumers must explicitly export their mandatory nodes to enforce this check.
+The adapter authenticates/reconciles these observations with raw results.
+
+The same helper exposes small pure predicates for consumer-authorized reuse:
+`equivalent_inputs(previous, current)` requires complete SHA256 maps with exactly
+`code`, `dependencies`, `selector`, `configuration`, `toolchain`, `environment`,
+`isolation`, and `timeout_policy`. Missing/unknown inputs disable reuse.
+`carry_review(previous, current_inputs, requirements_sha256)` additionally requires
+an exported PASS receipt digest and matching requirements. The consumer must
+resolve and authenticate that prior receipt and its provenance before calling;
+a matching string or this predicate alone never grants acceptance. Keep the
+original tested/reviewed candidate in retained proof; bind the reuse decision to
+the current candidate without claiming tests ran again.
+
+`validate_reuse(execution, authorization, policy, root, packet_dir, candidate)` checks a
+separate original execution record and current eligibility authorization. The
+original record keeps its candidate, invocation, source hashes, environment and
+log. Its canonical record digest binds the authorization, which separately names
+the current candidate, adopted policy version, allowed claim, complete equivalent
+inputs and consumer-authenticated trust/freshness decisions. Authentication of
+those exports and justification of the input inventory remain consumer duties.
+The returned execution and authorization candidates are distinct fields; reuse
+never reports a new execution. Default exact-C qualification remains unchanged.
+
+`validate_obligation_stage(obligations, stage, phase='complete')` requires unique
+`{id, deadline_stage, satisfied_by, status}` records. Deadlines are `candidate`,
+`installed` or `terminal`; resolution routes are `external` or `review`. At review
+`intake`, unresolved external prerequisites block before review starts. Pending
+review-dischargeable obligations due at this stage may enter review, but must pass
+at completion. Failed or overdue obligations cannot proceed. Future unresolved
+IDs remain pending, never passed; self-supersession is rejected. A replacement
+obligation must preserve the original requirement and cannot silently move its
+deadline. These helpers neither authenticate authority nor maintain workflow state.
+See the [effectiveness guidance](../../../workflow-effectiveness.md).

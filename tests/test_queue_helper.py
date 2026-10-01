@@ -25,6 +25,58 @@ class QueueHelperTests(unittest.TestCase):
                 'label': 'Gate', 'follow_up': 'Inspect evidence',
                 'timeout_seconds': 3, 'command': ['example-command']}
 
+    def test_malformed_bytes_are_diagnostic_and_command_status_is_unchanged(self):
+        for descriptor, code in ((1, 0), (2, 7)):
+            with self.subTest(descriptor=descriptor, code=code), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                executable = root / 'codex'
+                executable.write_text(f'#!{Path(sys.executable).resolve()}\nimport os,sys\n'
+                                      f'os.write({descriptor}, b"\\xff"); sys.exit({code})\n')
+                executable.chmod(0o755)
+                queue.save_json(root / 'status.json', {'outcome': 'success'})
+                before = (root / 'status.json').read_bytes()
+                with mock.patch.dict(os.environ, {'PATH': raw}):
+                    delivery = queue.notify(self.config(root))
+                self.assertEqual(delivery['state'], 'accepted_by_cli' if code == 0 else 'rejected_by_cli')
+                self.assertIn('\\xff', (root / 'queue.log').read_text())
+                self.assertEqual((root / 'status.json').read_bytes(), before)
+
+    def test_malformed_capability_diagnostics_do_not_crash_discovery(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            executable = root / 'codex'
+            executable.write_text(f'#!{Path(sys.executable).resolve()}\n'
+                                  'import os\nos.write(1, b"--thread --message\\xff")\n')
+            executable.chmod(0o755)
+            real_popen = subprocess.Popen
+            def launch_process(command, **kwargs):
+                if command[0] == 'codex':
+                    return real_popen(command, **kwargs)
+                return mock.Mock(pid=123)
+            with mock.patch.dict(os.environ, {'PATH': raw}), \
+                    mock.patch.object(queue.subprocess, 'Popen', side_effect=launch_process):
+                queue.launch(['--thread', THREAD, '--cwd', raw, '--job-dir', str(root / 'job'),
+                              '--label', 'Gate', '--follow-up', 'Inspect', '--', 'example'])
+            self.assertTrue((root / 'job' / 'config.json').is_file())
+
+    def test_concurrent_recovery_sends_only_one_notification(self):
+        from concurrent.futures import ThreadPoolExecutor
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            queue.save_json(root / 'status.json', {'outcome': 'success'})
+            def recover():
+                try:
+                    return queue.notify(self.config(root), recovery=True)['state']
+                except ValueError:
+                    return 'already accepted'
+            with mock.patch.object(queue.subprocess, 'run',
+                                   return_value=subprocess.CompletedProcess([], 0, 'ok')) as run:
+                with ThreadPoolExecutor(max_workers=2) as pool:
+                    results = list(pool.map(lambda _: recover(), range(2)))
+            self.assertCountEqual(results, ['accepted_by_cli', 'already accepted'])
+            self.assertEqual(run.call_count, 1)
+            self.assertEqual(json.loads((root / 'delivery.json').read_text())['attempts'], 1)
+
     def test_deadline_rejects_nan_and_infinity_before_starting_job(self):
         for value in ('nan', 'inf', '-inf', '0'):
             with self.subTest(value=value), tempfile.TemporaryDirectory() as raw, \
@@ -52,6 +104,55 @@ class QueueHelperTests(unittest.TestCase):
             self.assertEqual(config['timeout_seconds'], queue.DEFAULT_TIMEOUT_SECONDS)
             self.assertEqual(run.call_args.kwargs['timeout'], 10)
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX process groups required')
+    def test_watcher_cancellation_stops_owned_descendant_and_records_interruption(self):
+        import signal
+        for signum in (signal.SIGTERM, signal.SIGINT):
+            with self.subTest(signal=signum), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                child = root / 'child.py'
+                child.write_text('import signal,time\nfrom pathlib import Path\n'
+                    'signal.signal(signal.SIGTERM,signal.SIG_IGN)\n'
+                    'while True:\n Path("heartbeat").write_text(str(time.time_ns()))\n time.sleep(.02)\n')
+                config = self.config(root)
+                config['timeout_seconds'] = 30
+                config['command'] = [sys.executable, '-c',
+                    'import subprocess,sys,time,signal\nfrom pathlib import Path\n'
+                    'child=subprocess.Popen([sys.executable,"child.py"])\n'
+                    'def stop(signum,frame):\n child.kill(); child.wait(); time.sleep(.1); sys.exit(0)\n'
+                    'signal.signal(signal.SIGTERM,stop)\nPath("ready").touch()\ntime.sleep(60)']
+                config_path = root / 'config.json'
+                config_path.write_text(json.dumps(config))
+                # Actual helper watch entry point, with only delivery replaced to prevent messages.
+                launcher = ('import importlib.util,json,sys; '
+                    f's=importlib.util.spec_from_file_location("queue",{str(SCRIPT)!r}); '
+                    'm=importlib.util.module_from_spec(s); s.loader.exec_module(m); '
+                    'm.TERM_GRACE_SECONDS=.2; m.notify=lambda config: None; '
+                    'm.watch(json.load(open(sys.argv[1])))')
+                watcher = subprocess.Popen([sys.executable, '-c', launcher, str(config_path)],
+                                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                try:
+                    deadline = time.monotonic() + 5
+                    while not ((root / 'heartbeat').exists() and (root / 'ready').exists()) and time.monotonic() < deadline:
+                        time.sleep(.02)
+                    self.assertTrue((root / 'heartbeat').exists())
+                    watcher.send_signal(signum)
+                    time.sleep(.05)
+                    if watcher.poll() is None:
+                        watcher.send_signal(signum)
+                    _, error = watcher.communicate(timeout=5)
+                    self.assertEqual(watcher.returncode, 0, error.decode())
+                    status = json.loads((root / 'status.json').read_text())
+                    self.assertEqual(status['outcome'], 'interrupted')
+                    self.assertTrue(status['cancel_requested'])
+                    self.assertTrue(status['cleanup_confirmed'], status)
+                    before = (root / 'heartbeat').read_bytes()
+                    time.sleep(.12)
+                    self.assertEqual((root / 'heartbeat').read_bytes(), before)
+                finally:
+                    if watcher.poll() is None:
+                        watcher.kill(); watcher.communicate()
+
     def test_signal_termination_and_failed_delivery_are_separate(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -67,6 +168,47 @@ class QueueHelperTests(unittest.TestCase):
             self.assertEqual(status['exit_code'], -15)
             self.assertEqual(delivery['state'], 'rejected_by_cli')
             self.assertEqual(run.call_count, 1)
+
+    def test_unavailable_group_observation_never_proves_absence(self):
+        process = mock.Mock(pid=123)
+        with mock.patch.object(queue, 'group_exists', side_effect=PermissionError('unavailable')):
+            absent, error = queue.wait_group_absence(process, 0)
+        self.assertFalse(absent)
+        self.assertIsInstance(error, PermissionError)
+        process.poll.assert_called_once()
+        with mock.patch.object(queue, 'group_exists', side_effect=[PermissionError('transient'), False]), \
+                mock.patch.object(queue.time, 'sleep'):
+            absent, error = queue.wait_group_absence(process, 1)
+        self.assertTrue(absent)
+        self.assertIsNone(error)
+
+    def test_finished_job_cannot_be_rerun_or_overwritten(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            queue.save_json(root / 'status.json', {'outcome': 'success', 'exit_code': 0})
+            before = (root / 'status.json').read_bytes()
+            with mock.patch.object(queue.subprocess, 'Popen') as popen:
+                with self.assertRaisesRegex(ValueError, 'already retained'):
+                    queue.watch(self.config(root))
+                popen.assert_not_called()
+            self.assertEqual((root / 'status.json').read_bytes(), before)
+
+    def test_cancellation_during_cleanup_preserves_known_success(self):
+        import signal
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            def absent(group):
+                signal.getsignal(signal.SIGTERM)(signal.SIGTERM, None)
+                return False
+            with mock.patch.object(queue.subprocess, 'Popen', return_value=mock.Mock(pid=123, wait=mock.Mock(return_value=0))), \
+                    mock.patch.object(queue, 'group_exists', side_effect=absent), \
+                    mock.patch.object(queue, 'notify'):
+                queue.watch(self.config(root))
+            status = json.loads((root / 'status.json').read_text())
+            self.assertEqual(status['outcome'], 'success')
+            self.assertEqual(status['exit_code'], 0)
+            self.assertTrue(status['cancel_requested'])
+            self.assertTrue(status['cleanup_confirmed'])
 
     def test_timeout_is_distinct_from_signal_termination(self):
         with tempfile.TemporaryDirectory() as raw:

@@ -9,6 +9,7 @@ versions are tracked inside the references rather than in parallel filenames.
 | Install, navigate, compare, troubleshoot | [Consumer guide](consumer-guide.md) |
 | Interpret file/directory JSON, statuses, identity, limits, or older versions | [Navigation reference](navigation.md) |
 | Compare planning and candidate source; interpret compact deltas and exits | [Inventory reference](inventory.md) |
+| Keep complete review evidence without repeating records | [Review evidence transport](review-evidence.md) |
 | Know exactly which callables each language maps | [Language support](language-support.md) |
 | Hand off to Python AST, native Rust syntax, or Rust definition lookup | [Native analysis](native-analysis.md) |
 | Prepare Poker capsule context without changing its workflow | [Poker capsule integration](poker-capsule-workflow.md) |
@@ -22,3 +23,9 @@ versions are tracked inside the references rather than in parallel filenames.
 [Historical records](archive/README.md) retain extraction decisions, pilot/adoption
 observations, and measured audit results. They are not current setup instructions,
 provider promises, or capsule authority.
+
+The [workflow effectiveness corrections](workflow-effectiveness.md) explain
+reusable adoption checks, claim-specific evidence, lifecycle stages and bounded
+reuse without adding universal workflow machinery.
+
+- [Backlog implementation status](archive/backlog-implementation-status-2026-09-30.md): local fixes and outstanding consumer qualification boundaries.

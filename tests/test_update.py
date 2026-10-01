@@ -16,6 +16,68 @@ from update_modules import actions, editor, python_packages  # noqa: E402
 
 
 class UpdateTests(unittest.TestCase):
+    def test_nested_maintenance_timeout_remains_retryable(self):
+        command = (sys.executable, str(updater.ROOT / 'scripts' / 'maintain.py'), 'verify')
+        with mock.patch.object(updater.subprocess, 'run',
+                               side_effect=subprocess.CalledProcessError(75, command)):
+            with self.assertRaises(subprocess.TimeoutExpired):
+                updater.run(*command)
+        with mock.patch.object(updater.subprocess, 'run',
+                               side_effect=subprocess.CalledProcessError(1, command)):
+            with self.assertRaises(subprocess.CalledProcessError):
+                updater.run(*command)
+
+    def test_actual_maintenance_child_preserves_timeout_and_failure_distinction(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / 'scripts').mkdir()
+            child = root / 'scripts' / 'maintain.py'
+            maintenance_path = Path(__file__).resolve().parents[1] / 'scripts' / 'maintain.py'
+            setup = ('import importlib.util, subprocess, sys\n'
+                     f'spec=importlib.util.spec_from_file_location("maintenance", {str(maintenance_path)!r})\n'
+                     'm=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\n'
+                     'm.load_pins=lambda: {}\n')
+            for operation, expected in (
+                    ('subprocess.run([sys.executable, "-c", "import time; time.sleep(5)"], check=True, timeout=.05)', subprocess.TimeoutExpired),
+                    ('subprocess.run([sys.executable, "-c", "raise SystemExit(1)"], check=True, timeout=2)', subprocess.CalledProcessError)):
+                child.write_text(setup + f'def fail(*args, **kwargs): return {operation}\n'
+                                 'm.verify=fail\nsys.exit(m.main(["verify"]))\n')
+                with self.subTest(operation=operation), mock.patch.object(updater, 'ROOT', root):
+                    with self.assertRaises(expected):
+                        updater.run(sys.executable, str(child), 'verify')
+
+    def test_staging_does_not_hide_rejection_context_source_changes(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            def git(*args):
+                return subprocess.run(['git', *args], cwd=root, check=True,
+                                      capture_output=True)
+            git('init')
+            (root / 'src').mkdir()
+            source = root / 'src' / 'sample.py'
+            source.write_text('value = 1\n')
+            git('add', '.')
+            git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                'commit', '-m', 'fixture')
+            with mock.patch.object(updater, 'ROOT', root):
+                clean = updater.rejection_context(b'manifest', Path(sys.executable))
+                source.write_text('value = 2\n')
+                unstaged = updater.rejection_context(b'manifest', Path(sys.executable))
+                git('add', '.')
+                staged = updater.rejection_context(b'manifest', Path(sys.executable))
+            self.assertNotEqual(clean, staged)
+            self.assertEqual(unstaged, staged)
+            # Cleanliness is stricter than consumed-source identity: detect both layers.
+            source.write_text('value = 1\n')
+            workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/verify.yml').read_text()
+            self.assertIn('git diff --cached --exit-code', workflow)
+            self.assertNotEqual(subprocess.run(['git', 'diff', '--exit-code'], cwd=root,
+                                               capture_output=True).returncode, 0)
+            self.assertNotEqual(subprocess.run(['git', 'diff', '--cached', '--exit-code'],
+                                               cwd=root, capture_output=True).returncode, 0)
+            self.assertEqual(subprocess.run(['git', 'diff', 'HEAD', '--exit-code'], cwd=root,
+                                            capture_output=True).returncode, 0)
+
     def test_readiness_classifies_grammar_upgrade(self):
         result = updater.readiness_result(Path('candidate/bin/python'),
                                           ['tree-sitter-python'], [], True, [])

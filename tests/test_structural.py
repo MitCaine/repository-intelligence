@@ -48,7 +48,7 @@ class StructuralTests(unittest.TestCase):
             self.assertEqual(result["mapping_status"], "navigation_only")
             self.assertEqual(syntax["parser"]["runtime_version"], version("tree-sitter"))
             self.assertEqual(syntax["parser"]["grammar_version"], version("tree-sitter-python"))
-            self.assertEqual(syntax["parser"]["adapter_version"], 11)
+            self.assertEqual(syntax["parser"]["adapter_version"], 12)
             self.assertEqual(syntax["coverage"], "adapter_owned_callable_accounting")
             self.assertEqual(syntax["error_count"], 0)
             self.assertEqual(syntax["missing_count"], 0)

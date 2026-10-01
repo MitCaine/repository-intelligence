@@ -126,3 +126,5 @@ RI has no project license file yet; distribution notes are in maintenance.
 The capsule workflow always records an impact inventory before final READY/P;
 a fresh scope challenger is used when required by consumer policy, cross-seam
 changes or meaningful scope uncertainty. See the [controller guide](docs/capsule-controller-workflow.md#discover-and-challenge-scope-before-authorization).
+
+For large structural handoffs, the optional [deduplicated review bundle](docs/review-evidence.md) retains complete evidence with a concise index and selective reads. Consumer adoption remains explicit.

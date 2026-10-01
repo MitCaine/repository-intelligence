@@ -2,11 +2,15 @@
 """Detach one bounded command, save its result, and attempt one terminal notification."""
 
 import argparse
+import fcntl
+import tempfile
 import json
 import math
 import os
 from pathlib import Path
 import re
+import signal
+import threading
 import subprocess
 import sys
 import time
@@ -25,37 +29,67 @@ def group_exists(group):
         return True
     except ProcessLookupError:
         return False
+    except PermissionError as error:
+        raise PermissionError(error.errno, f'Cannot inspect owned process group {group}') from error
+
+
+def wait_group_absence(process, seconds):
+    deadline = time.monotonic() + seconds
+    last_error = None
+    while True:
+        process.poll()  # Reap the leader before probing a possibly zombie-only group.
+        try:
+            if not group_exists(process.pid):
+                return True, None
+            last_error = None
+        except PermissionError as error:
+            # An unavailable observation is never absence. Retry within the cleanup budget.
+            last_error = error
+        if time.monotonic() >= deadline:
+            return False, last_error
+        time.sleep(min(.05, max(0, deadline - time.monotonic())))
 
 
 def terminate_group(process):
-    """Leader exit does not imply that its process group has exited."""
-    group = process.pid
-    try:
-        os.killpg(group, 15)
-    except ProcessLookupError:
-        pass
-    deadline = time.monotonic() + TERM_GRACE_SECONDS
-    while group_exists(group) and time.monotonic() < deadline:
-        process.poll()  # reap the leader without using its exit as group proof
-        time.sleep(0.05)
-    try:
-        os.killpg(group, 9)
-    except ProcessLookupError:
-        pass
+    """Leader exit does not imply group exit; require a confirmed absent group."""
+    signal_error = None
+    for signum, grace in ((signal.SIGTERM, TERM_GRACE_SECONDS),
+                          (signal.SIGKILL, CLEANUP_WAIT_SECONDS)):
+        try:
+            os.killpg(process.pid, signum)
+        except ProcessLookupError:
+            pass
+        except PermissionError as error:
+            signal_error = PermissionError(error.errno,
+                f'Cannot send signal {signum} to owned process group {process.pid}')
+        absent, inspection_error = wait_group_absence(process, grace)
+        if absent:
+            return process.wait(timeout=CLEANUP_WAIT_SECONDS), True
     code = process.wait(timeout=CLEANUP_WAIT_SECONDS)
-    deadline = time.monotonic() + CLEANUP_WAIT_SECONDS
-    while group_exists(group) and time.monotonic() < deadline:
-        time.sleep(0.05)
-    return code, not group_exists(group)
+    if inspection_error or signal_error:
+        raise inspection_error or signal_error
+    return code, False
 
 
 def save_json(path, data):
-    temporary = path.with_suffix('.tmp')
-    temporary.write_text(json.dumps(data, indent=2, sort_keys=True) + '\n')
-    os.replace(temporary, path)
+    fd, raw = tempfile.mkstemp(prefix=path.name + '.', suffix='.tmp', dir=path.parent)
+    temporary = Path(raw)
+    try:
+        with os.fdopen(fd, 'w') as output:
+            output.write(json.dumps(data, indent=2, sort_keys=True) + '\n')
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def notify(config, *, recovery=False):
+    # Serialize notification attempts; an accepted attempt cannot be resent by recovery.
+    with (Path(config['job_dir']) / 'delivery.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        return notify_locked(config, recovery=recovery)
+
+
+def notify_locked(config, *, recovery=False):
     job_dir = Path(config['job_dir'])
     status_path = job_dir / 'status.json'
     status = json.loads(status_path.read_text())
@@ -74,7 +108,7 @@ def notify(config, *, recovery=False):
     try:
         queued = subprocess.run(['codex', 'queue', '--thread', config['thread'],
                                  '--message', message], stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, text=True,
+                                stderr=subprocess.STDOUT, text=True, errors="backslashreplace",
                                 timeout=QUEUE_TIMEOUT_SECONDS)
         delivery['state'] = 'accepted_by_cli' if queued.returncode == 0 else 'rejected_by_cli'
         delivery['exit_code'] = queued.returncode
@@ -87,57 +121,89 @@ def notify(config, *, recovery=False):
     return delivery
 
 
+class WatchCancelled(Exception):
+    pass
+
+
 def watch(config):
     job_dir = Path(config['job_dir'])
     status_path = job_dir / 'status.json'
+    if status_path.exists():
+        raise ValueError('Terminal result already retained; recover delivery without rerunning the command')
     output_path = job_dir / 'output.log'
     started = time.time()
-    outcome = 'watcher_error'
-    exit_code = None
-    detail = ''
-    cleanup_confirmed = None
-    cleanup_error = None
-    try:
-        with output_path.open('wb') as output:
-            process = subprocess.Popen(config['command'], cwd=config['cwd'],
-                                       stdout=output, stderr=subprocess.STDOUT,
-                                       start_new_session=True)
-            try:
-                exit_code = process.wait(timeout=config['timeout_seconds'])
-            except subprocess.TimeoutExpired:
-                outcome = 'timeout'
-                detail = 'deadline exceeded'
-            else:
-                outcome = ('success' if exit_code == 0 else
-                           'signal_terminated' if exit_code < 0 else 'failure')
-                detail = f'command outcome {outcome}; exit {exit_code}'
-            cleanup_confirmed = False
-            try:
-                if outcome == 'success' and not group_exists(process.pid):
-                    cleanup_confirmed = True
-                else:
-                    cleanup_code, cleanup_confirmed = terminate_group(process)
-                    if exit_code is None:
-                        exit_code = cleanup_code
-            except Exception as error:
-                cleanup_error = f'{type(error).__name__}: {error}'
-            detail += ('; process group absent after cleanup' if cleanup_confirmed else
-                       '; cleanup unresolved; do not retry overlapping work')
-    except Exception as error:
-        detail = f'watcher error: {type(error).__name__}: {error}'
-        if outcome not in ('success', 'failure', 'signal_terminated', 'timeout'):
-            outcome = ('lost_connectivity' if isinstance(error, (ConnectionError, BrokenPipeError))
-                       else 'watcher_error')
-        else:
-            cleanup_confirmed = False
-            cleanup_error = f'{type(error).__name__}: {error}'
+    outcome, exit_code, detail = 'watcher_error', None, ''
+    cleanup_confirmed, cleanup_error = None, None
+    process = None
+    cancelled = False
+    cleaning = False
+    launching = False
+    handlers = {}
 
-    status = {'outcome': outcome, 'exit_code': exit_code, 'detail': detail,
-              'cleanup_confirmed': cleanup_confirmed, 'cleanup_error': cleanup_error,
-              'started_at_epoch': started, 'finished_at_epoch': time.time(),
-              'command': config['command'], 'cwd': config['cwd'],
-              'thread': config['thread'], 'label': config['label']}
-    save_json(status_path, status)
+    def cancel(signum, frame):
+        nonlocal cancelled
+        cancelled = True
+        if not cleaning and not launching:
+            raise WatchCancelled(f'watcher cancellation signal {signum}')
+
+    if threading.current_thread() is threading.main_thread():
+        for signum in (signal.SIGTERM, signal.SIGINT):
+            handlers[signum] = signal.signal(signum, cancel)
+    try:
+        try:
+            with output_path.open('wb') as output:
+                launching = True
+                try:
+                    process = subprocess.Popen(config['command'], cwd=config['cwd'],
+                                               stdout=output, stderr=subprocess.STDOUT,
+                                               start_new_session=True)
+                finally:
+                    launching = False
+                if cancelled:
+                    raise WatchCancelled('watcher cancelled during launch')
+                try:
+                    exit_code = process.wait(timeout=config['timeout_seconds'])
+                except subprocess.TimeoutExpired:
+                    outcome, detail = 'timeout', 'deadline exceeded'
+                else:
+                    outcome = ('success' if exit_code == 0 else
+                               'signal_terminated' if exit_code < 0 else 'failure')
+                    detail = f'command outcome {outcome}; exit {exit_code}'
+        except (WatchCancelled, KeyboardInterrupt) as error:
+            cancelled = True
+            if outcome not in ('success', 'failure', 'signal_terminated', 'timeout'):
+                outcome = 'interrupted'
+            detail += f'; {type(error).__name__}: {error}'
+        except Exception as error:
+            detail = f'watcher error: {type(error).__name__}: {error}'
+            if outcome not in ('success', 'failure', 'signal_terminated', 'timeout'):
+                outcome = ('lost_connectivity' if isinstance(error, (ConnectionError, BrokenPipeError))
+                           else 'watcher_error')
+        finally:
+            cleaning = True
+            if process is not None:
+                cleanup_confirmed = False
+                try:
+                    if outcome == 'success' and not group_exists(process.pid):
+                        cleanup_confirmed = True
+                    else:
+                        cleanup_code, cleanup_confirmed = terminate_group(process)
+                        if exit_code is None:
+                            exit_code = cleanup_code
+                except Exception as error:
+                    cleanup_error = f'{type(error).__name__}: {error}'
+                detail += ('; process group absent after cleanup' if cleanup_confirmed else
+                           '; cleanup unresolved; do not retry overlapping work')
+        status = {'outcome': outcome, 'exit_code': exit_code, 'detail': detail,
+                  'cleanup_confirmed': cleanup_confirmed, 'cleanup_error': cleanup_error,
+                  'cancel_requested': cancelled,
+                  'started_at_epoch': started, 'finished_at_epoch': time.time(),
+                  'command': config['command'], 'cwd': config['cwd'],
+                  'thread': config['thread'], 'label': config['label']}
+        save_json(status_path, status)
+    finally:
+        for signum, handler in handlers.items():
+            signal.signal(signum, handler)
     notify(config)
 
 
@@ -164,7 +230,7 @@ def launch(argv=None):
     job_dir = Path(args.job_dir).resolve()
     try:
         help_result = subprocess.run(['codex', 'queue', '--help'], capture_output=True,
-                                     text=True, timeout=10)
+                                     text=True, errors="backslashreplace", timeout=10)
         if help_result.returncode or '--thread' not in help_result.stdout or '--message' not in help_result.stdout:
             parser.error('codex queue --help does not confirm --thread and --message')
     except (OSError, subprocess.SubprocessError) as error:

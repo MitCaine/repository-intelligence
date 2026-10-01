@@ -81,3 +81,13 @@ Scope freshness trial: materially change a challenged inventory and verify that
 its prior verdict cannot finalize READY/P. Rechallenge the final identity. A
 protected service requiring committed source instead runs exact-C qualification;
 do not invent pre-freeze hosted evidence.
+
+## Consumer transition specimen
+
+The [effectiveness guide](workflow-effectiveness.md#before-starting-an-issue)
+requires actual qualification-to-review callsites, API/read/report/import routes
+and installed capability positives/negatives. RI regression fixtures test local
+helpers, not those consumer transitions. Host autonomous wake-up and the two
+full consumer closeouts remain unqualified until their actual retained results
+establish them. Reuse an accepted shared-startup fixture rather than transcribe
+another authentication implementation.

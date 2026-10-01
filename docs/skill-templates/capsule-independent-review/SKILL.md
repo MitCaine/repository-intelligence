@@ -16,3 +16,14 @@ Account for the controlling objective beyond RI's selected source contract. Chec
 Return the complete review to the controller. Do not edit the candidate, approve, publish, accept, merge, or close the capsule from the reviewer lane.
 
 Receive the consumer's accepted review-report template and validator requirements, including declaration dispositions when required and explicit empty arrays for empty deltas. Return importable evidence in that format; semantic PASS alone is insufficient. Identify any export supplements needed for the complete handoff. Specimen validation does not supply future candidate/qualification proof.
+
+Use the [effectiveness guidance](../../workflow-effectiveness.md) to distinguish
+incumbent, proposed and installed proof. A green qualification omitting a
+mandatory node cannot prove that behavior. Receive the accepted API schema,
+readable Standards/raw proof and report-file/import route before dispatch.
+Complete semantic decisions first and generate required mechanical accounting
+once. Under an explicitly adopted consumer contract, terminal review can carry
+authenticated unchanged implementation judgments while independently checking
+lifecycle changes and remaining obligations; otherwise follow the installed
+original-outcome review requirement. Preserve provenance and never inherit an
+unresolved or unverifiable PASS.

@@ -18,8 +18,8 @@ from .source import SCHEMA_VERSION, git_object_format
 from .structural import MAX_DECLARATION_DETAILS, ScanSetup
 
 
-INVENTORY_SCHEMA_VERSION = 14
-MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-markdown-source-units-v11"
+INVENTORY_SCHEMA_VERSION = 15
+MAPPING_CONTRACT = "python-rust-javascript-typescript-java-go-csharp-c-cpp-markdown-source-units-v12"
 
 
 def _digest(scope: dict, files: list[dict]) -> str:
@@ -450,6 +450,8 @@ def main(argv: list[str] | None = None) -> int:
     output_choice.add_argument("--json", action="store_true", help="print full unbounded evidence")
     output_choice.add_argument("--compact-json", action="store_true",
                                help="print normalized changed facts and file metadata")
+    output_choice.add_argument("--review-bundle-json", action="store_true",
+                               help="lossless deduplicated review transport (opt-in schema v1)")
     args = parser.parse_args(argv)
     if not 1 <= args.limit <= 20:
         parser.error("--limit must be from 1 to 20")
@@ -473,7 +475,11 @@ def main(argv: list[str] | None = None) -> int:
                                    logical_root=args.logical_root, language_choices=choices,
                                    excluded_directories=excluded_directories)
         result = compare_inventories(planning, candidate)
-        output = (json.dumps(result, indent=2) if args.json else
+        if args.review_bundle_json:
+            from .review_bundle import build_review_bundle, canonical
+            output = canonical(build_review_bundle(planning, candidate)).decode("utf-8")
+        else:
+            output = (json.dumps(result, indent=2) if args.json else
                   json.dumps(compact_delta(result), indent=2) if args.compact_json else
                   format_delta_compact(result, limit=args.limit))
         status = result["status"]

@@ -18,7 +18,11 @@ test the mapping promise.
 The pinned Markdown block grammar maps `.md` front matter (`---` or `+++`),
 every nonempty ATX or Setext heading section, and every grammar-recognized
 checked or unchecked task-list item. A section's source range includes its
-heading and own content up to the first nested section; checklist items have
+heading and own content up to the next sibling heading or nested section.
+Preambles precede section ranges; headings inside blockquotes are mapped from
+the heading node, so the first quote prefix lies outside that range. All raw
+body bytes and later quote prefixes remain intact. LF, CRLF and CR-only inputs
+use raw-byte slices with logical line coordinates. Checklist items have
 their own overlapping ranges and `task_state`. Fenced code examples do not
 create headings or checklist entries. Section identity uses its heading path;
 checklist identity uses its ordinal within that path. Repeated headings and
