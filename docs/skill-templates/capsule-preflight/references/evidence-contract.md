@@ -28,6 +28,9 @@ python path/to/capsule-preflight/scripts/evidence_preflight.py \
 ```
 
 Exit 0 reports `disposition: checked`; exit 2 reports `blocked` with a reason.
+Records whose nesting exhausts JSON decoding or validation capacity return
+`blocked` with a controlled nesting reason rather than a traceback. This does
+not impose a new nesting restriction on legacy metadata that remains processable.
 Checked means these deterministic comparisons passed. It does not establish
 scope purpose, independent review, authorization signatures, run provenance,
 remote branch identity, or approval. The consumer authenticates those through

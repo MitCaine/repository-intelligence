@@ -34,7 +34,7 @@ class _ReferencePaths:
 
 def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(',', ':'),
-                      ensure_ascii=False, allow_nan=False).encode('utf-8')
+                      ensure_ascii=False, allow_nan=False).encode('utf-8', errors='backslashreplace')
 
 
 def digest(value):

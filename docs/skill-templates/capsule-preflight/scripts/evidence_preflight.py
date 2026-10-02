@@ -111,9 +111,12 @@ def unique_object(pairs):
 def load(path):
     require(stat.S_ISREG(path.lstat().st_mode), f'not a regular file: {path}')
     require(path.stat().st_size <= 2_000_000, f'record too large: {path}')
-    value = json.loads(path.read_text(), object_pairs_hook=unique_object)
-    require(isinstance(value, dict), f'expected object: {path}')
-    return expand_source_maps(value)
+    try:
+        value = json.loads(path.read_text(), object_pairs_hook=unique_object)
+        require(isinstance(value, dict), f'expected object: {path}')
+        return expand_source_maps(value)
+    except RecursionError as error:
+        raise Blocked('record nesting exceeds processing capacity') from error
 
 
 def git(root, *args):
@@ -480,6 +483,10 @@ def main():
                            args.packet.parent)
         result = {'schema_version': 1, 'disposition': 'checked', 'changed_paths': changed}
         code = 0
+    except RecursionError:
+        result = {'schema_version': 1, 'disposition': 'blocked',
+                  'reason': 'record nesting exceeds processing capacity'}
+        code = 2
     except (ValueError, OSError, KeyError, TypeError, subprocess.SubprocessError) as error:
         result = {'schema_version': 1, 'disposition': 'blocked', 'reason': str(error)}
         code = 2

@@ -5,6 +5,8 @@ import tempfile
 import contextlib
 import io
 import json
+import os
+import sys
 import unittest
 from unittest import mock
 
@@ -68,6 +70,53 @@ class ReviewBundleTests(unittest.TestCase):
 
     def test_deterministic(self):
         self.assertEqual(rb.canonical(self.bundle), rb.canonical(rb.build_review_bundle(self.planning, self.candidate)))
+
+    def test_filesystem_surrogate_encoding_preserves_bytes_and_hashes(self):
+        from repository_intelligence.inventory import _digest
+        name = b'unit-\xff.py'
+        path = os.fsdecode(name)
+        encoded = rb.canonical({'path': path})
+        self.assertEqual(encoded, b'{"path":"unit-\\udcff.py"}')
+        self.assertEqual(os.fsencode(json.loads(encoded)['path']), name)
+        self.assertNotEqual(rb.digest({'path': path}), rb.digest({'path': r'unit-\udcff.py'}))
+        self.assertNotEqual(_digest({}, [{'path': path, 'source_identity': None}]),
+                            _digest({}, [{'path': r'unit-\udcff.py', 'source_identity': None}]))
+        self.assertEqual(rb.canonical({'path': 'é.py'}), b'{"path":"\xc3\xa9.py"}')
+
+    @unittest.skipUnless(sys.platform.startswith('linux'),
+                         'actual non-UTF-8 filesystem names exercised on Linux')
+    def test_non_utf8_filename_round_trip_and_cli(self):
+        from repository_intelligence import inventory
+        name = b'unit-\xff.py'
+        for root, source in [(self.p, b'def before():\n    return 1\n'),
+                             (self.c, b'def after():\n    return 2\n')]:
+            with open(os.fsencode(root) + b'/' + name, 'wb') as stream:
+                stream.write(source)
+        planning = inventory_tree(self.p, stable=True)
+        candidate = inventory_tree(self.c, stable=True)
+        expected = os.fsdecode(name)
+        item = next(item for item in planning['files'] if item['path'] == expected)
+        self.assertEqual(os.fsencode(item['path']), name)
+        self.assertEqual(item['declarations'][0]['name'], 'before')
+        bundle = rb.build_review_bundle(planning, candidate)
+        serialized = rb.canonical(bundle)
+        self.assertIn(b'\\udcff', serialized)
+        restored = rb.validate_review_bundle(json.loads(serialized))
+        self.assertEqual(restored['planning'], planning)
+        self.assertEqual(restored['candidate'], candidate)
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            code = inventory.main(['compare', str(self.p), str(self.c),
+                                   '--assert-stable-materialization', '--review-bundle-json'])
+        self.assertEqual(code, 0)
+        self.assertEqual(rb.validate_review_bundle(json.loads(output.getvalue())), restored)
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            code = inventory.main(['scan', str(self.p), '--assert-stable-materialization'])
+        self.assertEqual(code, 0)
+        output.getvalue().encode('utf-8')  # Safe with strict UTF-8 stdout too.
+        # Ordinary Unicode canonical bytes and existing hashes stay unchanged.
+        self.assertEqual(rb.canonical({'path': 'é.py'}), b'{"path":"\xc3\xa9.py"}')
+        self.assertNotEqual(rb.digest({'path': expected}),
+                            rb.digest({'path': r'unit-\udcff.py'}))
 
     def test_reference_prefixes_in_both_orders_and_typed_siblings(self):
         for first, second in (([], ['a']), (['a'], []), (['a'], ['a']),

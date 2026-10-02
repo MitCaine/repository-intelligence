@@ -43,6 +43,10 @@ exclusions are separate scan evidence and do not affect the digest. They
 block comparison when they overlap files mapped on the opposite side. The digest is
 a reproducibility checksum, not a signature or source authenticity proof.
 Different absolute checkout paths can have the same logical root and digest.
+Non-UTF-8 POSIX path bytes use filesystem surrogate escapes in JSON and digest
+input; decoding then filesystem encoding recovers the original bytes. Compact
+terminal output displays those escapes. Valid Unicode digest bytes are unchanged,
+so no inventory or mapping version changes for this previously failing case.
 The policy includes selected header languages and caller-selected excluded
 directory names; the default excluded names include `target`, `node_modules`,
 `venv`, and `__pycache__`. A file that becomes excluded at the same relative

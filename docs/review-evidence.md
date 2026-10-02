@@ -42,7 +42,10 @@ Selective reads mechanically validate the entire bundle before selecting data;
 the model need not reconstruct pages or repeat every structural record.
 
 Digests cover canonical JSON data, not original JSON whitespace. Each document
-reconstructs exactly to that data. The verifier rejects missing, extra, cyclic,
+reconstructs exactly to that data. POSIX non-UTF-8 filename bytes are retained
+through Python filesystem surrogate escapes, serialized as JSON `\udcXX`
+escapes. Decoding and filesystem encoding recover the original path bytes;
+valid Unicode canonical bytes are unchanged. The verifier rejects missing, extra, cyclic,
 overlapping or altered references and recomputes the comparison from both
 inventories. These checks prove internal consistency, not source authenticity.
 Overlap validation uses component-prefix lookup, preserving ancestor/descendant

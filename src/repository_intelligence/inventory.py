@@ -29,7 +29,7 @@ def _digest(scope: dict, files: list[dict]) -> str:
                            "byte_count": (item["source_identity"] or {}).get("byte_count")}
                           for item in files]}
     encoded = json.dumps(material, sort_keys=True, separators=(",", ":"),
-                         ensure_ascii=False).encode("utf-8")
+                         ensure_ascii=False).encode("utf-8", errors="backslashreplace")
     return hashlib.sha256(encoded).hexdigest()
 
 
@@ -484,7 +484,8 @@ def main(argv: list[str] | None = None) -> int:
                   json.dumps(compact_delta(result), indent=2) if args.compact_json else
                   format_delta_compact(result, limit=args.limit))
             status = result["status"]
-    print(output)
+    # Filesystem surrogate escapes must not depend on stdout's error policy.
+    print(output.encode('utf-8', errors='backslashreplace').decode('utf-8'))
     return 0 if status in {"complete", "comparable_candidate_delta"} else 3 if status == "incompatible" else 2
 
 

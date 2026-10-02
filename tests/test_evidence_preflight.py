@@ -493,6 +493,36 @@ class EvidencePreflightTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertEqual(json.loads(result.stdout)['disposition'], 'blocked')
 
+    def test_deep_compact_metadata_returns_structured_block(self):
+        contract = self.records / 'contract.json'
+        packet = self.records / 'packet.json'
+        contract.write_text(json.dumps(self.contract))
+        cmd = [os.sys.executable, str(SCRIPT), '--repository', str(self.root),
+               '--contract', str(contract), '--packet', str(packet)]
+        # Traversal capacity varies across Python versions (3.14 inlines
+        # comprehensions). A processable record may pass, exhaustion must block.
+        metadata = '[' * 600 + '0' + ']' * 600
+        for value, disposition in [(self.packet, 'checked'),
+                                    (gate.compact_source_maps(self.packet), 'blocked')]:
+            raw = json.dumps(value)
+            packet.write_text(raw[:-1] + ',"extra_metadata":' + metadata + '}')
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            actual = json.loads(result.stdout)['disposition']
+            self.assertIn(actual, ['checked'] if disposition == 'checked' else
+                          ['checked', 'blocked'])
+            self.assertEqual(result.returncode, 0 if actual == 'checked' else 2)
+            self.assertEqual(result.stderr, '')
+        with mock.patch.object(gate, 'expand_source_maps', side_effect=RecursionError):
+            with self.assertRaisesRegex(gate.Blocked, 'record nesting'):
+                gate.load(packet)
+        # Parser exhaustion itself must also produce a controlled block.
+        packet.write_text('{"schema_version":2,"extra":' + '[' * 2000 +
+                          '0' + ']' * 2000 + '}')
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(json.loads(result.stdout)['disposition'], 'blocked')
+        self.assertEqual(result.stderr, '')
+
     def test_reuse_retains_origin_and_separate_current_authorization(self):
         execution = copy.deepcopy(self.packet['checks'][0])
         execution['inputs'] = {key: 'a' * 64 for key in gate.REUSE_INPUTS}
