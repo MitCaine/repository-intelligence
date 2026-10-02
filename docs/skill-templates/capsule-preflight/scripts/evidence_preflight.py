@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
@@ -11,6 +12,79 @@ import subprocess
 
 class Blocked(ValueError):
     pass
+
+
+INVOCATION_FIELDS = {'argv', 'cwd', 'config', 'interpreter', 'profiles',
+                     'isolation', 'environment', 'source_files'}
+MAX_EXPANDED_SOURCE_BYTES = 64_000_000
+
+
+def source_map_digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':'),
+        ensure_ascii=False, allow_nan=False).encode('utf-8')).hexdigest()
+
+
+def compact_source_maps(record):
+    """Optional schema-2 export; sharing data never merges invocation roles."""
+    require(type(record.get('schema_version')) is int and record['schema_version'] == 1,
+            'compaction requires a schema-1 record')
+    require('source_maps' not in record, 'unexpected source map table')
+    maps = {}
+    def visit(value):
+        if isinstance(value, dict):
+            if set(value) == INVOCATION_FIELDS:
+                sources = value['source_files']
+                require(isinstance(sources, dict) and sources, 'missing source map')
+                key = source_map_digest(sources)
+                maps[key] = deepcopy(sources)
+                return {**{k: deepcopy(v) for k, v in value.items() if k != 'source_files'},
+                        'source_files_ref': key}
+            return {k: visit(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [visit(v) for v in value]
+        return deepcopy(value)
+    result = visit(record)
+    result.update(schema_version=2, source_maps=maps)
+    return result
+
+
+def expand_source_maps(record):
+    """Authenticate optional schema-2 maps before legacy semantic validation."""
+    version = record.get('schema_version')
+    require(type(version) is int and version in (1, 2), 'unsupported schema')
+    if version == 1:
+        require('source_maps' not in record, 'source maps require schema 2')
+        return record
+    maps = record.get('source_maps')
+    require(isinstance(maps, dict), 'missing source map table')
+    sizes = {}
+    for key, sources in maps.items():
+        require(isinstance(sources, dict) and sources and
+                source_map_digest(sources) == key, 'source map digest mismatch')
+        sizes[key] = len(json.dumps(sources, ensure_ascii=False).encode('utf-8'))
+    used, expanded_bytes = set(), 0
+    reference_fields = (INVOCATION_FIELDS - {'source_files'}) | {'source_files_ref'}
+    def visit(value):
+        nonlocal expanded_bytes
+        if isinstance(value, dict):
+            if ('source_files_ref' in value and
+                    (INVOCATION_FIELDS - {'source_files'}) <= set(value)):
+                require(set(value) == reference_fields, 'conflicting or invalid source reference')
+                key = value['source_files_ref']
+                require(isinstance(key, str) and key in maps, 'missing source map')
+                used.add(key)
+                expanded_bytes += sizes[key]
+                require(expanded_bytes <= MAX_EXPANDED_SOURCE_BYTES, 'expanded source maps exceed budget')
+                return {**{k: deepcopy(v) for k, v in value.items() if k != 'source_files_ref'},
+                        'source_files': deepcopy(maps[key])}
+            return {k: visit(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [visit(v) for v in value]
+        return deepcopy(value)
+    result = visit({k: v for k, v in record.items() if k != 'source_maps'})
+    require(used == set(maps), 'unreferenced source maps')
+    result['schema_version'] = 1
+    return result
 
 
 def require(condition, message):
@@ -39,9 +113,7 @@ def load(path):
     require(path.stat().st_size <= 2_000_000, f'record too large: {path}')
     value = json.loads(path.read_text(), object_pairs_hook=unique_object)
     require(isinstance(value, dict), f'expected object: {path}')
-    require(type(value.get('schema_version')) is int and value['schema_version'] == 1,
-            f'unsupported schema: {path}')
-    return value
+    return expand_source_maps(value)
 
 
 def git(root, *args):
@@ -77,11 +149,14 @@ def indexed(records, label):
 
 
 def validate_invocation(invocation, root, candidate):
+    return _validate_invocation(invocation, root, candidate, {})
+
+
+def _validate_invocation(invocation, root, candidate, source_cache):
     require(isinstance(invocation, dict), 'missing invocation')
     require(isinstance(invocation.get('argv'), list) and invocation['argv'] and
             all(isinstance(v, str) and v for v in invocation['argv']), 'invalid invocation argv')
-    require(set(invocation) == {'argv', 'cwd', 'config', 'interpreter', 'profiles',
-                                'isolation', 'environment', 'source_files'},
+    require(set(invocation) == INVOCATION_FIELDS,
             'incomplete or unsupported invocation fields')
     relative_path(invocation['cwd'])
     directory = root / invocation['cwd']
@@ -100,12 +175,17 @@ def validate_invocation(invocation, root, candidate):
         relative_path(path)
         require(isinstance(identity, dict) and set(identity) == {'sha256', 'mode'},
                 f'missing rehearsal mode/hash: {path}')
-        entry = git(root, 'ls-tree', '-z', candidate, '--', path).split(b'\0')[0]
-        require(entry and entry.split(b'\t', 1)[-1].decode() == path,
-                f'missing exact rehearsal source: {path}')
-        mode, kind, _ = entry.split(b'\t', 1)[0].decode().split()
+        key = (str(root.resolve()), candidate, path)
+        cache = source_cache
+        if key not in cache:
+            entry = git(root, 'ls-tree', '-z', candidate, '--', path).split(b'\0')[0]
+            require(entry and entry.split(b'\t', 1)[-1].decode() == path,
+                    f'missing exact rehearsal source: {path}')
+            mode, kind, _ = entry.split(b'\t', 1)[0].decode().split()
+            actual = hashlib.sha256(git(root, 'show', f'{candidate}:{path}')).hexdigest()
+            cache[key] = (mode, kind, actual)
+        mode, kind, actual = cache[key]
         require(kind == 'blob' and mode == identity['mode'], f'rehearsal mode mismatch: {path}')
-        actual = hashlib.sha256(git(root, 'show', f'{candidate}:{path}')).hexdigest()
         require(actual == identity['sha256'], f'rehearsal source mismatch: {path}')
 
 
@@ -294,6 +374,7 @@ def validate_closeout(expected, observed, checks, root, packet_dir):
 
 
 def validate(contract, packet, root, packet_dir):
+    contract, packet = expand_source_maps(contract), expand_source_maps(packet)
     identity = contract.get('identity')
     require(isinstance(identity, dict) and set(identity) ==
             {'task_id', 'revision', 'base', 'planning', 'candidate'}, 'invalid contract identity')
@@ -341,6 +422,7 @@ def validate(contract, packet, root, packet_dir):
     require(set(rehearsals) == {name for name, item in required.items()
                                if item.get('rehearsal_required') is True},
             'missing or unexpected rehearsal IDs')
+    source_cache = {}  # Successful immutable Git observations, for this call only.
     for name, expected in required.items():
         record = observed[name]
         require(record.get('candidate') == c and record.get('profile') == expected.get('profile')
@@ -373,7 +455,7 @@ def validate(contract, packet, root, packet_dir):
                     isinstance(probe.get('detail'), str) and probe['detail'].strip(),
                     f'{name}: missing capability probe result')
         invocation = expected.get('invocation')
-        validate_invocation(invocation, root, c)
+        _validate_invocation(invocation, root, c, source_cache)
         require(same_json(record.get('invocation'), invocation), f'{name}: frozen invocation drift')
         if rehearsal_required:
             rehearsal = rehearsals.get(name, {})

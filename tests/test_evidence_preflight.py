@@ -8,6 +8,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'docs/skill-templates/capsule-preflight/scripts/evidence_preflight.py'
 spec = importlib.util.spec_from_file_location('evidence_preflight', SCRIPT)
@@ -68,6 +69,126 @@ class EvidencePreflightTests(unittest.TestCase):
 
     def check(self):
         return gate.validate(self.contract, self.packet, self.root, self.records)
+
+    def repeat_checks(self, count):
+        expected, observed, rehearsal = (copy.deepcopy(rows[0]) for rows in (
+            self.contract['checks'], self.packet['checks'], self.packet['rehearsals']))
+        for document, field, template in ((self.contract, 'checks', expected),
+                (self.packet, 'checks', observed), (self.packet, 'rehearsals', rehearsal)):
+            document[field] = [{**copy.deepcopy(template), 'id': f'check-{i}'}
+                               for i in range(count)]
+
+    def test_committed_sources_are_read_once_per_validation(self):
+        sources = copy.deepcopy(self.contract['checks'][0]['invocation']['source_files'])
+        for i in range(31):
+            path, data = f'source-{i}.py', f'fixture {i}\n'.encode()
+            (self.root / path).write_bytes(data)
+            sources[path] = {'mode': '100644', 'sha256': hashlib.sha256(data).hexdigest()}
+        self.git('add', '.')
+        self.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                 'commit', '-qm', 'source fixture')
+        candidate = self.git('rev-parse', 'HEAD').strip()
+        self.contract['identity']['candidate'] = candidate
+        self.packet['identity']['candidate'] = candidate
+        self.packet['checks'][0]['candidate'] = candidate
+        self.contract['allowed_paths'] = sorted(sources)
+        self.contract['inventory'] = [{'path': path, 'disposition': 'edit', 'purpose': 'fixture'}
+                                     for path in sorted(sources)]
+        for record in self.contract['checks'] + self.packet['checks'] + self.packet['rehearsals']:
+            record['invocation']['source_files'] = copy.deepcopy(sources)
+        self.repeat_checks(12)
+        with mock.patch.object(gate, 'git', wraps=gate.git) as calls:
+            self.assertEqual(self.check(), sorted(sources))
+            source_calls = [call for call in calls.call_args_list
+                            if call.args[1] in ('ls-tree', 'show')]
+            self.assertEqual(len(source_calls), 64)
+            self.assertEqual(self.check(), sorted(sources))
+            source_calls = [call for call in calls.call_args_list
+                            if call.args[1] in ('ls-tree', 'show')]
+            self.assertEqual(len(source_calls), 128)  # No cross-call memo.
+        for field, wrong in (('sha256', '0' * 64), ('mode', '100755')):
+            expected = copy.deepcopy(self.contract)
+            packet = copy.deepcopy(self.packet)
+            expected['checks'][-1]['invocation']['source_files']['task.py'][field] = wrong
+            packet['checks'][-1]['invocation'] = copy.deepcopy(expected['checks'][-1]['invocation'])
+            with self.subTest(field=field), self.assertRaises(gate.Blocked):
+                gate.validate(expected, packet, self.root, self.records)
+
+    def test_source_cache_keys_include_exact_commit_and_repository(self):
+        invocation = self.contract['checks'][0]['invocation']
+        candidate = self.contract['identity']['candidate']
+        base = self.contract['identity']['base']
+        cache = {}
+        gate._validate_invocation(invocation, self.root, candidate, cache)
+        with self.assertRaisesRegex(gate.Blocked, 'source mismatch'):
+            gate._validate_invocation(invocation, self.root, base, cache)
+        other = Path(self.temp.name) / 'other'
+        subprocess.run(['git', 'clone', '-q', str(self.root), str(other)],
+                       check=True, env=self.env)
+        with mock.patch.object(gate, 'git', wraps=gate.git) as calls:
+            gate._validate_invocation(invocation, other, candidate, cache)
+            self.assertEqual(calls.call_count, 2)
+        # A later invocation observes changed expectations, never cached decisions.
+        changed = copy.deepcopy(invocation)
+        changed['source_files']['task.py']['mode'] = '100755'
+        with self.assertRaisesRegex(gate.Blocked, 'mode mismatch'):
+            gate.validate_invocation(changed, self.root, candidate)
+
+    def test_shared_source_maps_roundtrip_and_cli(self):
+        import sys
+        self.repeat_checks(30)
+        contract, packet = map(gate.compact_source_maps, (self.contract, self.packet))
+        self.assertEqual(len(contract['source_maps']), 1)
+        self.assertEqual(len(packet['source_maps']), 1)
+        self.assertEqual(gate.expand_source_maps(contract), self.contract)
+        self.assertEqual(gate.expand_source_maps(packet), self.packet)
+        self.assertEqual(gate.validate(contract, packet, self.root, self.records), ['task.py'])
+        for name, value in (('contract', contract), ('packet', packet)):
+            (self.records / f'{name}.json').write_text(json.dumps(value))
+        result = subprocess.run([sys.executable, str(SCRIPT), '--repository', str(self.root),
+            '--contract', str(self.records / 'contract.json'),
+            '--packet', str(self.records / 'packet.json')], capture_output=True,
+            text=True, env=self.env, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_shared_maps_fit_budget_without_merging_evidence_roles(self):
+        self.repeat_checks(30)
+        sources = {'directory-' + 'x' * 150 + f'/file-{i}.py':
+                   {'mode': '100644', 'sha256': hashlib.sha256(str(i).encode()).hexdigest()}
+                   for i in range(256)}
+        for record in self.packet['checks'] + self.packet['rehearsals']:
+            record['invocation']['source_files'] = copy.deepcopy(sources)
+        before = json.dumps(self.packet).encode()
+        compact = gate.compact_source_maps(self.packet)
+        after = json.dumps(compact).encode()
+        self.assertGreater(len(before), 2_000_000)
+        self.assertLess(len(after), 150_000)
+        self.assertEqual(gate.expand_source_maps(compact), self.packet)
+        self.assertEqual(len(compact['checks']), 30)
+        self.assertEqual(len(compact['rehearsals']), 30)
+        compact['metadata'] = {'source_files_ref': 'ordinary consumer metadata'}
+        self.assertEqual(gate.expand_source_maps(compact)['metadata'], compact['metadata'])
+
+    def test_shared_map_faults_and_expansion_budget(self):
+        compact = gate.compact_source_maps(self.packet)
+        key = next(iter(compact['source_maps']))
+        for fault in ('missing', 'tamper', 'unused', 'both', 'version'):
+            value = copy.deepcopy(compact)
+            if fault == 'missing': value['source_maps'].clear()
+            elif fault == 'tamper': value['source_maps'][key]['task.py']['mode'] = '100755'
+            elif fault == 'unused':
+                sources = {'extra': {'mode': '100644', 'sha256': '0' * 64}}
+                value['source_maps'][gate.source_map_digest(sources)] = sources
+            elif fault == 'both': value['checks'][0]['invocation']['source_files'] = {}
+            else: value['schema_version'] = True
+            with self.subTest(fault=fault), self.assertRaises(gate.Blocked):
+                gate.expand_source_maps(value)
+        with mock.patch.object(gate, 'MAX_EXPANDED_SOURCE_BYTES', 1), self.assertRaises(gate.Blocked):
+            gate.expand_source_maps(compact)
+        # Sharing hashes does not permit a final invocation to replace rehearsal settings.
+        compact['rehearsals'][0]['invocation']['environment'] = {'changed': 'yes'}
+        with self.assertRaisesRegex(gate.Blocked, 'rehearsal mismatch'):
+            gate.validate(self.contract, compact, self.root, self.records)
 
     def test_committed_candidate_final_identity_is_always_required(self):
         self.contract['checks'][0]['rehearsal_required'] = False
@@ -347,7 +468,7 @@ class EvidencePreflightTests(unittest.TestCase):
         path.write_text('{"schema_version":1,"schema_version":1}')
         with self.assertRaisesRegex(gate.Blocked, 'duplicate JSON'):
             gate.load(path)
-        path.write_text('{"schema_version":2}')
+        path.write_text('{"schema_version":3}')
         with self.assertRaisesRegex(gate.Blocked, 'unsupported schema'):
             gate.load(path)
 

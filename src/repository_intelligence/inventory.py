@@ -474,15 +474,16 @@ def main(argv: list[str] | None = None) -> int:
         candidate = inventory_tree(args.candidate, stable=args.assert_stable_materialization,
                                    logical_root=args.logical_root, language_choices=choices,
                                    excluded_directories=excluded_directories)
-        result = compare_inventories(planning, candidate)
         if args.review_bundle_json:
-            from .review_bundle import build_review_bundle, canonical
-            output = canonical(build_review_bundle(planning, candidate)).decode("utf-8")
+            from .review_bundle import _build_review_bundle, canonical
+            bundle, status = _build_review_bundle(planning, candidate)
+            output = canonical(bundle).decode("utf-8")
         else:
+            result = compare_inventories(planning, candidate)
             output = (json.dumps(result, indent=2) if args.json else
                   json.dumps(compact_delta(result), indent=2) if args.compact_json else
                   format_delta_compact(result, limit=args.limit))
-        status = result["status"]
+            status = result["status"]
     print(output)
     return 0 if status in {"complete", "comparable_candidate_delta"} else 3 if status == "incompatible" else 2
 

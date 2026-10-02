@@ -2,7 +2,7 @@
 
 Use this optional transport when repeated inventory records make a handoff large.
 It retains the complete planning inventory, candidate inventory and recomputed
-comparison. Repeated JSON objects are stored once and referenced by SHA-256.
+comparison. Repeated JSON objects and arrays are stored once and referenced by SHA-256.
 No persistent index, service, compression layer or new approval authority is added.
 Inventory schema 16 and mapping v13 describe the current Markdown semantics;
 the transport has its own
@@ -54,6 +54,14 @@ the wire envelope and the expanded documents/records; references cannot evade it
 Limits are 64 MB stored and a conservative 128 MB decoded allocation budget,
 including reconstructed references. They are RI transport limits, not permission
 to increase a consumer's evidence budget. There is no external-file lookup.
+
+Schema 1 already permits array-valued records; the current producer also factors
+repeated arrays. Record selection returns the verifier's authenticated resolved
+value (including scalar records accepted from external producers), copied for the
+caller. Consumers must test their actual readers before selecting the expanded
+producer; RI does not automatically upgrade retained consumer runtimes. The bundle
+CLI performs one construction comparison and one independent verification
+comparison, retaining the latter's status for its exit code.
 
 ## Feasibility and handoff gate
 

@@ -43,6 +43,11 @@ def digest(value):
 
 def build_review_bundle(planning, candidate):
     """Factor repeated objects, retaining exact canonical JSON data and statuses."""
+    return _build_review_bundle(planning, candidate)[0]
+
+
+def _build_review_bundle(planning, candidate):
+    """Build and return the independently verified status for the compare CLI."""
     documents = {'planning': planning, 'candidate': candidate,
                  'comparison': compare_inventories(planning, candidate)}
     if sum(len(canonical(v)) for v in documents.values()) > MAX_DECODED_BYTES:
@@ -52,16 +57,13 @@ def build_review_bundle(planning, candidate):
     def collect(value, depth=0):
         if depth > MAX_DEPTH:
             raise ValueError('evidence nesting exceeds budget')
-        if isinstance(value, dict):
+        if isinstance(value, (dict, list)):
             raw = canonical(value)
             if len(raw) >= 256:
                 key = hashlib.sha256(raw).hexdigest()
                 counts[key] += 1
                 originals[key] = value
-            for child in value.values():
-                collect(child, depth + 1)
-        elif isinstance(value, list):
-            for child in value:
+            for child in (value.values() if isinstance(value, dict) else value):
                 collect(child, depth + 1)
 
     for value in documents.values():
@@ -72,12 +74,13 @@ def build_review_bundle(planning, candidate):
         references = []
 
         def walk(item, path):
-            if isinstance(item, dict):
+            if isinstance(item, (dict, list)):
                 key = digest(item)
                 if key in shared and not (not path and key == own):
                     references.append({'path': path, 'record': key})
                     return None
-                return {k: walk(v, path + [k]) for k, v in item.items()}
+                if isinstance(item, dict):
+                    return {k: walk(v, path + [k]) for k, v in item.items()}
             if isinstance(item, list):
                 return [walk(v, path + [i]) for i, v in enumerate(item)]
             return deepcopy(item)
@@ -89,11 +92,11 @@ def build_review_bundle(planning, candidate):
     # Nested records referenced only inside an externalized parent remain reachable.
     bundle = {'review_bundle_schema_version': SCHEMA_VERSION, 'documents': encoded,
               'records': records}
-    validate_review_bundle(bundle)
+    verified = validate_review_bundle(bundle)
     _check_depth(bundle)
     if len(canonical(bundle)) > MAX_BYTES:
         raise ValueError('stored evidence exceeds budget')
-    return bundle
+    return bundle, verified['comparison']['status']
 
 
 def _check_depth(value, depth=0):
@@ -109,6 +112,10 @@ def _check_depth(value, depth=0):
 
 def validate_review_bundle(bundle):
     """Authenticate every reference/hash and reconstruct all complete documents."""
+    return _validate_review_bundle(bundle)[0]
+
+
+def _validate_review_bundle(bundle):
     _check_depth(bundle)
     if len(canonical(bundle)) > MAX_BYTES:
         raise ValueError('stored evidence exceeds budget')
@@ -195,7 +202,7 @@ def validate_review_bundle(bundle):
         raise ValueError('unreferenced evidence records')
     if canonical(result['comparison']) != canonical(compare_inventories(result['planning'], result['candidate'])):
         raise ValueError('comparison does not match inventories')
-    return result
+    return result, memo
 
 
 def review_index(bundle, *, limit=20):
@@ -239,29 +246,10 @@ def review_index(bundle, *, limit=20):
 
 def read_record(bundle, record_id):
     """Select one authenticated repeated record without model-driven reconstruction."""
-    documents = validate_review_bundle(bundle)
-    if record_id not in bundle['records']:
+    _, records = _validate_review_bundle(bundle)
+    if record_id not in records:
         raise ValueError('unknown evidence record')
-    # Resolve from the complete authenticated documents using its canonical hash.
-    def find(value):
-        if isinstance(value, dict):
-            if digest(value) == record_id:
-                return value
-            for child in value.values():
-                result = find(child)
-                if result is not None:
-                    return result
-        elif isinstance(value, list):
-            for child in value:
-                result = find(child)
-                if result is not None:
-                    return result
-        return None
-    for value in documents.values():
-        result = find(value)
-        if result is not None:
-            return deepcopy(result)
-    raise ValueError('unreachable evidence record')
+    return deepcopy(records[record_id])
 
 
 def read_document_path(bundle, document, path):

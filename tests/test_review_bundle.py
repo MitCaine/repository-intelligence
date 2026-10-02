@@ -124,12 +124,56 @@ class ReviewBundleTests(unittest.TestCase):
         (self.c / 'new.h').write_text('different unmapped content')
         self.assertEqual(changed, inventory_tree(self.c, stable=True))
         altered = deepcopy(bundle)
-        entry = altered['documents']['candidate']
-        if entry['value'] is None:
-            entry = altered['records'][entry['references'][0]['record']]
-        entry['value']['observed_unsupported_paths'][0]['reason'] = 'tampered'
+        rows_key = rb.digest(candidate['observed_unsupported_paths'])
+        altered['records'][rows_key]['value'][0]['reason'] = 'tampered'
         with self.assertRaises(ValueError):
             rb.validate_review_bundle(altered)
+
+    def test_repeated_arrays_are_factored_and_selectable(self):
+        planning = deepcopy(self.planning)
+        candidate = deepcopy(self.candidate)
+        rows = [{'path': f'unsupported-{i}-é.h', 'reason': 'no_language_adapter_selected'}
+                for i in range(1000)]
+        for inventory in (planning, candidate):
+            inventory['observed_unsupported_paths'] = deepcopy(rows)
+        bundle = rb.build_review_bundle(planning, candidate)
+        key = rb.digest(rows)
+        self.assertIn(key, bundle['records'])
+        self.assertIsInstance(bundle['records'][key]['value'], list)
+        decoded = rb.validate_review_bundle(bundle)
+        self.assertEqual(decoded['planning'], planning)
+        self.assertEqual(decoded['candidate'], candidate)
+        self.assertEqual(rb.read_record(bundle, key), rows)
+        selected = rb.read_record(bundle, key)
+        selected[0]['reason'] = 'changed by caller'
+        self.assertEqual(rb.read_record(bundle, key), rows)
+        self.assertEqual(rb.read_document_path(bundle, 'candidate',
+            ['observed_unsupported_paths', 5]), rows[5])
+        self.assertLess(len(rb.canonical(bundle)), len(rb.canonical(decoded)) * .6)
+        self.assertEqual(rb.canonical(bundle), rb.canonical(rb.build_review_bundle(planning, candidate)))
+        for fault in ('missing', 'tamper'):
+            altered = deepcopy(bundle)
+            if fault == 'missing': del altered['records'][key]
+            else: altered['records'][key]['value'][0]['path'] = 'different.h'
+            with self.subTest(fault=fault), self.assertRaises(ValueError):
+                rb.validate_review_bundle(altered)
+
+    def test_all_accepted_record_types_have_selective_reads(self):
+        for value in ([], ['value'], 'text', None, False, 0):
+            planning = deepcopy(self.planning)
+            planning['selected_record'] = value
+            documents = {'planning': planning, 'candidate': self.candidate,
+                'comparison': compare_inventories(planning, self.candidate)}
+            key = rb.digest(value)
+            bundle = {'review_bundle_schema_version': 1,
+                'records': {key: {'value': value, 'references': []}},
+                'documents': {name: {'value': deepcopy(document), 'references': [],
+                    'sha256': rb.digest(document)} for name, document in documents.items()}}
+            bundle['documents']['planning']['value']['selected_record'] = None
+            bundle['documents']['planning']['references'] = [
+                {'path': ['selected_record'], 'record': key}]
+            with self.subTest(value=value):
+                self.assertEqual(rb.canonical(rb.read_record(bundle, key)), rb.canonical(value))
 
     def test_index_bounds_failure_and_mismatch_metadata(self):
         candidate = deepcopy(self.candidate)
@@ -213,6 +257,25 @@ class ReviewBundleTests(unittest.TestCase):
         self.assertNotIn('record_ids', index)
         for groups in (index['delta']['file_changes'], index['delta']['declaration_changes']):
             for entry in groups.values(): self.assertLessEqual(len(entry['sample']), 1)
+
+    def test_bundle_cli_constructs_and_independently_compares_only_twice(self):
+        from repository_intelligence import inventory
+        for variant, exit_code in (('complete', 0), ('incomplete', 2), ('incompatible', 3)):
+            candidate = deepcopy(self.candidate)
+            if variant == 'incomplete': candidate['status'] = 'incomplete'
+            if variant == 'incompatible': candidate['inventory_schema_version'] = -1
+            with self.subTest(variant=variant), \
+                 mock.patch.object(inventory, 'inventory_tree', side_effect=[self.planning, candidate]), \
+                 mock.patch.object(inventory, 'compare_inventories', wraps=inventory.compare_inventories) as extra, \
+                 mock.patch.object(rb, 'compare_inventories', wraps=rb.compare_inventories) as required:
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    self.assertEqual(inventory.main(['compare', str(self.p), str(self.c),
+                        '--assert-stable-materialization', '--review-bundle-json']), exit_code)
+                self.assertEqual(extra.call_count, 0)
+                self.assertEqual(required.call_count, 2)
+                bundle = json.loads(output.getvalue())
+            self.assertEqual(rb.validate_review_bundle(bundle)['candidate'], candidate)
 
     def test_recomputed_comparison_uses_exact_json_types(self):
         documents = rb.validate_review_bundle(self.bundle)

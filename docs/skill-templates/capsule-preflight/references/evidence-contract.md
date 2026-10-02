@@ -38,7 +38,8 @@ changes; they do not authenticate the person or process that supplied them.
 
 ## Export fields
 
-Both documents are JSON objects with `schema_version: 1`. This corrected
+Both documents are JSON objects with `schema_version: 1`, or the optional
+source-map-sharing encoding `schema_version: 2` described below. This corrected
 template requires final invocation fields in committed-C-only exports as well;
 a consumer replacing its pinned helper must update those exporters explicitly. Duplicate keys,
 unsupported versions, malformed JSON and missing required data block.
@@ -210,4 +211,29 @@ Identity, invocation, closeout metadata and validator-evidence comparisons use
 canonical JSON matching. Boolean, integer and float aliases are distinct:
 `true`, `1`, and `1.0` cannot substitute for one another, nor can `false`, `0`,
 and `0.0`. This matches authenticated exported expectations; consumers still
-own provenance and their metadata schema. The adapter wire schema remains 1.
+own provenance and their metadata schema. Existing inline exports remain schema 1.
+
+## Optional shared source maps
+
+Consumers may explicitly adopt schema 2 for either contract or packet; mixed
+schema-1/schema-2 input pairs are supported. `compact_source_maps(record)` exports
+a schema-1 adapter record into this encoding without altering check, rehearsal,
+execution or authorization roles. It retains one top-level `source_maps` object
+mapping canonical SHA256 keys to complete `source_files` maps. Each factored
+invocation replaces `source_files` with `source_files_ref` naming that key; all
+other invocation fields remain separate and exact. Tables are local to their
+document: an observed packet cannot supply trusted contract expectations.
+
+The helper authenticates each canonical map digest, rejects missing/unused maps
+and conflicting inline/reference fields, and expands to schema-1 semantics before
+validation. The unchanged 2 MB limit applies to stored records. Expansion of
+referenced source maps is additionally bounded to 64 MB per record; it does not
+raise any consumer evidence budget. No external map lookup or persistent store is
+added. Consumers retaining a pinned older helper must explicitly update both
+helper and exporter before selecting schema 2.
+
+Within each `validate` call, successful Git source observations are shared by
+resolved repository root, exact commit and canonical path. Every check still
+compares its own expected mode/hash; only object acquisition is reused. Logs,
+checkout cleanliness and invocation/environment decisions are not cached. A new
+call starts with an empty source cache; this is not cross-candidate evidence reuse.
