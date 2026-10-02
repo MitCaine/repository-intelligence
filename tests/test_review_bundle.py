@@ -69,6 +69,83 @@ class ReviewBundleTests(unittest.TestCase):
     def test_deterministic(self):
         self.assertEqual(rb.canonical(self.bundle), rb.canonical(rb.build_review_bundle(self.planning, self.candidate)))
 
+    def test_reference_prefixes_in_both_orders_and_typed_siblings(self):
+        for first, second in (([], ['a']), (['a'], []), (['a'], ['a']),
+                              (['a'], ['a', 0]), (['a', 0], ['a'])):
+            with self.subTest(first=first, second=second):
+                paths = rb._ReferencePaths()
+                paths.add(first)
+                with self.assertRaisesRegex(ValueError, 'overlapping'):
+                    paths.add(second)
+        paths = rb._ReferencePaths()
+        for path in (['a', 0], ['a', '0'], ['ab'], ['a', 1]):
+            paths.add(path)
+
+    def test_reference_lookup_work_scales_with_components(self):
+        for count in (1000, 4000):
+            visits = []
+            class CountingNodes(dict):
+                def setdefault(self, key, default):
+                    visits.append(key)
+                    return super().setdefault(key, CountingNodes())
+            paths = rb._ReferencePaths()
+            paths.root = CountingNodes()
+            for i in range(count):
+                paths.add(['files', i, 'metadata'])
+            self.assertEqual(len(visits), 3 * count)
+
+    def test_index_bounds_complete_unsupported_inventory(self):
+        for i in range(1000):
+            for root in (self.p, self.c):
+                (root / f'unsupported-{i}.h').write_text('unmapped')
+        planning = inventory_tree(self.p, stable=True)
+        candidate = inventory_tree(self.c, stable=True)
+        bundle = rb.build_review_bundle(planning, candidate)
+        index = rb.review_index(bundle, limit=1)
+        self.assertEqual(index['review_index_version'], 2)
+        self.assertLess(len(rb.canonical(index)), 20_000)
+        for side in ('planning', 'candidate'):
+            view = index['delta'][side]['observed_unsupported_paths']
+            self.assertEqual(view['count'], 1000)
+            self.assertEqual(len(view['sample']), 1)
+            self.assertTrue(view['truncated'])
+            rows = rb.read_document_path(bundle, view['document'], view['path'])
+            self.assertEqual(len(rows), 1000)
+            self.assertEqual(index['delta'][side]['retained_inventory_sha256'],
+                             rb.digest(rb.read_document_path(bundle, side, [])))
+        (self.c / 'unsupported-0.h').unlink()
+        (self.c / 'new.h').write_text('unmapped')
+        changed = inventory_tree(self.c, stable=True)
+        self.assertEqual(candidate['inventory_digest'], changed['inventory_digest'])
+        changed_index = rb.review_index(rb.build_review_bundle(planning, changed), limit=1)
+        self.assertNotEqual(index['delta']['candidate']['retained_inventory_sha256'],
+                            changed_index['delta']['candidate']['retained_inventory_sha256'])
+        # Source contents at an unchanged unsupported path are outside this inventory.
+        (self.c / 'new.h').write_text('different unmapped content')
+        self.assertEqual(changed, inventory_tree(self.c, stable=True))
+        altered = deepcopy(bundle)
+        entry = altered['documents']['candidate']
+        if entry['value'] is None:
+            entry = altered['records'][entry['references'][0]['record']]
+        entry['value']['observed_unsupported_paths'][0]['reason'] = 'tampered'
+        with self.assertRaises(ValueError):
+            rb.validate_review_bundle(altered)
+
+    def test_index_bounds_failure_and_mismatch_metadata(self):
+        candidate = deepcopy(self.candidate)
+        candidate['status'] = 'incomplete'
+        candidate['failures'] = [{'path': f'p{i}', 'error': 'fixture'} for i in range(1000)]
+        candidate['incomplete_reasons'] = ['file_or_scan_failure']
+        index = rb.review_index(rb.build_review_bundle(self.planning, candidate), limit=1)
+        self.assertEqual(index['delta']['status'], 'incomplete')
+        self.assertEqual(index['delta']['candidate']['failures']['count'], 1000)
+        self.assertEqual(len(index['delta']['candidate']['failures']['sample']), 1)
+        incompatible = deepcopy(self.candidate)
+        incompatible['files'] = incompatible['files'] * 1000
+        index = rb.review_index(rb.build_review_bundle(self.planning, incompatible), limit=1)
+        self.assertEqual(index['delta']['status'], 'incompatible')
+        self.assertTrue(index['delta']['mismatches']['truncated'])
+
     def test_missing_extra_and_tampered_record(self):
         for fault in ('missing','extra','tamper'):
             value = deepcopy(self.bundle)

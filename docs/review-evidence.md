@@ -27,16 +27,27 @@ python -m repository_intelligence.review_bundle read review-bundle.json \
 Compare retains its existing exit codes: 0 comparable, 2 incomplete, 3
 incompatible. Bundle verification checks transport integrity; exit 0 is **not**
 a completeness or approval verdict. Inspect its returned comparison status.
-The index includes counts and at most twenty entries per change kind, with
-explicit truncation flags. Full records remain accessible by document path.
+The index uses `review_index_version: 2` (separate from bundle schema 1).
+It includes counts and at most twenty entries per change kind and coverage/reason
+list, with explicit truncation flags and document-path locators. Scope and parser
+contracts are locators rather than repeated metadata. Consumers of the older index
+shape must explicitly adopt this projection; the retained bundle and inventory
+contracts are unchanged. Full records remain accessible by document path.
+Each side's `retained_inventory_sha256` hashes its complete canonical inventory,
+including unsupported paths and exclusion/failure reasons. The existing
+`inventory_digest` covers supported source identities and scan policy only.
+Neither digest detects content changes at an unchanged unsupported path: retain
+Git/source evidence for those bytes.
 Selective reads mechanically validate the entire bundle before selecting data;
 the model need not reconstruct pages or repeat every structural record.
 
 Digests cover canonical JSON data, not original JSON whitespace. Each document
 reconstructs exactly to that data. The verifier rejects missing, extra, cyclic,
 overlapping or altered references and recomputes the comparison from both
-inventories. These checks prove internal consistency, not source authenticity;
-consumers still bind P/C, raw source hashes, full Git diff and qualification.
+inventories. These checks prove internal consistency, not source authenticity.
+Overlap validation uses component-prefix lookup, preserving ancestor/descendant
+rejection in either order without comparing every path to every earlier path.
+Consumers still bind P/C, raw source hashes, full Git diff and qualification.
 Recomputed comparisons must match canonical JSON bytes, including scalar types:
 `0`, `false` and `0.0` are distinct. The 80-level nesting limit is checked on both
 the wire envelope and the expanded documents/records; references cannot evade it.

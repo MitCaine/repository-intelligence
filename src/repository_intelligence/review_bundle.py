@@ -12,6 +12,24 @@ SCHEMA_VERSION = 1
 MAX_BYTES = 64_000_000
 MAX_DECODED_BYTES = 128_000_000
 MAX_DEPTH = 80
+INDEX_VERSION = 2
+
+
+class _ReferencePaths:
+    """Reject component-prefix overlaps in work proportional to path length."""
+    def __init__(self):
+        self.root = {}
+        self.end = object()
+
+    def add(self, path):
+        node = self.root
+        for segment in path:
+            if self.end in node:
+                raise ValueError('duplicate or overlapping evidence paths')
+            node = node.setdefault(segment, {})
+        if node:
+            raise ValueError('duplicate or overlapping evidence paths')
+        node[self.end] = True
 
 
 def canonical(value):
@@ -131,7 +149,7 @@ def validate_review_bundle(bundle):
         if (not isinstance(entry, dict) or set(entry) not in ({'value', 'references'}, {'value', 'references', 'sha256'})
                 or not isinstance(entry['references'], list)):
             raise ValueError('invalid encoded evidence')
-        value, paths = deepcopy(entry['value']), []
+        value, paths = deepcopy(entry['value']), _ReferencePaths()
         for reference in entry['references']:
             if not isinstance(reference, dict) or set(reference) != {'path', 'record'}:
                 raise ValueError('invalid evidence reference')
@@ -139,9 +157,7 @@ def validate_review_bundle(bundle):
             if (not isinstance(path, list) or len(path) > MAX_DEPTH or
                     any(type(p) not in (str, int) or (type(p) is int and p < 0) for p in path)):
                 raise ValueError('invalid evidence path')
-            if any(path[:len(old)] == old or old[:len(path)] == path for old in paths):
-                raise ValueError('duplicate or overlapping evidence paths')
-            paths.append(path)
+            paths.add(path)
             parent = value
             try:
                 for segment in path[:-1]:
@@ -188,6 +204,26 @@ def review_index(bundle, *, limit=20):
         raise ValueError('index limit must be between 1 and 100')
     documents = validate_review_bundle(bundle)
     delta = compact_delta(documents['comparison'])
+    def sample(rows, document, path):
+        return {'count': len(rows), 'sample': rows[:limit],
+                'truncated': len(rows) > limit,
+                'document': document, 'path': path}
+
+    # Full coverage belongs to the retained inventory, not repeated index lists.
+    for side in ('planning', 'candidate'):
+        inventory = documents[side]
+        summary = delta[side]
+        projected = {key: summary[key] for key in (
+            'root', 'status', 'inventory_schema_version', 'navigation_schema_version',
+            'mapping_contract', 'materialization', 'digest')}
+        projected['retained_inventory_sha256'] = digest(inventory)
+        for field in ('incomplete_reasons', 'failures', 'observed_exclusions',
+                      'observed_unsupported_paths'):
+            projected[field] = sample(inventory.get(field, []), side, [field])
+        for field in ('scope', 'parser_contract'):
+            projected[field] = {'document': side, 'path': [field]}
+        delta[side] = projected
+    delta['mismatches'] = sample(delta['mismatches'], 'comparison', ['mismatches'])
     for field in ('file_changes', 'declaration_changes'):
         if delta[field] is not None:
             delta[field] = {kind: {'count': len(rows), 'sample': rows[:limit],
@@ -195,6 +231,7 @@ def review_index(bundle, *, limit=20):
                             for kind, rows in delta[field].items()}
     delta.pop('file_metadata', None)
     return {'review_bundle_schema_version': SCHEMA_VERSION,
+            'review_index_version': INDEX_VERSION,
             'bundle_sha256': digest(bundle),
             'documents': {name: digest(value) for name, value in documents.items()},
             'record_count': len(bundle['records']), 'delta': delta}
