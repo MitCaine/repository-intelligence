@@ -66,7 +66,11 @@ Use `docs/local_project_map.md` in every consumer project. Keep it short:
 
 - Selected RI execution instructions: source commit/bytes and usable location.
 - Compatible RI runtime/source and its invocation, plus role/model settings.
-- Project standards and required test commands or their authoritative locations.
+- Shared capsule instructions: the capsule-format section of the selected RI
+  daily procedure, plus the project's task-file storage location and necessary
+  additional fields. Do not maintain a competing local format.
+- Project standards and required test commands or their authoritative locations;
+  use focused selection-section links rather than unrelated historical reading.
 - Role permissions, candidate capture/publication and integration/issue actions.
 - Supported completion route and existing active-task/checkpoint location.
 

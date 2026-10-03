@@ -82,7 +82,9 @@ that specific blocker rather than self-approving.
 
 The capsule records the objective/issue, base/branch, permitted edit scope,
 checkable acceptance criteria, required test commands and known prerequisites.
-Use the project's existing task format where useful. RI adds no mandatory JSON
+Use the [shared RI Markdown capsule format](start-an-issue.md#capsule-format).
+Projects supply values and necessary extra fields, not a replacement format.
+RI adds no mandatory JSON
 schema, signed packet, planning-history layout or finite launch budget.
 Independent scope challenge is optional unless a separately adopted project
 requirement needs it; do not add a second review just for changing ordinary files.

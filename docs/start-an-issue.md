@@ -30,6 +30,30 @@ authorize/create the bounded map before issue dispatch, rather than guessing.
 - Resolve missing product decisions; do not invent requirements or parameters.
   Only a concrete changed setup input or failed capability needs setup diagnosis.
 
+## Capsule format
+
+RI owns this shared capsule format for every adopting project. Use one ordinary
+Markdown task file with these headings:
+
+- **Objective:** live issue and original required specifications/decisions.
+- **Source and scope:** base revision, task branch, authorized edit paths and
+  affected current documentation; preserve unrelated work.
+- **Acceptance:** individual checkboxes stating observable outcomes and each
+  outcome's concrete test or inspectable evidence, including documentation.
+- **Checks:** literal required commands, intended environment and results to retain.
+- **Prerequisites:** known dependencies, unresolved decisions, and any genuinely
+  post-installation obligation with its satisfaction method.
+- **Handoff and closeout:** authorized actor/actions, exact returned source/results,
+  pending work and verification before issue closure and safe branch cleanup.
+
+Keep these headings and their meaning the same across projects. The local map
+supplies project values, commands, standards, permissions and the capsule storage
+location; it points to this section in the selected RI instructions. Projects may
+add necessary fields but must not replace the shared structure or duplicate its
+instructions in a competing local template. No extra schema or historical runner
+template is implied. Preserve frozen historical task formats without applying
+them to new tasks.
+
 ## Execute serially
 
 ```text
@@ -49,8 +73,8 @@ and unresolved questions. A controller summary alone is insufficient. Each role
 reads its directed orientation before acting; inaccessible required material is
 a reported gap, not permission to guess.
 
-1. **Capsule builder:** create a dedicated task branch and use the existing
-   Markdown capsule format. Include issue/objective, base/branch, authorized
+1. **Capsule builder:** create a dedicated task branch and use the
+   [shared RI capsule format above](#capsule-format). Include issue/objective, base/branch, authorized
    paths, independently checkable acceptance criteria, required commands,
    known prerequisites and affected current docs/examples/maps/links. Require
    stale wording to be corrected, or justify why documentation is unaffected.
