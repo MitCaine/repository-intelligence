@@ -433,6 +433,48 @@ retaining implementation artifacts rather than reusing the agent conversation.
 Use verified native completion or capsule-queue, then suspend once bounded
 controller preparation is finished. Do not poll or invent work to avoid waiting.
 
+### Release completed agent capacity
+
+One working subagent at a time does not guarantee a free host slot: limits can
+count open agent threads, including completed conversations. After each terminal
+return, retain and authenticate the required artifacts, record the controller's
+disposition and next handoff, then close the completed agent using the host's
+supported agent-close operation, **where available**, before creating the next fresh role. Keep
+source, branches, receipts and failure evidence; closing a conversation does not
+authorize deleting those artifacts. Do not close an agent still executing or
+awaiting a required terminal return, and do not treat interruption alone as closure.
+
+At setup, establish whether the host supports closing completed agents and
+releasing capacity. If dispatch reports an agent/thread limit, inspect the host's
+agent inventory once, close only completed agents whose handoffs are retained,
+and retry creation only after capacity release is confirmed. This is dispatch
+recovery, not permission to rerun a completed command or reset attempt allowances.
+If the host exposes no close operation or still rejects creation after supported
+cleanup, retain the verified checkpoint and record the capacity limitation.
+**Last-resort agent reuse is authorized by this workflow** when fresh creation is
+blocked and capacity cannot be released through the available host operations.
+Do not repeatedly attempt unsupported UI cleanup or spawning. Fresh contexts
+remain the normal route; convenience or a desire to retain earlier reasoning is
+not a reason to reuse. A separate controller task still needs explicit user
+authorization; creating one is not a required intermediate step before reuse.
+
+For last-resort reuse, select one idle agent whose previous assignment has ended,
+retain its original result, and give it a complete new handoff with the current
+phase, exact source identities, scope, instructions, pending gates and stop state.
+Record the reused agent and capacity reason in the existing checkpoint. Require
+it to reauthenticate those inputs; prior conversation, verdicts and approvals do
+not satisfy the new assignment. Keep one assignment running at a time and
+preserve attempt allowances and historical STOP records. Reuse does not clear a
+stopped attempt or authorize dependent work.
+
+Keep review independent: an agent that authored or implemented the candidate or
+its repairs cannot review that candidate. Reuse for review is permitted only for
+an otherwise uninvolved agent, with enforced read-only access and a new
+candidate-bound verdict; record that its conversation is reused rather than
+claiming a fresh context. If no independent agent is available, preserve the
+checkpoint and report that review remains blocked. This exception concerns
+context freshness only, not consumer permissions, qualification or acceptance.
+
 Use the consumer's existing stage/attempt state. Require only artifacts that
 exist at that stage; a missing future P or C is not an intake failure.
 

@@ -143,6 +143,15 @@ a fresh read-only reviewer, plus a scope challenger for consumer-required, cross
 tested planner and reviewer model; confirm model names, efforts, repository access, and enforced review
 permissions in each consuming host before relying on the route.
 
+Also establish completed-agent cleanup during setup: retain each terminal handoff,
+close its finished agent where the host supports it, then create the next
+fresh role. A completed conversation can still occupy an open-thread slot.
+Record a missing close capability as a host limitation; use the controller's
+[capacity recovery route](capsule-controller-workflow.md#release-completed-agent-capacity)
+for authorized last-resort idle-agent reuse when fresh creation is blocked and
+capacity cannot be released. Retain the checkpoint, reauthenticate the new
+handoff and preserve reviewer independence; fresh contexts remain the default.
+
 | Stage | Skill to use when applicable | Owner |
 | --- | --- | --- |
 | Authenticate capsule, branch, P, and scope | `capsule-preflight` | Controller, planner, and implementor |
