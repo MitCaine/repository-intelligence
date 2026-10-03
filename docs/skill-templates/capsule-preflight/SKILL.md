@@ -40,6 +40,14 @@ Before qualification and reviewer dispatch, check actual packet completeness: re
 
 Report gaps for the current phase only. Refresh context within existing read grants; use policy-permitted bounded infrastructure retries; apply in-scope corrections only with remaining allowance and required parent lineage. Missing authority/prerequisites block dependent work. Changed scope, base, required proof or authority requires `STOP_REPLAN` and the smallest needed controller decision. Do not repair authority by widening paths, choosing a different base, substituting an old candidate, or silently dropping a required check. A mechanical PASS authenticates only what that check actually covers; the controller still resolves semantic scope and acceptance.
 
+After a stopping result, diagnose before revising the capsule: authenticate the
+retained agent/gate/wrapper reason and evidence, and separate observed failure
+from hypothesis. If no reason is supplied, record `reason unknown` and use only
+authorized bounded read-only diagnostics or an explanation request. Do not guess
+a capsule change, resume the stopped attempt, or reset its allowance. Record the
+smallest evidence-supported recovery in the existing checkpoint. Follow
+[stop diagnosis](../../capsule-controller-workflow.md#diagnose-a-stop-before-replanning).
+
 Return a compact preflight record: verified capsule and repository identities, permitted next action, applicable lane and checks, unresolved gaps, and the exact source of each decision. Do not launch implementation, qualify, publish, accept, or merge unless the active request and consumer workflow authorize that step.
 
 Before accepting P when RI is mandatory, require the consumer runtime probe and representative comparison with the selected interpreter; runtime/harness changes invalidate dependent readiness. Supply the accepted review/report/export format and fixture validation record. Where rehearsal is applicable, it must show selected test collection, fixtures and skips/deselection, rather than only successful command launch. Committed-C-only hosted workflow/source identities are verified during exact-C qualification.

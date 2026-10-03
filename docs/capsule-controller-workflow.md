@@ -70,7 +70,7 @@ Authorize implementation paths
     |
     v
 Preflight exact capsule/base/planning overlay/scope/host
-    | mismatch --> STOP_REPLAN --> controller repairs capsule --> preflight
+    | mismatch --> STOP_REPLAN --> diagnose --> authorized recovery --> preflight
     v
 RI evidence, if useful: locate -> inspect -> bind to exact Git blob
     |
@@ -535,7 +535,7 @@ recovery rules below.
 | **After reviewer return** | Authenticate the verdict's branch and C against current Git state. Require a finding or evidence-backed disposition for every active AC and applicable standard; reconcile each finding with the original objective, qualification, and changed-file inventory. Treat absent dispositions, unsupported evidence, or a moved C as unresolved. | Preserve failed C/findings and return an in-scope correction or replan; a complete PASS proceeds to guarded integration checks. |
 | **Before guarded integration** | Recheck the base and candidate identity plus ref/publication conditions required by the consumer at integration; ensure required Q(C), fresh independent R(C), all active criteria and standards, approvals, and consumer-specific publication conditions bind the same C. Requalify and re-review any changed C or execution-relevant base. | Use only the consumer's authorized approval, publication, and acceptance route. |
 | **After integration and review closeout** | Verify the intended target contains the reviewed candidate or approved merge result, record integration identity, confirm evidence is retained and review/issue status is reconciled. Verify the closeout predicate below, including retrievable source, issue/primary checkout reconciliation and no active capsule, worktree or follow-up needing the branch. | Close the issue when its objective is satisfied; delete the completed capsule branch and unused local copies through the consumer route. Retain unmerged or still-used branches. |
-| **On failure, interruption, or changed scope at any stage** | Preserve the exact P/C, command outputs, findings, and current ref state. Classify an in-scope correction, bounded infrastructure retry, replacement capsule, or decision outside current authority. Never infer success from a missing callback or reuse proof for changed source. | Resume the authorized stage with fresh checks, or STOP_REPLAN and bring only the concrete unresolved decision to the user. |
+| **On failure, interruption, or changed scope at any stage** | Preserve the exact P/C, command outputs, findings, and current ref state. [Diagnose a stop before replanning](#diagnose-a-stop-before-replanning); if no reason is supported, record reason unknown and obtain bounded authorized diagnostics. Classify an in-scope correction, bounded infrastructure retry, replacement capsule, or decision outside current authority. Never infer success from a missing callback or reuse proof for changed source. | Resume the authorized stage with fresh checks, or STOP_REPLAN and bring only the concrete unresolved decision to the user. |
 
 The gate before reviewer dispatch checks that the packet is complete; it cannot
 prejudge the review. A reviewer finding remains a finding even if the planned
@@ -619,6 +619,38 @@ may retain authenticated unchanged implementation judgments under the
 [scoped carry-forward rules](workflow-effectiveness.md#stage-obligations-and-bounded-reuse);
 otherwise its existing original-outcome review requirement still applies. Installation success does not close an issue whose live
 probes or history gates remain pending.
+
+### Diagnose a stop before replanning
+
+A `STOP_REPLAN` halts the affected attempt and dependent work. Preserve its exact
+P/C or current planning identity, terminal result, raw output, public turn/events,
+wrapper error and cleanup outcome. A stopping status emitted at intake is not
+proof of a capsule defect. Confirm whether the host made that status terminal;
+if execution continues despite a stopping status, halt it through the permitted
+route and retain the resulting terminal evidence.
+
+Before changing a capsule or dispatching replacement work, the controller must:
+
+- Read the retained reason and supporting evidence from the agent, wrapper and
+  required gate; distinguish the observed failure from a proposed explanation.
+- Identify whether the blocker concerns capsule scope/authority, source behavior,
+  environment/transport, or an agent/wrapper error. Do not classify by guess.
+- If no supported reason exists, record **reason unknown**. Use a bounded,
+  authorized read-only diagnostic to inspect the preserved attempt or request an
+  explanation. An explanation request is not permission to resume the stopped
+  implementation, edit source, rerun a costly gate or create replacement work.
+- Select the smallest evidence-supported recovery under existing authority and
+  remaining allowances. Record what must change and why in the existing
+  checkpoint before returning a correction or replacement handoff.
+
+Role handoffs require a concrete stop reason and evidence locator when available;
+if unavailable, the role must state that explicitly. Do not invent a reason to
+fill the result. The controller must not rewrite the capsule merely because the
+agent emitted `stop_replan`, or assume a parser/transport failure is a planning
+failure. If diagnosis remains inconclusive, keep dependent work blocked and
+report the missing fact. A later diagnostic success never clears the original
+STOP or resets a consumed allowance. Apply the recovery routes below only after
+this diagnosis; no extra mandatory report or review stage is introduced.
 
 ### Resume or replan from preserved evidence
 

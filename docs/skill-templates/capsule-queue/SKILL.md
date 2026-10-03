@@ -43,6 +43,13 @@ handoff. Keep review independent; never restart the completed job or reset its
 allowance to regain capacity. See
 [agent capacity recovery](../../capsule-controller-workflow.md#release-completed-agent-capacity).
 
+A stopping terminal result requires diagnosis before replan: preserve its reason,
+raw output, exact attempt identity and cleanup state. A bare `stop_replan` is not
+proof the capsule needs rewriting. Record `reason unknown` if the evidence lacks
+an explanation; obtain bounded authorized diagnostics before selecting recovery.
+Do not restart or resume the stopped job to obtain that explanation. See
+[stop diagnosis](../../capsule-controller-workflow.md#diagnose-a-stop-before-replanning).
+
 For a new external command, launch it once through the helper below. For an existing job, watch its blocking completion event or wrap a blocking watch command; never restart it to attach a watcher. If the service exposes only status checks, put bounded polling with backoff and a deadline inside a dedicated watcher script.
 
 Distinguish success, failure, timeout, signal termination, and lost connectivity using authoritative terminal evidence. The helper can classify its own watcher errors; a wrapped command that exits nonzero after losing connectivity is a failure unless its watcher records a more specific outcome. A signal alone does not prove an intentional cancellation. A missing PID or closed connection is not success. Save raw, potentially untrusted logs under an unused directory under the consumer-authorized external evidence root. Queue exactly one concise terminal message containing outcome, status path, and the controller's next action. The helper records command outcome in `status.json` and notification state in `delivery.json`; `accepted_by_cli` is not proof the controller consumed it.
