@@ -73,7 +73,13 @@ and unresolved questions. A controller summary alone is insufficient. Each role
 reads its directed orientation before acting; inaccessible required material is
 a reported gap, not permission to guess.
 
-1. **Capsule builder:** create a dedicated task branch and use the
+Before builder dispatch, identify the branch-creation actor from the map. If the
+controller owns Git, it creates the dedicated branch and supplies its identity to
+the builder. Otherwise explicitly grant only the needed branch action to the
+builder. The builder cannot infer Git permission from its role or these instructions.
+
+1. **Capsule builder:** work on the supplied dedicated task branch (or create it
+   only under the explicit branch grant), and use the
    [shared RI capsule format above](#capsule-format). Include issue/objective, base/branch, authorized
    paths, independently checkable acceptance criteria, required commands,
    known prerequisites and affected current docs/examples/maps/links. Require

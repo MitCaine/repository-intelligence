@@ -44,7 +44,7 @@ not an automatic cancellation of otherwise authorized work.
 ```text
 Controller: authenticate objective, checkout, authority and usable tools
     |
-Planner: dedicated branch + bounded Markdown capsule/task record
+Planner: supplied/explicitly authorized branch + bounded Markdown task
     | return branch/base, task path, scope, criteria, checks and gaps
 Controller: inspect task and relevant source; resolve actual gaps
     |
@@ -59,6 +59,10 @@ Independent reviewer: read candidate, task, standards and real test evidence
 Controller: authorized integration --> verify result --> close issue
     --> retain necessary evidence --> delete merged task branch when safe
 ```
+
+The project map assigns branch creation: when Git is controller-owned, the
+controller creates the branch before builder dispatch; otherwise the builder
+receives an explicit narrow grant. Role names alone grant no Git action.
 
 Initial implementation starts from validated planning state. A correction starts
 from the authenticated recovery source/parent and retained finding, not from an

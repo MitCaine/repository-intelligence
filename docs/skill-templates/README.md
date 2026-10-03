@@ -14,8 +14,9 @@ approval boundaries against the consumer's current capsule contract before
 installing it. Use the project map to distinguish shared RI instructions from independently required local controls. Resolve contradictions before dispatch; do not silently select a conflicting procedure.
 Start with the [new-project setup checklist](../new-project-setup.md) when
 adopting the workflow in a consumer repository.
-In the documented handoff, the controller delegates dedicated branch and
-capsule creation to a planner subagent, then verifies its branch and planning
+In the documented handoff, the controller supplies the dedicated branch, or
+explicitly grants its creation under the project map, and delegates capsule
+creation to a planner subagent, then verifies its branch and planning
 state; remote publication is required only when the selected project route requires it. The consumer execution map assigns candidate capture and publication
 to its authorized actor and stage; implementor commit/push requires an explicit
 grant. Keep planning, implementation and fresh review roles separate.

@@ -71,7 +71,8 @@ Use `docs/local_project_map.md` in every consumer project. Keep it short:
   additional fields. Do not maintain a competing local format.
 - Project standards and required test commands or their authoritative locations;
   use focused selection-section links rather than unrelated historical reading.
-- Role permissions, candidate capture/publication and integration/issue actions.
+- Role permissions, including the branch-creation actor and any explicit builder
+  grant, candidate capture/publication and integration/issue actions.
 - Supported completion route and existing active-task/checkpoint location.
 
 Reference project-owned requirements rather than copying their text. This map
