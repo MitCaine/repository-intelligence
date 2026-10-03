@@ -89,6 +89,10 @@ Use the interpreter path printed by the updater in Codex:
 python3 scripts/update.py
 ```
 
+Add `--codex` to keep a separate managed Codex CLI current for future attempts.
+Use its printed path and selection receipt during setup; active attempts retain
+their bound runtime. See [managed CLI updates](docs/maintenance.md#managed-codex-cli-updates-for-future-attempts).
+
 The updater retains the previously selected environment while it qualifies a
 package candidate in a separate environment. Its
 `.ri-cache/update-result.json` distinguishes local verification from outstanding

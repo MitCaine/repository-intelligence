@@ -29,7 +29,7 @@ if sys.version_info < (3, 12):
                 os.execv(executable, [executable, __file__, *sys.argv[1:]])
     raise SystemExit('Install Python 3.12, 3.13, or 3.14 before running updates')
 
-from update_modules import actions, editor, native, python_packages, review_obligations
+from update_modules import actions, codex, editor, native, python_packages, review_obligations
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -301,6 +301,9 @@ def readiness_result(python: Path, changed: list[str], action_changes: list[str]
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--native', action='store_true', help='also update rustup stable tools')
+    parser.add_argument('--codex', action='store_true', help='update managed Codex CLI for future attempts')
+    parser.add_argument('--codex-pair', action='append', default=[], metavar='MODEL:EFFORT',
+                        help='require this model/effort in the managed CLI catalog; requires --codex')
     parser.add_argument('--offline', action='store_true', help='reuse existing pinned wheels')
     parser.add_argument('--migrate-python', action='store_true',
                         help='qualify a newer Python in a separate environment before selecting it')
@@ -309,6 +312,10 @@ def main() -> int:
                         help='acknowledge completed external review for a printed current identity')
     parser.add_argument('--run-id', help='caller-selected unique run ID for the structured result')
     args = parser.parse_args()
+    if args.codex_pair and not args.codex:
+        parser.error('--codex-pair requires --codex')
+    if args.offline and args.codex:
+        parser.error('--offline cannot update Codex CLI')
     if args.run_id is not None and (not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}', args.run_id)
                                     or args.run_id in {'.', '..'}):
         parser.error('--run-id must be 1-128 safe ASCII characters')
@@ -379,6 +386,8 @@ def main() -> int:
                 editor_ready = False
                 print(f'Editor setting unchanged: {error}', file=sys.stderr)
             readiness = readiness_result(python, changed, action_changes, editor_ready, review)
+            if args.codex:
+                readiness['codex'] = codex.update(CACHE, args.codex_pair)
             pending = retain_reviews(commit, changed, action_changes)
             readiness['pending_reviews'] = pending
             readiness['outstanding_qualification'] = sorted({item['reason'] for item in pending.values()})

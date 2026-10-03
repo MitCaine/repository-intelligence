@@ -58,6 +58,38 @@ toolchain. `--offline --native` is rejected because the native update can use
 the network.
 Native updates are opt-in and cannot be rolled back by this script.
 
+### Managed Codex CLI updates for future attempts
+
+Use the same start-of-work updater with `--codex`. Node.js/npm must already be
+installed. Optionally repeat `--codex-pair MODEL:EFFORT` for required role settings:
+
+```sh
+python3 scripts/update.py --codex --codex-pair gpt-6.1-sol:low
+```
+
+The modular `scripts/update_modules/codex.py` resolves npm's latest stable
+`@openai/codex`, installs an exact version in a new ignored `.ri-cache/codex`
+directory, verifies its version and installed file identities, then reads that
+executable's paginated `model/list` catalog. No model thread or inference turn is
+created. Unsupported requested pairs fail without substitution or changing the
+previous selection. Offline mode cannot update the CLI. Registry/install/catalog
+failure leaves the old selection intact; interrupted candidates remain diagnostic
+directories and are never selected implicitly.
+
+The atomic `.ri-cache/codex/selected.json` records the executable, package-tree
+digest and model/effort observations. It is a **future-attempt selection**, not
+consumer qualification or proof of model entitlement. Existing version directories
+are retained, never upgraded in place. Consumers use the printed absolute path,
+bind their Node/runtime dependencies and actually qualify changed launch/report
+interfaces before adoption. Pin the selection in setup before product planning;
+active attempts retain their previous resource identities. A desktop app update
+must not silently replace an attempt's CLI manifest. Refreshing a catalog does not
+automatically choose a newly released model or reset stopped attempts.
+
+This leaves the desktop-bundled CLI, global CLI and personal model settings alone.
+To keep this managed installation current, include `--codex` in the ordinary
+start-of-work command. The updater performs no automatic old-runtime deletion.
+
 Inspect `.ri-cache/update-result.json` after an invocation. A caller may pass
 `--run-id <unique-id>` (1–128 ASCII letters, digits, `.`, `_`, or `-`, beginning
 with a letter or digit); otherwise RI generates one. The atomically replaced
