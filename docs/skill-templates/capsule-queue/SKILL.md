@@ -17,13 +17,16 @@ Use this skill when an external agent or other process needs a watcher to detect
 ## Verify wake-up before relying on queue
 
 Before dispatch, select the terminal delivery route for the exact controller.
-Receiving a result in an active blocking wait and waking an idle controller are
-separate capabilities. Do not end the turn assuming native subagent completion
-will start a new one. Use native completion while the supported blocking wait
-remains active; end the turn only when idle wake-up is verified.
+For native subagents, default to the host's supported event-based blocking wait.
+Native result delivery to the parent and starting a new turn in an idle parent
+are separate capabilities. Built-in subagent support does not by itself establish
+idle wake-up. Keep the controller turn in the blocking wait; do not end it on an
+assumption that a terminal result will start another turn. End the turn only when
+idle wake-up has been verified for the selected route.
 
-Use the queue watcher when native idle wake-up is unavailable and a supported
-watcher can observe that job, but first verify that queue delivery actually wakes
+Queue is for external jobs lacking a reliable completion channel, or another
+route with a supported watcher and verified wake-up; it is not the default for
+native subagents. Before relying on it, verify that queue delivery actually wakes
 the intended controller on this host. A small harmless delivery probe must reach
 the exact idle controller and be consumed without a human nudge; CLI acceptance
 alone is insufficient. Reuse that observation for the same host/controller route
