@@ -107,6 +107,27 @@ text is diagnostic, not the machine disposition. A caller must compare its
 requested run ID and expected source commit, validate the schema and exit
 status, and treat a missing result as failure. A concurrent invocation rejected
 before acquiring the updater lock does not replace the active run's result.
+Consumers that support compatibility reporting request `--result-schema 2`.
+Successful schema-2 results additionally contain `runtime_contract` with
+`package_version`, `inventory_schema_version`, `navigation_schema_version`, and
+`mapping_contract`, observed from the current RI source using `selected_python`
+after local qualification. Failure and interruption records use the requested
+schema but contain no runtime contract or readiness assertion. Schema 1 remains
+the default for existing strict consumers; do not add schema-2 fields to their
+records or automatically change their accepted contract.
+
+Compare this observed contract with the consumer's supported versions **before
+activating its new RI wheel or changing its runtime paths**. A locally qualified
+RI update does not prove consumer compatibility. Preserve the working consumer
+runtime when the contract differs, and handle adapter changes separately.
+The result is the current invocation's machine-readable version report; the
+[navigation reference](navigation.md#current-result-contracts) owns the human
+version table. Current operational docs should link to these authorities instead
+of duplicating pins. Historical capsules, results and approvals retain their
+original versions. Environment selection remains in
+`.ri-cache/selected-python.json`; use the result's `selected_python`, not a
+hardcoded `.venv` path.
+
 Updated grammar packages still need the upstream node review described below.
 Changed Actions still need a successful hosted Verify run. The updater does
 not claim either check passed merely because local tests completed. The

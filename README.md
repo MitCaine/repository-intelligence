@@ -132,3 +132,10 @@ a fresh scope challenger is used when required by consumer policy, cross-seam
 changes or meaningful scope uncertainty. See the [controller guide](docs/capsule-controller-workflow.md#discover-and-challenge-scope-before-authorization).
 
 For large structural handoffs, the optional [deduplicated review bundle](docs/review-evidence.md) retains complete evidence with a concise index and selective reads. Consumer adoption remains explicit.
+
+For updater integrations, `scripts/update.py --result-schema 2` reports the
+qualified interpreter and current runtime compatibility versions in
+`.ri-cache/update-result.json`. Compare them with the consumer's supported
+contract before activation. See [the updater contract](docs/maintenance.md)
+and [current result versions](docs/navigation.md#current-result-contracts).
+Existing schema-1 consumers remain supported by the default command.

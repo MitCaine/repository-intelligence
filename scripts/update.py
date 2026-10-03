@@ -72,18 +72,20 @@ def source_commit() -> str:
     return commit
 
 
-def write_result(run_id: str, commit: str, disposition: str, **details: object) -> dict:
-    result = {'schema_version': 1, 'run_id': run_id, 'source_commit': commit,
+def write_result(run_id: str, commit: str, disposition: str, *,
+                 schema_version: int = 1, **details: object) -> dict:
+    result = {'schema_version': schema_version, 'run_id': run_id, 'source_commit': commit,
               'disposition': disposition, **details}
     atomic_write(RESULT, (json.dumps(result, indent=2) + '\n').encode())
     return result
 
 
-def write_failed_result(run_id: str, commit: str | None, reason: str) -> None:
+def write_failed_result(run_id: str, commit: str | None, reason: str, *,
+                        schema_version: int = 1) -> None:
     if commit is None:
         return
     try:
-        write_result(run_id, commit, 'failed', failure_reason=reason[:500])
+        write_result(run_id, commit, 'failed', schema_version=schema_version, failure_reason=reason[:500])
     except OSError as error:
         print(f'Could not write failed update result: {error}', file=sys.stderr)
 
@@ -285,6 +287,33 @@ def retain_reviews(commit: str, changed: list[str], action_changes: list[str]) -
     return pending
 
 
+def runtime_contract(python: Path) -> dict:
+    """Observe current source contracts with the locally qualified interpreter."""
+    code = """
+import json, pathlib, sys, tomllib
+root = pathlib.Path(sys.argv[1])
+sys.path.insert(0, str(root / 'src'))
+from repository_intelligence.inventory import INVENTORY_SCHEMA_VERSION, MAPPING_CONTRACT
+from repository_intelligence.source import SCHEMA_VERSION
+project = tomllib.loads((root / 'pyproject.toml').read_text(encoding='utf-8'))
+print(json.dumps({'package_version': project['project']['version'],
+                 'inventory_schema_version': INVENTORY_SCHEMA_VERSION,
+                 'navigation_schema_version': SCHEMA_VERSION,
+                 'mapping_contract': MAPPING_CONTRACT}))
+"""
+    probe = subprocess.run([str(python), '-I', '-B', '-c', code, str(ROOT)], cwd=ROOT,
+                           capture_output=True, text=True, check=True, timeout=30)
+    value = json.loads(probe.stdout)
+    if (not isinstance(value, dict) or set(value) != {'package_version', 'inventory_schema_version',
+                                                   'navigation_schema_version', 'mapping_contract'}
+            or any(type(value[field]) is not int or value[field] < 1
+                   for field in ('inventory_schema_version', 'navigation_schema_version'))
+            or any(not isinstance(value[field], str) or not value[field]
+                   for field in ('package_version', 'mapping_contract'))):
+        raise ValueError('Invalid observed RI runtime contract')
+    return value
+
+
 def readiness_result(python: Path, changed: list[str], action_changes: list[str],
                      editor_ready: bool, review: list[str]) -> dict:
     outstanding = []
@@ -311,6 +340,8 @@ def main() -> int:
     parser.add_argument('--resolve-review', action='append', default=[], metavar='ID=SHA256',
                         help='acknowledge completed external review for a printed current identity')
     parser.add_argument('--run-id', help='caller-selected unique run ID for the structured result')
+    parser.add_argument('--result-schema', type=int, choices=(1, 2), default=1,
+                        help='schema 2 includes observed runtime compatibility; default 1 preserves consumers')
     args = parser.parse_args()
     if args.codex_pair and not args.codex:
         parser.error('--codex-pair requires --codex')
@@ -393,18 +424,21 @@ def main() -> int:
             readiness['outstanding_qualification'] = sorted({item['reason'] for item in pending.values()})
             disposition = ('review_required' if review or readiness['outstanding_qualification']
                            else 'completed')
-            result = write_result(run_id, commit, disposition, **readiness)
+            if args.result_schema == 2:
+                readiness['runtime_contract'] = runtime_contract(python)
+            result = write_result(run_id, commit, disposition,
+                                  schema_version=args.result_schema, **readiness)
             if review:
                 print('Updates requiring review:\n' + '\n'.join(review), file=sys.stderr)
             print(json.dumps(result, indent=2))
             return 0
     except KeyboardInterrupt:
-        write_failed_result(run_id, commit, 'interrupted')
+        write_failed_result(run_id, commit, 'interrupted', schema_version=args.result_schema)
         print('Update interrupted; selected environment remains at last qualified state',
               file=sys.stderr)
         return 130
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, URLError) as error:
-        write_failed_result(run_id, commit, str(error))
+        write_failed_result(run_id, commit, str(error), schema_version=args.result_schema)
         print(f'Update failed: {error}', file=sys.stderr)
         return 1
 

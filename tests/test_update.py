@@ -485,6 +485,35 @@ class UpdateTests(unittest.TestCase):
             self.assertEqual(result['disposition'], 'completed')
             self.assertTrue(result['local_verify_passed'])
 
+    def test_schema_two_success_contains_observed_contract(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / 'pyproject.toml').write_text('manifest', encoding='utf-8')
+            (root / '.github' / 'workflows').mkdir(parents=True)
+            settings = root / '.vscode' / 'settings.json'
+            settings.parent.mkdir()
+            settings.write_text('{\n  // user setting\n  "editor.tabSize": 4,\n}\n',
+                                encoding='utf-8')
+            with mock.patch.object(updater, 'ROOT', root), \
+                    mock.patch.object(updater, 'CACHE', root / '.ri-cache'), \
+                    mock.patch.object(updater, 'JOURNAL', root / '.ri-cache' / 'update-recovery.json'), \
+                    mock.patch.object(updater, 'RESULT', root / '.ri-cache' / 'update-result.json'), \
+                    mock.patch.object(updater, 'source_commit', return_value='a' * 40), \
+                    mock.patch.object(updater, 'REJECTIONS', root / '.ri-cache' / 'rejected-updates.json'), \
+                    mock.patch.object(updater, 'SELECTION', root / '.ri-cache' / 'selected-python.json'), \
+                    mock.patch.object(updater, 'ensure_python', return_value=(root / '.venv/bin/python', False)), \
+                    mock.patch.object(updater, 'run'), \
+                    mock.patch.object(updater, 'runtime_contract', return_value={'package_version': '1.2.3', 'inventory_schema_version': 16, 'navigation_schema_version': 7, 'mapping_contract': 'v13'}), \
+                    mock.patch.object(sys, 'argv', ['update.py', '--offline', '--result-schema', '2']):
+                self.assertEqual(updater.main(), 0)
+            self.assertIn('// user setting', settings.read_text(encoding='utf-8'))
+            result = json.loads((root / '.ri-cache' / 'update-result.json').read_text())
+            self.assertEqual(result['disposition'], 'completed')
+            self.assertTrue(result['local_verify_passed'])
+
+            self.assertEqual(result['schema_version'], 2)
+            self.assertEqual(result['runtime_contract']['mapping_contract'], 'v13')
+
     def test_editor_preserves_other_workspace_settings(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -515,3 +544,35 @@ class UpdateTests(unittest.TestCase):
             with mock.patch.object(actions, 'release', return_value=('v2', 'b' * 40)):
                 self.assertEqual(actions.update(Path(raw)), ['actions/checkout: v1 -> v2'])
             self.assertIn('uses: actions/checkout@' + 'b' * 40, path.read_text(encoding='utf-8'))
+
+class RuntimeContractTests(unittest.TestCase):
+    def test_contract_observed_with_selected_interpreter(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            package = root / 'src/repository_intelligence'
+            package.mkdir(parents=True)
+            (package / '__init__.py').write_text('')
+            (package / 'inventory.py').write_text('INVENTORY_SCHEMA_VERSION = 16\nMAPPING_CONTRACT = "source-units-v13"\n')
+            (package / 'source.py').write_text('SCHEMA_VERSION = 7\n')
+            (root / 'pyproject.toml').write_text('[project]\nversion = "1.2.3"\n')
+            with mock.patch.object(updater, 'ROOT', root):
+                value = updater.runtime_contract(Path(sys.executable))
+            self.assertEqual(value, {'package_version': '1.2.3', 'inventory_schema_version': 16,
+                                     'navigation_schema_version': 7, 'mapping_contract': 'source-units-v13'})
+
+    def test_contract_rejects_types_and_probe_failure(self):
+        invalid = {'package_version': '1', 'inventory_schema_version': True,
+                   'navigation_schema_version': 7, 'mapping_contract': 'v13'}
+        with mock.patch.object(updater.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, json.dumps(invalid), '')):
+            with self.assertRaises(ValueError):
+                updater.runtime_contract(Path(sys.executable))
+        with mock.patch.object(updater.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, [])):
+            with self.assertRaises(subprocess.CalledProcessError):
+                updater.runtime_contract(Path(sys.executable))
+
+    def test_versioned_failure_never_asserts_contract_or_readiness(self):
+        with tempfile.TemporaryDirectory() as raw, mock.patch.object(updater, 'RESULT', Path(raw) / 'result.json'):
+            updater.write_failed_result('test', 'a' * 40, 'failed', schema_version=2)
+            value = json.loads(updater.RESULT.read_bytes())
+            self.assertEqual(value, {'schema_version': 2, 'run_id': 'test', 'source_commit': 'a' * 40,
+                                     'disposition': 'failed', 'failure_reason': 'failed'})
