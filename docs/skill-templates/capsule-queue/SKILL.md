@@ -14,6 +14,24 @@ when deciding whether a genuinely new approval is needed.
 
 Use this skill when an external agent or other process needs a watcher to detect its terminal state and wake its controller. Native subagents and Codex threads with reliable completion channels use those channels. Ordinary commands return directly. Do not create a second notification when the runner already provides a reliable terminal callback. Establish the completion route at dispatch; do not spend repeated controller turns checking unchanged status.
 
+## Verify wake-up before relying on queue
+
+Before dispatch, select the terminal delivery route for the exact controller.
+Receiving a result in an active blocking wait and waking an idle controller are
+separate capabilities. Do not end the turn assuming native subagent completion
+will start a new one. Use native completion while the supported blocking wait
+remains active; end the turn only when idle wake-up is verified.
+
+Use the queue watcher when native idle wake-up is unavailable and a supported
+watcher can observe that job, but first verify that queue delivery actually wakes
+the intended controller on this host. A small harmless delivery probe must reach
+the exact idle controller and be consumed without a human nudge; CLI acceptance
+alone is insufficient. Reuse that observation for the same host/controller route
+until the route changes or delivery fails. Do not add duplicate notifications to
+a verified native route. If neither route has verified idle wake-up, keep the
+supported bounded blocking wait and state the limitation. Do not restart a job
+to attach a watcher or claim an untested native-subagent watcher is supported.
+
 ## Authority and routing
 
 - Read the active capsule and current controller assignment before dispatch. The capsule alone defines owned paths, exact branch/base/overlay, checks, and stop conditions. A watcher may observe and report; it cannot broaden scope, choose replacement checks, retry a failed gate, publish, accept, or merge.
@@ -30,14 +48,20 @@ blocking runner operation; putting a deadline around repeated model-driven
 status requests is still polling. If Work lacks a verified completion bridge,
 state that limitation once and use its supported blocking wait.
 
-The controller may prepare authorized review or installation material while
-waiting, provided it neither depends on a pending PASS nor changes the candidate.
-Once useful preparation is complete, wait for the terminal result. Do not query
-individual CI jobs or reread unchanged status files to generate periodic
-"still running" commentary. Intermediate green profiles do not require a wake-up
-when the same aggregate result remains pending. Report actionable failures,
-timeouts, delivery problems or requested status. Necessary tool-level resumptions
-of a blocking wait must not turn into repeated CI inspection.
+After dispatch, wait for the terminal handoff. Reading the active workspace,
+source diff, logs or interim test results to track progress is monitoring too;
+it is not an alternative to status polling. Do not repeatedly restate the
+contract or produce interim acceptance judgments while a role is working.
+Controller candidate/scope/evidence verification begins after terminal delivery.
+Unsolicited progress may be received without starting a monitoring loop.
+
+Early intervention is limited to an actionable blocker/clarification delivered
+by the role, a concrete safety concern, failed completion delivery or a direct
+owner status request. Use only the reads necessary for that intervention, then
+return to waiting. Independent preparation must be a specific already-authorized
+activity that does not inspect or depend on the active role's unfinished work;
+do it once, not as a recurring excuse to stay active. Supported wait resumptions
+at host time limits are allowed; they do not authorize extra progress checks.
 
 For a native subagent terminal return, the controller retains and authenticates
 the handoff, records its disposition, then closes the completed agent, where available, through

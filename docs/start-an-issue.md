@@ -115,9 +115,39 @@ independent no-change review and authorized closeout without an artificial commi
 
 ## Wait, recover and resume
 
-Use native completion or a supported bounded blocking wait after dispatch. Use
-queue only for an external gate lacking native completion. Do not repeatedly poll
-or invent work to avoid waiting. Choose task-appropriate host-supported deadlines.
+Before dispatch, select the terminal delivery route for the exact controller.
+Receiving a result in an active blocking wait and waking an idle controller are
+separate capabilities. Do not end the turn assuming native subagent completion
+will start a new one. Use native completion while the supported blocking wait
+remains active; end the turn only when idle wake-up is verified.
+
+Use the queue watcher when native idle wake-up is unavailable and a supported
+watcher can observe that job, but first verify that queue delivery actually wakes
+the intended controller on this host. A small harmless delivery probe must reach
+the exact idle controller and be consumed without a human nudge; CLI acceptance
+alone is insufficient. Reuse that observation for the same host/controller route
+until the route changes or delivery fails. Do not add duplicate notifications to
+a verified native route. If neither route has verified idle wake-up, keep the
+supported bounded blocking wait and state the limitation. Do not restart a job
+to attach a watcher or claim an untested native-subagent watcher is supported.
+
+Do not repeatedly poll or invent work to avoid waiting. Choose task-appropriate
+host-supported deadlines.
+
+After dispatch, wait for the terminal handoff. Reading the active workspace,
+source diff, logs or interim test results to track progress is monitoring too;
+it is not an alternative to status polling. Do not repeatedly restate the
+contract or produce interim acceptance judgments while a role is working.
+Controller candidate/scope/evidence verification begins after terminal delivery.
+Unsolicited progress may be received without starting a monitoring loop.
+
+Early intervention is limited to an actionable blocker/clarification delivered
+by the role, a concrete safety concern, failed completion delivery or a direct
+owner status request. Use only the reads necessary for that intervention, then
+return to waiting. Independent preparation must be a specific already-authorized
+activity that does not inspect or depend on the active role's unfinished work;
+do it once, not as a recurring excuse to stay active. Supported wait resumptions
+at host time limits are allowed; they do not authorize extra progress checks.
 
 At a blocker, hold consequential work and do one bounded authorized read-only
 sweep to consolidate real failures and unknowns. Routine clarification, diagnosis
