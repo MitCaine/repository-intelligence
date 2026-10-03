@@ -1,10 +1,14 @@
 # Lightweight workflow corrections
 
+> Scope: extended/historical consumer mechanisms and observations. For current
+> lightweight adoption use [the controller workflow](capsule-controller-workflow.md).
+> These examples do not add mandatory gates or establish current project integration.
+
 This guide reconciles the mature-project trials with RI's controller guidance.
 It is a proposal for consumer adoption where their installed rules differ;
 reading RI does not alter an active consumer's authority, recovery allowance,
-profile floors or report schema. Use the existing five skills and consumer
-runner. Add no scheduler, approval stage, registry or universal test framework.
+profile floors or report schema. Use only resources actually selected by the consumer; the lightweight route
+does not require five skills or a special runner. Add no scheduler, approval stage, registry or universal test framework.
 
 ## Before starting an issue
 

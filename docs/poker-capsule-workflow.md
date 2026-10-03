@@ -1,5 +1,9 @@
 # Poker capsule workflow: first-consumer recipe
 
+> Scope: extended/historical consumer mechanisms and observations. For current
+> lightweight adoption use [the controller workflow](capsule-controller-workflow.md).
+> These examples do not add mandatory gates or establish current project integration.
+
 For the complete controller/planner/implementor/reviewer loop, native completion,
 checkable capsule requirements, recovery decisions, and optional skill templates, see the
 [capsule controller workflow](capsule-controller-workflow.md). This page remains

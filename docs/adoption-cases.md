@@ -1,5 +1,9 @@
 # Workflow adoption cases
 
+> Scope: extended/historical consumer mechanisms and observations. For current
+> lightweight adoption use [the controller workflow](capsule-controller-workflow.md).
+> These examples do not add mandatory gates or establish current project integration.
+
 These are small, repeatable trials for a consumer adopting RI or the optional
 capsule skills. The RI documentation probe on 2026-09-29 used a Codex parent,
 Sol Light planner and reviewer subagents, and a Luna Max implementor. The

@@ -24,3 +24,12 @@ redirect pages. Update saved links to the current index; this documentation move
 does not itself change a result schema or runtime behavior.
 
 - [Implemented-fixes audit corrections](implemented-fixes-audit-corrections-2026-09-30.md): five targeted defects and their local regression controls.
+
+## Extended workflow retired from the default route
+
+[Former controller procedure](extended-controller-workflow-2026-10-02.md) and
+[former setup](extended-project-setup-2026-10-02.md) preserve the extended adoption
+instructions for audit. The former preflight, scope-review, independent-review
+and RI-handoff skill prose is retained alongside them. Use the
+[current controller guide](../capsule-controller-workflow.md) for new or authorized
+replacement work. Optional helper defects remain independently auditable.

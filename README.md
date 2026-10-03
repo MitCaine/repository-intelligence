@@ -127,9 +127,10 @@ RI originated in [Poker App](https://github.com/MitCaine/poker-app).
 [Historical measurements](docs/archive/README.md) retain their original scope.
 RI has no project license file yet; distribution notes are in maintenance.
 
-The capsule workflow always records an impact inventory before final READY/P;
-a fresh scope challenger is used when required by consumer policy, cross-seam
-changes or meaningful scope uncertainty. See the [controller guide](docs/capsule-controller-workflow.md#discover-and-challenge-scope-before-authorization).
+The default [controller workflow](docs/capsule-controller-workflow.md) uses a
+bounded task, serial planner/implementor/reviewer roles, relevant tests and full
+diff review. Independent scope challenge and evidence helpers are optional unless
+needed by a separately adopted project requirement.
 
 For large structural handoffs, the optional [deduplicated review bundle](docs/review-evidence.md) retains complete evidence with a concise index and selective reads. Consumer adoption remains explicit.
 

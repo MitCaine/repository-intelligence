@@ -29,3 +29,17 @@ reusable adoption checks, claim-specific evidence, lifecycle stages and bounded
 reuse without adding universal workflow machinery.
 
 - [Backlog implementation status](archive/backlog-implementation-status-2026-09-30.md): local fixes and outstanding consumer qualification boundaries.
+
+## Workflow audit scope
+
+- **Default procedure:** controller workflow and compact new-project setup.
+- **Current role instructions:** the optional skill templates; choose only useful roles.
+- **Runtime contracts:** navigation/inventory references and executable package code.
+- **Optional extended helpers:** preflight evidence checker, queue watcher and review
+  bundles are separate executable surfaces. Making them optional does not fix or
+  erase defects; audit their code when evaluating or selecting those helpers.
+- **Historical extended instructions:** the archive retains the former mandatory
+  procedure for comparison. It is not the expected route for new tasks.
+
+Published commit identity matters: local documentation replacement is not yet a
+published consumer adoption or a successful real-host trial.
