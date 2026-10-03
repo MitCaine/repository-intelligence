@@ -5,8 +5,8 @@ description: Authenticate an active task capsule and its exact repository state 
 
 # Capsule preflight
 
-Follow the [current controller workflow](../../capsule-controller-workflow.md).
-Read the bounded task and project map; authenticate objective, current phase,
+Follow the [current controller workflow](../../start-an-issue.md).
+Read the bounded task and project-root `docs/local_project_map.md`; authenticate objective, current phase,
 base/branch/source, permitted scope, runtime compatibility and required commands.
 Initial dispatch starts at planning; correction dispatch starts at the authenticated
 recovery parent. Do not require nonexistent future candidate or review records.

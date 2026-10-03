@@ -1,5 +1,12 @@
 # Lightweight controller workflow with RI
 
+**Read the complete directed orientation material before acting.** Read the
+selected execution instructions, local map, complete issue and required linked
+specifications/decisions before task decisions, edits or dispatch. Resolve
+contradictions and identify missing inputs before dependent work. Summaries do
+not substitute for unread requirements; this does not require a whole-repository
+read. Pass original required sources to each role, not only a controller summary.
+
 This is the default RI-assisted workflow for projects adopting or explicitly
 replacing an RI workflow. RI supplies source navigation/comparison; it does not
 require a special capsule runner, SDK transport, evidence exporter or approval
@@ -10,9 +17,14 @@ Only this current procedure governs RI workflow handoffs. Do not load archived
 procedures or previous plans as execution instructions. Use the current adopted
 project map and active task; resolve a conflicting map before dispatch.
 
+For daily execution in an established project, [Start an issue](start-an-issue.md)
+is the bounded controller entrypoint. This guide explains the wider adoption and
+replacement context; reading it all is not a prerequisite for every issue.
+
 ## Keep the integration small
 
-Keep one short project map in the existing entrypoint. Record the selected RI
+Keep one short project map at project-root `docs/local_project_map.md`.
+Link it from the project README/AGENTS entrypoint. Record the selected RI
 runtime/source and supported contract, shared instruction identity, repository
 standards, normal test commands, permitted Git/issue actions, and completion
 route. Pin the instruction bytes or their source commit; retain the map across
@@ -99,15 +111,25 @@ additional report or gate file is needed:
   relevant test evidence must cover the candidate actually integrated. If that
   candidate changes, reconcile the diff and obtain affected checks/review before
   integration; do not transfer a verdict silently to new bytes.
-- Close only after verifying authorized integration and all original criteria,
+- Close only after verifying authorized integration (or the reviewed no-change
+  outcome) and all original criteria,
   including any explicitly deferred installation/closeout obligations. Retain a
   concise result and necessary evidence in the existing project record. Remove
   only the verified merged task branch when safe; preserve unrelated work and
   unmerged recovery evidence. If any required outcome remains pending, leave
   the issue open and state it.
 
-Before dispatch, verify actual required access/runtime and that the commands are
-usable in their intended environment. Use a small relevant rehearsal for a known
+Assign any genuinely post-installation obligation its actual stage and way to
+satisfy it in the existing capsule. Pre-integration review checks the implementation
+and the proposed post-installation check; it must not demand proof of an operation
+that requires that review's approval first. After authorized integration, perform
+the pending checks before issue closure. A failed installed check leaves the issue
+open and enters bounded recovery; approval does not turn that failure into a pass.
+Do not defer a prerequisite that must be satisfied before implementation/review.
+
+Before each role dispatch, verify that role's actual required access/runtime and
+that its commands are usable in their intended environment. Planner intake needs
+the objective and base, not a capsule or candidate it has yet to create. Use a small relevant rehearsal for a known
 sandbox-sensitive command; no mandatory full adoption specimen chain. Setup proof
 is not candidate proof. Run required project checks on the candidate and preserve
 actual results/skips. Do not replace a project's substantive tests with RI output.
@@ -127,7 +149,8 @@ polls or invented work to avoid waiting. A failure callback wakes diagnosis,
 not an automatic cascade of prerequisite capsules.
 
 Set any required finite deadline according to the actual task size and host
-limits. Do not impose an arbitrary 300-second model-review cap. Validate the timeout before dispatch, allowing for instruction/source
+limits. Do not impose an arbitrary 300-second model-review cap. Validate the
+timeout before dispatch, allowing for instruction/source
 reading and producing the verdict. Preserve genuine historical timeout receipts;
 they are not current configuration. If a timeout occurs, reconcile completion
 and cleanup before an authorized recovery rather than repeatedly launching the
@@ -153,7 +176,12 @@ explain that attempt without resuming it. Correct ordinary in-scope defects unde
 the existing task authority, preserving useful code. Replan only for actual
 changes to objective, scope, base or authority. Do not reset existing allowances
 or invent unlimited retries. Lost replies require checking actual operation state
-before repeating a launch or integration.
+before repeating a launch or integration. If main moved, compare the actual
+integration result with the reviewed candidate; changed source or merge resolution
+needs affected checks and independent review before acceptance. After compaction,
+recover the current phase, selected instructions, source, active job and pending
+obligations from the existing checkpoint. Do not launch a duplicate job or restart
+planning merely because conversation context was lost.
 
 Repeat checks when their relevant inputs change or project rules require them.
 Prior results keep their original source/command/environment identities; do not

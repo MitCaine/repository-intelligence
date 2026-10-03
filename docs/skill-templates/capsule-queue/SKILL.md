@@ -9,7 +9,7 @@ Routine role coordination, failure-evidence inspection, factual explanation
 requests and permitted completion-delivery recovery are included in the authorized
 task; they do not require a new human approval just because a gate failed. Keep
 existing scope, disclosure rules, attempt limits and stops intact. Follow
-[standing controller authority](../../capsule-controller-workflow.md#waiting-and-recovery)
+[standing controller authority](../../start-an-issue.md#wait-recover-and-resume)
 when deciding whether a genuinely new approval is needed.
 
 Use this skill when an external agent or other process needs a watcher to detect its terminal state and wake its controller. Native subagents and Codex threads with reliable completion channels use those channels. Ordinary commands return directly. Do not create a second notification when the runner already provides a reliable terminal callback. Establish the completion route at dispatch; do not spend repeated controller turns checking unchanged status.
@@ -48,7 +48,7 @@ available and fresh creation is blocked, record the limitation and use the
 workflow's authorized last-resort idle-agent reuse with a complete reauthenticated
 handoff. Keep review independent; never restart the completed job or reset its
 allowance to regain capacity. See
-[agent capacity recovery](../../capsule-controller-workflow.md#waiting-and-recovery).
+[agent capacity recovery](../../start-an-issue.md#wait-recover-and-resume).
 
 Distinguish nonterminal opening progress from the accepted terminal outcome.
 Never use `stop_replan` as an acknowledgement while authentication is merely
@@ -56,27 +56,27 @@ pending. The role must establish the relevant trigger through bounded authorized
 checks before emitting this last-resort outcome, with immediate stops retained
 for confirmed violations or explicit owner instructions. An actual stopping event
 still halts dependent work; do not reinterpret it as progress to resume a job.
-See [stop-trigger checks](../../capsule-controller-workflow.md#waiting-and-recovery).
+See [stop-trigger checks](../../start-an-issue.md#wait-recover-and-resume).
 
 When a blocker is found, hold execution and consolidate related findings through
 one bounded authorized read-only capsule sweep before terminal closure where
 supported. Keep diagnostic progress nonterminal; never misuse a stopping status
 as an interim hold. If the host already finalized the stop, recover diagnosis
 through a separate diagnostic-only follow-up before replacement planning, not
-by resuming the job. See [diagnostic sweep](../../capsule-controller-workflow.md#waiting-and-recovery).
+by resuming the job. See [diagnostic sweep](../../start-an-issue.md#wait-recover-and-resume).
 
 A stopping terminal result requires diagnosis before replan: preserve its reason,
 raw output, exact attempt identity and cleanup state. A bare `stop_replan` is not
 proof the capsule needs rewriting. Record `reason unknown` if the evidence lacks
 an explanation; obtain bounded authorized diagnostics before selecting recovery.
 Do not restart or resume the stopped job to obtain that explanation. See
-[stop diagnosis](../../capsule-controller-workflow.md#waiting-and-recovery).
+[stop diagnosis](../../start-an-issue.md#wait-recover-and-resume).
 
 A bounded diagnostic-only follow-up to the stopping implementor is included in
 the authorized task and needs no additional human approval. It may explain its
 own stop through the existing authorized channel; this does not resume the job.
 Retain the answer separately and wait through the supported completion route.
-See [standing diagnostic authority](../../capsule-controller-workflow.md#waiting-and-recovery).
+See [standing diagnostic authority](../../start-an-issue.md#wait-recover-and-resume).
 
 For a new external command, launch it once through the helper below. For an existing job, watch its blocking completion event or wrap a blocking watch command; never restart it to attach a watcher. If the service exposes only status checks, put bounded polling with backoff and a deadline inside a dedicated watcher script.
 
@@ -143,7 +143,7 @@ or interrupt that cleanup. Known completed outcomes remain separate from
 cleanup/cancellation flags. SIGKILL, host loss, escaped sessions and remote jobs
 cannot be contained by this handler. Use the accepted remote cancellation route
 when applicable. End-of-turn consumption still requires an actual host probe;
-see [completion and waiting](../../capsule-controller-workflow.md#waiting-and-recovery).
+see [completion and waiting](../../start-an-issue.md#wait-recover-and-resume).
 
 The cleanup wait reaps the leader before checking group absence. Temporary
 permission failures in group inspection are retried only within the existing

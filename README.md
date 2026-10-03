@@ -11,12 +11,19 @@ TypeScript/TSX, Java, Go, C#, C, C++, and Markdown**. Native analyzers are optio
 RI needs no service, database, or maintained symbol index. Task scope, capsule
 execution, and acceptance stay with the consumer project.
 
+## Controller starting an issue
+
+In an established project, read [Start an issue](docs/start-an-issue.md), the
+project's `docs/local_project_map.md` and the live issue. That is the bounded execution
+entrypoint; the package introduction and setup/reference docs below are not
+required controller reading.
+
 ## Choose a route
 
 | Your task | Start here | What you get |
 | --- | --- | --- |
 | Use RI in an ordinary project | [Consumer guide](docs/consumer-guide.md), then the `locator` command below | Source navigation and coverage evidence; no capsule is required. |
-| Use RI with a capsule workflow | [New-project setup](docs/new-project-setup.md), [controller workflow](docs/capsule-controller-workflow.md), and [skill templates](docs/skill-templates/README.md) | One controller delegates capsule planning, implementation, and independent review to native subagents. |
+| Set up RI workflow in a new project | [New-project setup](docs/new-project-setup.md), [controller workflow](docs/capsule-controller-workflow.md), and [skill templates](docs/skill-templates/README.md) | One controller delegates capsule planning, implementation, and independent review to native subagents. |
 | Maintain the RI package | [Architecture](docs/architecture.md), [maintenance](docs/maintenance.md), and [documentation index](docs/README.md) | Module boundaries, updater/bundle commands, and verification requirements. |
 
 RI does not supply a consumer capsule runner, project permissions, or approval

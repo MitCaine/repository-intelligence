@@ -9,7 +9,8 @@ RI does not require an execution framework or all five skills to be installed.
 1. Select a compatible RI source/wheel and interpreter. Run the project's actual
    compatibility probe, or a representative RI query/comparison using that runtime.
    Retain a working compatible version rather than silently changing its schema.
-2. Keep one short map in the existing project entrypoint: shared instruction
+2. Keep one short map at project-root `docs/local_project_map.md`; link it from
+   the project README/AGENTS entrypoint. Record shared instruction
    commit/byte identity, runtime/source and contract, role permissions, standards,
    required tests, permitted Git/issue actions and completion route.
 3. Supply the current instructions to each role using the supported local handoff.
@@ -30,6 +31,9 @@ review remains independent of the candidate's author/implementor.
 Task records must include the controller guide's [completion requirements](capsule-controller-workflow.md#required-task-completion),
 including affected documentation, criterion-specific evidence and verified closeout.
 Use the existing record; no extra mandatory artifact is needed.
+
+Once setup is adopted, direct new issue controllers to [Start an issue](start-an-issue.md)
+and `docs/local_project_map.md`. Do not repeat adoption or installation for each task.
 
 ## Recovery and resume
 
@@ -55,3 +59,20 @@ replacement eliminates their need; do not declare their failed attempts successf
 
 Changing the docs does not itself qualify a host or migrate a project's installed
 instructions. Record the adopted source/bytes and verify the actual replacement.
+
+## Standard project map
+
+Use `docs/local_project_map.md` in every consumer project. Keep it short:
+
+- Selected RI execution instructions: source commit/bytes and usable location.
+- Compatible RI runtime/source and its invocation, plus role/model settings.
+- Project standards and required test commands or their authoritative locations.
+- Role permissions, candidate capture/publication and integration/issue actions.
+- Supported completion route and existing active-task/checkpoint location.
+
+Reference project-owned requirements rather than copying their text. This map
+holds local bindings, not a second shared workflow. During migration, reconcile
+an existing map into this file, repair incoming links, and leave old map locations
+as pointers where needed; do not keep two authoritative maps. Preserve active
+frozen task identities and historical records. Do not repin an active attempt
+silently or infer authority from the map's mere presence.

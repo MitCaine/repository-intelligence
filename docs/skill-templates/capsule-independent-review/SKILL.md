@@ -5,7 +5,7 @@ description: Conduct or prepare a fresh, read-only review of one exact capsule c
 
 # Capsule independent review
 
-Follow the [current controller workflow](../../capsule-controller-workflow.md).
+Follow the [current controller workflow](../../start-an-issue.md).
 Review the exact candidate or no-change source, bounded task, full diff, relevant
 tests/results and applicable repository standards. Use direct source and ordinary
 logs; RI navigation/comparison is supporting evidence, not a substitute for review.
@@ -26,3 +26,7 @@ part of this read-only review; request existing evidence through the controller.
 Return PASS, findings or unresolved gaps with candidate identity and supporting
 evidence using the host's normal handoff. Missing required evidence cannot pass.
 Controller integration is separate; review does not grant merge authority.
+For explicitly post-installation criteria, review the implementation and planned
+check now; identify proof still due before closeout. Do not require installation
+proof before the approval needed to install. Missing evidence already due at the
+review stage remains a blocker.

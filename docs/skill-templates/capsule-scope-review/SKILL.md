@@ -7,7 +7,7 @@ description: Independently challenge a proposed consumer capsule impact inventor
 
 This is an optional independent challenge when scope uncertainty or a separately
 adopted project requirement warrants it. Follow the
-[current workflow](../../capsule-controller-workflow.md); do not add this role to
+[current workflow](../../start-an-issue.md); do not add this role to
 every ordinary task by default or replace candidate review with planning review.
 
 Read the complete draft, objective/base, planned changes and proposed checks.

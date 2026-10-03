@@ -6,6 +6,7 @@ versions are tracked inside the references rather than in parallel filenames.
 
 | Need | Read |
 | --- | --- |
+| Execute an issue in an established project | [Start an issue](start-an-issue.md), `docs/local_project_map.md` and live issue |
 | Install, navigate, compare, troubleshoot | [Consumer guide](consumer-guide.md) |
 | Interpret file/directory JSON, statuses, identity, limits, or older versions | [Navigation reference](navigation.md) |
 | Compare planning and candidate source; interpret compact deltas and exits | [Inventory reference](inventory.md) |
@@ -19,12 +20,14 @@ versions are tracked inside the references rather than in parallel filenames.
 | Run the start-of-work updater, verify, upgrade grammars, maintain docs, or package RI | [Maintenance](maintenance.md) |
 
 
-Controllers should read the current procedure, setup and selected role skills.
+Established-project controllers read the bounded start-an-issue procedure, project-root
+`docs/local_project_map.md` and live issue. Setup and package reference docs are conditional resources.
 Do not use archived workflow instructions or previous plans for new execution.
 
 ## Workflow audit scope
 
-- **Default procedure:** controller workflow and compact new-project setup.
+- **Daily execution procedure:** start-an-issue; controller workflow explains
+  project adoption and broader context, and new-project setup is used at adoption.
 - **Current role instructions:** the optional skill templates; choose only useful roles.
 - **Runtime contracts:** navigation/inventory references and executable package code.
 - **Optional extended helpers:** preflight evidence checker, queue watcher and review
