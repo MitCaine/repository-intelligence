@@ -12,6 +12,8 @@ Initial dispatch starts at planning; correction dispatch starts at the authentic
 recovery parent. Do not require nonexistent future candidate or review records.
 
 Inspect relevant source, callers and tests to check scope and criterion coverage.
+Require affected current documentation/link updates (or an evidenced not-applicable
+conclusion) in scope and acceptance. Resolve specification gaps before dispatch.
 Use the project's existing task record, not a new packet/schema. Independent scope
 challenge is optional unless a separately adopted project requirement needs it.
 

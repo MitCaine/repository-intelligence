@@ -6,6 +6,10 @@ require a special capsule runner, SDK transport, evidence exporter or approval
 service. Existing projects adopt this replacement under owner authority rather
 than silently bypassing their current controls.
 
+Only this current procedure governs RI workflow handoffs. Do not load archived
+procedures or previous plans as execution instructions. Use the current adopted
+project map and active task; resolve a conflicting map before dispatch.
+
 ## Keep the integration small
 
 Keep one short project map in the existing entrypoint. Record the selected RI
@@ -70,6 +74,38 @@ schema, signed packet, planning-history layout or finite launch budget.
 Independent scope challenge is optional unless a separately adopted project
 requirement needs it; do not add a second review just for changing ordinary files.
 
+## Required task completion
+
+Each capsule must include these requirements in its existing task record; no
+additional report or gate file is needed:
+
+- Resolve objective/specification gaps before implementation. Do not invent
+  product parameters or expand the objective to make a task executable.
+- Update affected current documentation, examples, local maps and incoming links
+  when behavior, commands, versions or workflow change. Remove stale or
+  contradictory wording within that affected surface. Identify those paths in
+  scope; preserve clearly marked historical records. Record a supported
+  not-applicable conclusion when no documentation is affected. This does not
+  require a repository-wide documentation rewrite for every task.
+- Give every acceptance criterion a concrete test or inspectable source/result;
+  report failures and skips honestly. A passing aggregate test count does not
+  prove an omitted required case. Explain any required proof left unexecuted.
+- At each handoff, return the source/branch identity, completed work, actual
+  results, unresolved findings and next permitted action. Supply each role with
+  the selected shared instructions and relevant project requirements. Controller
+  checks returned scope and evidence before dispatching the next role; it does
+  not implement or self-review the assigned source changes.
+- Review the affected documentation alongside code and tests. Approval and
+  relevant test evidence must cover the candidate actually integrated. If that
+  candidate changes, reconcile the diff and obtain affected checks/review before
+  integration; do not transfer a verdict silently to new bytes.
+- Close only after verifying authorized integration and all original criteria,
+  including any explicitly deferred installation/closeout obligations. Retain a
+  concise result and necessary evidence in the existing project record. Remove
+  only the verified merged task branch when safe; preserve unrelated work and
+  unmerged recovery evidence. If any required outcome remains pending, leave
+  the issue open and state it.
+
 Before dispatch, verify actual required access/runtime and that the commands are
 usable in their intended environment. Use a small relevant rehearsal for a known
 sandbox-sensitive command; no mandatory full adoption specimen chain. Setup proof
@@ -91,8 +127,7 @@ polls or invented work to avoid waiting. A failure callback wakes diagnosis,
 not an automatic cascade of prerequisite capsules.
 
 Set any required finite deadline according to the actual task size and host
-limits. Do not inherit an arbitrary 300-second model-review cap from retired RI
-transport. Validate the timeout before dispatch, allowing for instruction/source
+limits. Do not impose an arbitrary 300-second model-review cap. Validate the timeout before dispatch, allowing for instruction/source
 reading and producing the verdict. Preserve genuine historical timeout receipts;
 they are not current configuration. If a timeout occurs, reconcile completion
 and cleanup before an authorized recovery rather than repeatedly launching the
@@ -145,7 +180,3 @@ use the owner-authorized integration commands. Verify current entrypoints select
 only this route and a compatible runtime. Retire obsolete prerequisite issues as
 superseded after integration eliminates their need; do not call their failed
 implementations successful. Keep product issues paused until separately resumed.
-
-The [historical extended controller reference](archive/extended-controller-workflow-2026-10-02.md) and its
-[evidence helper templates](skill-templates/README.md) remain optional material
-for separately justified consumer controls, not extra gates in this default route.

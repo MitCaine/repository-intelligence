@@ -676,7 +676,7 @@ authenticate exports and enforce missing-record failures; a skill alone cannot.
 The fresh reviewer accounts for the original outcomes and applicable installed/terminal
 obligations before guarded finalization. An explicitly adopted consumer contract
 may retain authenticated unchanged implementation judgments under the
-[scoped carry-forward rules](../workflow-effectiveness.md#stage-obligations-and-bounded-reuse);
+[scoped carry-forward rules](historical-workflow-effectiveness-2026-10-02.md#stage-obligations-and-bounded-reuse);
 otherwise its existing original-outcome review requirement still applies. Installation success does not close an issue whose live
 probes or history gates remain pending.
 
@@ -929,7 +929,7 @@ Apply the [review evidence feasibility and handoff gate](../review-evidence.md#f
 
 ## Effectiveness and adopted consumer contracts
 
-Use the [lightweight corrections](../workflow-effectiveness.md) at the existing
+Use the [lightweight corrections](historical-workflow-effectiveness-2026-10-02.md) at the existing
 planning, qualification, review and closeout gates. They specify selecting-gate
 observations, validate-before-readiness ordering, staged obligations and
 consumer-authorized evidence/review reuse. Existing consumer rules remain

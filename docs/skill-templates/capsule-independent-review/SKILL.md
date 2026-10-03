@@ -10,6 +10,8 @@ Review the exact candidate or no-change source, bounded task, full diff, relevan
 tests/results and applicable repository standards. Use direct source and ordinary
 logs; RI navigation/comparison is supporting evidence, not a substitute for review.
 
+Check affected current documentation, examples and links for stale or contradictory
+instructions; historical records remain explicitly historical.
 Remain read-only. Cover each acceptance criterion and applicable standard with a
 concise evidence-backed disposition. Separate actual defects from missing evidence
 and uncertainty; identify concrete paths/cases for corrections. Do not demand a

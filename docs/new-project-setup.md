@@ -27,6 +27,10 @@ retaining results. If capacity cannot be released and fresh creation fails, the
 workflow permits last-resort idle-agent reuse with reauthenticated context;
 review remains independent of the candidate's author/implementor.
 
+Task records must include the controller guide's [completion requirements](capsule-controller-workflow.md#required-task-completion),
+including affected documentation, criterion-specific evidence and verified closeout.
+Use the existing record; no extra mandatory artifact is needed.
+
 ## Recovery and resume
 
 Record current phase, branch/source, task, criteria, tests, active job, results,
@@ -51,5 +55,3 @@ replacement eliminates their need; do not declare their failed attempts successf
 
 Changing the docs does not itself qualify a host or migrate a project's installed
 instructions. Record the adopted source/bytes and verify the actual replacement.
-Historical extended setup is [retained for audit](archive/extended-project-setup-2026-10-02.md),
-not an extra checklist for this route.

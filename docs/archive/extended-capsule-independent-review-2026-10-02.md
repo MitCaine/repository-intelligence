@@ -20,7 +20,7 @@ Return the complete review to the controller. Do not edit the candidate, approve
 
 Receive the consumer's accepted review-report template and validator requirements, including declaration dispositions when required and explicit empty arrays for empty deltas. Return importable evidence in that format; semantic PASS alone is insufficient. Identify any export supplements needed for the complete handoff. Specimen validation does not supply future candidate/qualification proof.
 
-Use the [effectiveness guidance](../workflow-effectiveness.md) to distinguish
+Use the [effectiveness guidance](historical-workflow-effectiveness-2026-10-02.md) to distinguish
 incumbent, proposed and installed proof. A green qualification omitting a
 mandatory node cannot prove that behavior. Receive the accepted API schema,
 readable Standards/raw proof and report-file/import route before dispatch.

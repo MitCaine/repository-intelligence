@@ -96,5 +96,5 @@ When a protected service requires committed C, record that constraint and use pe
 Require final observed invocation/source identity for every check, including
 committed-C-only lanes. Where exported, check mandatory node collection and
 execution under the actual selecting gate, not green totals. Use the
-[effectiveness guidance](../workflow-effectiveness.md) for validate-before-P
+[effectiveness guidance](historical-workflow-effectiveness-2026-10-02.md) for validate-before-P
 ordering and staged obligations; existing consumer contracts govern adoption.

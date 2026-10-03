@@ -8,7 +8,7 @@ during this assessment; its scripts were frozen before fixture testing. No
 Poker source, capsule, ref or review receipt was changed by this assessment.
 This is an integration assessment, not approval of a product candidate.
 
-The current RI usage owner is the [capsule integration guide](../poker-capsule-workflow.md).
+The current RI usage owner is the [capsule integration guide](historical-poker-capsule-workflow-2026-10-02.md).
 This dated report records findings and evidence; it is not another capsule contract.
 
 ## Findings and disposition

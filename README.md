@@ -69,8 +69,6 @@ macros. Read [coverage limits](docs/limitations.md) when deciding what else to i
 For a parser gap or a Rust reference question, [native analysis](docs/native-analysis.md)
 provides explicit Python AST, native Rust syntax, and Rust definition interfaces.
 Keep the original structural evidence; the providers have different coverage.
-[Poker's capsule recipe](docs/poker-capsule-workflow.md) demonstrates the controller
-handoff through its existing context-page helper.
 The [capsule controller workflow](docs/capsule-controller-workflow.md) explains
 the purpose, capsule requirements and checkable acceptance criteria, full
 handoff, native subagent completion, recovery decisions, and optional project
@@ -124,7 +122,6 @@ The [documentation index](docs/README.md) links all current guides.
 [Result contracts and compatibility](docs/navigation.md#current-result-contracts)
 identify behavior more precisely than package version `0.1.0`; pin the RI revision.
 RI originated in [Poker App](https://github.com/MitCaine/poker-app).
-[Historical measurements](docs/archive/README.md) retain their original scope.
 RI has no project license file yet; distribution notes are in maintenance.
 
 The default [controller workflow](docs/capsule-controller-workflow.md) uses a

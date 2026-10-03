@@ -150,7 +150,7 @@ configuration. Examples and historical probe settings are not universal policy.
    controller destination. `codex queue` targets a Codex session; a Work
    controller needs a tested bridge or supported bounded wait. Select the
    route at dispatch so one hosted run does not cause repeated controller turns.
-7. **Run a trial capsule.** Use the [adoption cases](../adoption-cases.md) to check
+7. **Run a trial capsule.** Use the [adoption cases](historical-adoption-cases-2026-10-02.md) to check
    correct and incorrect skill activation, branch creation, authorized candidate capture and lane-correct publication,
    all [controller gates](extended-controller-workflow-2026-10-02.md#controller-gates-from-intake-through-closeout),
    command rehearsal, exact-SHA qualification, fresh review, correction, and closeout. Record the
@@ -214,7 +214,7 @@ next action without resetting allowances or restarting completed work.
 
 ## Qualify and reuse the actual adopted route
 
-Use the [adoption specimen recipe](../workflow-effectiveness.md#before-starting-an-issue)
+Use the [adoption specimen recipe](historical-workflow-effectiveness-2026-10-02.md#before-starting-an-issue)
 once per relevant host/runtime/helper configuration, through actual consumer
 callsites. Keep mutable qualification scratch out of authenticated startup
 authority. Pin compatibility and record invalidation inputs; fresh chats resume
