@@ -13,7 +13,8 @@ require a special capsule runner, SDK transport, evidence exporter or approval
 service. Existing projects adopt this replacement under owner authority rather
 than silently bypassing their current controls.
 
-Only this current procedure governs RI workflow handoffs. Do not load archived
+The [Start an issue procedure](start-an-issue.md) owns daily RI workflow
+execution; this guide owns adoption and replacement guidance. Do not load archived
 procedures or previous plans as execution instructions. Use the current adopted
 project map and active task; resolve a conflicting map before dispatch.
 

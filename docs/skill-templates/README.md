@@ -30,9 +30,13 @@ grant. Keep planning, implementation and fresh review roles separate.
 
 For a project-scoped Codex installation, copy the chosen **whole skill folders**
 to that project's `.agents/skills/` (or the skill location supported by its
-actual Codex installation). The queue folder includes its required helper
-script. For personal local Codex use, install under the local Codex skills
-directory instead. Validate each copied folder with the available skill
+actual Codex installation). Every folder includes `references/project-procedure.md`, which resolves shared
+instructions through project-root `docs/local_project_map.md`. The queue folder
+also includes its required helper script. For personal local Codex use, install under the local Codex skills
+directory instead. After copying, check every relative resource link in the installed folder, then
+from the consuming workspace open the map and its exact selected procedure and
+verify their recorded identities. Template-tree validation alone does not prove
+installed-layout validity. Validate each copied folder with the available skill
 validator and try one realistic, non-destructive invocation before relying on
 it. Do not replace an existing project skill without comparing its instructions.
 Record the RI commit and template path used for each copied skill in the

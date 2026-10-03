@@ -68,6 +68,12 @@ comparison, retaining the latter's status for its exit code.
 
 ## Feasibility and handoff gate
 
+This section applies only to projects that explicitly adopted this bundle/export
+and report-import mechanism. It adds no gate to ordinary lightweight issue work;
+direct source, full diffs and real logs remain sufficient there. The report schema
+and transport limits below are selected consumer mechanisms, not universal RI
+workflow requirements.
+
 Before final READY/P, measure the actual producer output for the planned scope,
 including a large indivisible file. Distinguish stored bytes, decoded bytes and
 reviewer context. Source size alone does not predict structural evidence size.

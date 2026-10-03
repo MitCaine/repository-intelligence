@@ -78,7 +78,7 @@ from repository_intelligence.locator import index_file, query_path
 
 root = Path('/path/to/project')
 packet = index_file(root / 'src/clock.py', root=root)
-assert packet['schema_version'] == 6
+assert packet['schema_version'] == 7
 if packet['mapping_status'] == 'navigation_only':
     for entry in packet['functions']:
         print(entry['qualified_name'], entry['byte_range'])
@@ -149,8 +149,8 @@ A supported file larger than 4,000,000 but no larger than 32,000,000 bytes retai
 A source root with no selected supported paths, recognized unsupported paths, traversal failures, or exclusions raises `ValueError`; do not interpret that as proof of absent functionality. An exclusion-only root returns an `excluded` packet with its observed scope. Invalid paths, query terms, limits, or selection configuration may also raise. The API is not a universal malformed-input-to-JSON converter.
 
 For parser gaps, use the explicit [native syntax handoff](native-analysis.md) and
-retain the original structural result. Poker consumers can follow the
-[capsule integration recipe](poker-capsule-workflow.md).
+retain the original structural result. For established-project issue execution, use
+[Start an issue](start-an-issue.md).
 
 Escalate to the [optional Rust lookup](native-analysis.md) only when a reference definition is needed. Supply Cargo features, the default-feature choice, and target explicitly. Its result and resource behavior are separate from the shared scanner, and ordinary navigation does not require it.
 
@@ -167,4 +167,4 @@ Escalate to the [optional Rust lookup](native-analysis.md) only when a reference
 
 Poker's former `--authority-dir` example does not apply to the current shared
 locator. Authored authority remains a separate consumer input; see the
-[capsule recipe](poker-capsule-workflow.md).
+[issue-start procedure](start-an-issue.md).

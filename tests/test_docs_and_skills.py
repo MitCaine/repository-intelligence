@@ -1,6 +1,9 @@
 """Independent Markdown and manifest fixtures for the offline docs checker."""
 import importlib.util
+import ast
 from pathlib import Path
+import re
+import shutil
 import tempfile
 import unittest
 
@@ -10,6 +13,50 @@ spec.loader.exec_module(checker)
 
 
 class DocsCheckerTests(unittest.TestCase):
+    def test_complete_skills_relocate_without_missing_resources(self):
+        repo = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as raw:
+            installed = Path(raw) / '.agents' / 'skills'
+            shutil.copytree(repo / 'docs' / 'skill-templates', installed)
+            # The installation copies folders, not the template index.
+            (installed / 'README.md').unlink()
+            errors = checker.check(installed)
+            self.assertEqual([e for e in errors if e !=
+                              'docs/skill-templates: unexpected or missing skill manifests'], [])
+            skills = list(installed.glob('*/SKILL.md'))
+            self.assertEqual(len(skills), 5)
+            for skill in skills:
+                self.assertEqual(checker.scalar_manifest(skill.read_text())['name'],
+                                 skill.parent.name)
+                locator = skill.parent / 'references' / 'project-procedure.md'
+                self.assertTrue(locator.is_file())
+
+    def test_current_documented_contracts_match_source(self):
+        repo = Path(__file__).resolve().parents[1]
+
+        def constant(filename, name):
+            tree = ast.parse((repo / 'src' / 'repository_intelligence' / filename).read_text())
+            return next(ast.literal_eval(node.value) for node in tree.body
+                        if isinstance(node, ast.Assign) and any(
+                            isinstance(target, ast.Name) and target.id == name
+                            for target in node.targets))
+
+        navigation = (repo / 'docs' / 'navigation.md').read_text()
+        for field, filename, name in (
+                ('schema_version', 'source.py', 'SCHEMA_VERSION'),
+                ('inventory_schema_version', 'inventory.py', 'INVENTORY_SCHEMA_VERSION'),
+                ('adapter_version', 'structural.py', 'ADAPTER_VERSION')):
+            row = next(line for line in navigation.splitlines()
+                       if line.startswith('| ') and f'`{field}`' in line)
+            value = re.search(r'\| `(\d+)` \|', row)
+            self.assertIsNotNone(value)
+            self.assertEqual(int(value[1]), constant(filename, name))
+        example = (repo / 'docs' / 'consumer-guide.md').read_text()
+        values = re.findall(r"assert packet\['schema_version'\] == (\d+)", example)
+        self.assertTrue(values)
+        self.assertEqual({int(value) for value in values},
+                         {constant('source.py', 'SCHEMA_VERSION')})
+
     def fixture(self, content):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

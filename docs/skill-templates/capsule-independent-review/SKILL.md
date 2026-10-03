@@ -5,7 +5,7 @@ description: Conduct or prepare a fresh, read-only review of one exact capsule c
 
 # Capsule independent review
 
-Follow the [current controller workflow](../../start-an-issue.md).
+Follow the [current controller workflow](references/project-procedure.md).
 Review the exact candidate or no-change source, bounded task, full diff, relevant
 tests/results and applicable repository standards. Use direct source and ordinary
 logs; RI navigation/comparison is supporting evidence, not a substitute for review.

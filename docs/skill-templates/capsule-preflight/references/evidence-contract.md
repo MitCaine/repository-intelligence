@@ -200,7 +200,7 @@ at completion. Failed or overdue obligations cannot proceed. Future unresolved
 IDs remain pending, never passed; self-supersession is rejected. A replacement
 obligation must preserve the original requirement and cannot silently move its
 deadline. These helpers neither authenticate authority nor maintain workflow state.
-See the [effectiveness guidance](../../../capsule-controller-workflow.md).
+See the [selected project procedure](project-procedure.md).
 
 Terminal carry-forward also requires unchanged retained-evidence digest and adopted
 policy version. Selecting-gate identity is a separate required input, not inferred

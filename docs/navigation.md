@@ -11,7 +11,7 @@ The shared entry points are `repository_intelligence.locator.index_file` and
 | --- | --- |
 | Navigation `schema_version` | `7` |
 | `inventory_schema_version` | `16` |
-| `adapter_version` | `11` |
+| `adapter_version` | `13` |
 | `mapping_contract` | `python-rust-javascript-typescript-java-go-csharp-c-cpp-markdown-source-units-v13` |
 
 Package metadata remains `0.1.0`; pin the RI revision and retain emitted parser

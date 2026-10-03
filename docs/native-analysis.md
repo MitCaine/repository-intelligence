@@ -147,4 +147,4 @@ Macro-heavy or build-dependent questions can require the consumer's compiler
 and build tools under its normal configuration. This interface does not silently
 enable build scripts/procedural macros or resolve every build variant.
 
-For context-page integration, see [Poker's capsule recipe](poker-capsule-workflow.md).
+For issue execution, see [Start an issue](start-an-issue.md).

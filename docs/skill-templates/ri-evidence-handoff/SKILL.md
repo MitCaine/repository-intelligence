@@ -5,7 +5,7 @@ description: Prepare exact-source Repository Intelligence navigation or planning
 
 # RI evidence handoff
 
-Follow the [current workflow](../../start-an-issue.md). Use the
+Follow the [current workflow](references/project-procedure.md). Use the
 selected compatible RI runtime for bounded navigation or structural comparison.
 Bind results to the actual source/revision and retain locations, hashes and gaps.
 Read the relevant source slices; use full Git diff/direct inspection for files RI

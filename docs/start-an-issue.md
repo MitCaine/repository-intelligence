@@ -65,8 +65,10 @@ a reported gap, not permission to guess.
    Commit/push only when the map grants that action. Keep useful work for corrections.
 4. **Controller:** inspect the full diff, scope, documentation and criterion evidence;
    capture the exact candidate when assigned that responsibility. Supply the
-   reviewer with that source, capsule, standards and actual test/log evidence.
-5. **Independent reviewer:** remain read-only; return concise evidence-backed
+   reviewer with that source, the full diff, capsule, standards and actual test/log
+   evidence.
+5. **Independent reviewer:** remain read-only and review the full change, not just
+   RI declarations or a summary; return concise evidence-backed
    dispositions for every criterion and applicable standard. Check docs too.
    Missing evidence already due cannot pass. For post-installation obligations,
    assess the implementation/check plan now; installed proof remains due at closeout.
