@@ -28,6 +28,12 @@ complete structural comparison; it does not by itself cancel otherwise
 authorized work. Use another approved evidence route or replan while keeping
 the obligation visible.
 
+Before product planning, resolve adoption/setup conflicts and bind the selected
+map, complete skill resources, compatible runtime and supported review route.
+Setup repair is a separate assignment; do not dispatch product planning while
+that repair remains unresolved. Representative setup proof is not future C/Q/R
+evidence. Keep candidate-specific rehearsal and qualification at their later stages.
+
 For each capsule, the controller authenticates the issue and base, then asks a
 capsule-planner subagent to draft the capsule and impact inventory on its
 planning branch. The first return supplies the draft and inventory identities.
@@ -381,6 +387,18 @@ point/runtime, review lane/report validator, export contents/supplements, and
 approval/acceptance/closeout commands. The branch workflow is supported wherever
 these actors are authorized; role names alone do not grant Git mutation.
 
+Map diagnostic execution and evidence disclosure separately before dispatch.
+Record destination visibility (including public CI logs/artifacts), the bounded
+payload, and the existing authority permitting its release. Apply standing
+authorization where it covers that payload and destination; do not add routine
+approval rounds. A private-diagnostic restriction still applies when a diagnostic
+uses a public repository. Short artifact retention does not make disclosure private.
+If automatic approval review rejects release, preserve the rejection and halt that
+action. Use an already supported private route if available; do not bypass the
+rejection through an indirect upload. Report the exact uncovered payload and
+destination when specific human authorization is necessary. Unaffected local
+preparation can continue within its existing authority.
+
 When RI is mandatory, run the consumer's actual runtime compatibility probe and
 one representative comparison with the selected RI interpreter before accepting
 P. Record producer/consumer contract versions and runtime identity. Recheck when
@@ -395,6 +413,26 @@ and validator requirements as part of their handoff.
 
 ## Phase selection and resume
 
+### One subagent at a time
+
+The controller runs one subagent assignment at a time. The primary sequence is:
+
+1. A fresh capsule creator returns the draft and final planning artifacts.
+2. After controller validation of final P, a fresh implementor returns its work.
+3. After controller capture and required qualification of C, a fresh independent
+   reviewer returns its verdict.
+
+The controller consumes the terminal result and verifies the required handoff
+before dispatching the next role. Do not run concurrent discovery assistants,
+setup assistants, implementors, or Standards/Spec reviewer subagents, and do not
+allow a role to create a parallel agent tree. One reviewer covers both Standards
+and Spec. Any separately required scope challenge is a serial assignment after
+its complete draft inputs exist; it cannot overlap the capsule creator or waive
+an existing consumer gate. Corrections use fresh assignments sequentially,
+retaining implementation artifacts rather than reusing the agent conversation.
+Use verified native completion or capsule-queue, then suspend once bounded
+controller preparation is finished. Do not poll or invent work to avoid waiting.
+
 Use the consumer's existing stage/attempt state. Require only artifacts that
 exist at that stage; a missing future P or C is not an intake failure.
 
@@ -407,6 +445,15 @@ exist at that stage; a missing future P or C is not an intake failure.
 | Review | Exact C/Q, full diff, complete packet and accepted report schema; request fresh enforced read-only review. |
 | Integration/closeout | Matching approval/Q/R, current refs and accepted route; verify retained source, history, issue and checkout reconciliation before cleanup. |
 | Resume/rule adoption | Authenticate retained state against live Git/runner state and re-enter its actual phase. |
+
+When intake exposes a setup conflict, preserve the current product state and
+resolve only the separately authorized setup assignment. Do not install or change
+the selected workflow/skill/helper/runtime bindings inside an active product
+attempt. A required change returns through the consumer's recovery/adoption route;
+it is not an implicit restart. Specification advice may inform a draft, but cannot
+stand in for scope challenge of the complete capsule, impact inventory and proof
+routes. Record premature assignments as deviations, retaining useful drafts as
+inputs rather than counting their results as gates passed in order.
 
 A fresh or resumed controller reads authoritative instructions and an existing
 retained planning/evidence checkpoint containing objective/issue, consumer

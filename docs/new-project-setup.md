@@ -24,6 +24,7 @@ The map records:
 | Roles | Actor, model/effort, permissions, whole skill folder/helper identity and retrieval route |
 | Execution | Each stage's literal interface, inputs, outputs, candidate capture/publication owner |
 | Evidence | Qualification logs, standards, report schema/import/export, supplements and retention |
+| Disclosure | Diagnostic/review destination visibility, permitted payload, disclosure authority and any explicit restrictions |
 | Completion | Verified destination and callback or bounded watcher; cancellation and deadline |
 | Recovery | Stop transitions, finite correction allowance, integration and terminal cleanup |
 
@@ -57,6 +58,11 @@ Preserve paused product attempts. If the owner explicitly authorizes repairing a
 broken adoption outside its capsule lifecycle, bound that exception to adoption
 repair; keep repository safety, separate implementation and fresh independent
 review. Resolve the actual map and affected interfaces before product dispatch.
+Finish and bind this setup assignment before dispatching a product planner. Do
+not combine adoption correction and product planning in one active attempt or
+change its selected skills mid-run. Preserve useful premature drafts, but repeat
+the affected handoff at the permitted recovery point rather than relabeling it
+compliant. This uses existing phase records and adds no new approval layer.
 Run a small specimen through actual planning, implementation, review, report
 import and terminal disposition, with source identities and completion delivery.
 A specimen does not approve production work or prove an unexercised remote merge.
