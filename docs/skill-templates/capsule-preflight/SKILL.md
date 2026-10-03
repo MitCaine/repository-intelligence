@@ -5,6 +5,15 @@ description: Authenticate an active task capsule and its exact repository state 
 
 # Capsule preflight
 
+Under an authorized task using the adopted workflow, routine coordination,
+failure diagnosis, role clarification, handoff validation and bounded preparation
+are included in standing authority. Do not request another human approval for
+those actions solely because a gate failed. Continue only consumer-authorized
+corrections/stages within scope, permissions, destinations and remaining limits;
+a STOP still blocks dependent execution. Keep source edits with the authorized
+implementor. Ask only for the specific uncovered decision, not permission to
+investigate. See [controller authority](../../capsule-controller-workflow.md#standing-authority-for-routine-controller-work).
+
 For candidate evidence checks, read [the adapter contract](references/evidence-contract.md)
 and use [evidence_preflight.py](scripts/evidence_preflight.py) when the consumer
 has exported authenticated expectations and observed runner records. A checked
@@ -40,6 +49,24 @@ Before qualification and reviewer dispatch, check actual packet completeness: re
 
 Report gaps for the current phase only. Refresh context within existing read grants; use policy-permitted bounded infrastructure retries; apply in-scope corrections only with remaining allowance and required parent lineage. Missing authority/prerequisites block dependent work. Changed scope, base, required proof or authority requires `STOP_REPLAN` and the smallest needed controller decision. Do not repair authority by widening paths, choosing a different base, substituting an old candidate, or silently dropping a required check. A mechanical PASS authenticates only what that check actually covers; the controller still resolves semantic scope and acceptance.
 
+Emit `STOP_REPLAN` only as a last resort after bounded authorized checks establish
+the relevant stop trigger and existing permitted recovery cannot resolve it.
+Evidence not yet inspected is not failed authentication. Check the supplied
+identity records and report actual observations and uncertainty; do not run all
+checks merely to justify a stop. Confirmed violations and explicit owner stops
+still halt immediately. Opening progress uses the supported nonterminal channel,
+not a terminal `stop_replan` placeholder. An accidentally emitted stop remains
+stopped. See [stop-trigger checks](../../capsule-controller-workflow.md#establish-the-trigger-before-emitting-stop_replan).
+
+A suspected replan blocker holds execution, not all capsule interaction. Within
+existing read authority/budget, do one bounded read-only sweep of related capsule
+identity, scope, runtime/command and delivery prerequisites, returning supported
+blockers together plus unknown/unchecked items. Use nonterminal progress while
+diagnosing; finalize STOP only afterward where the host permits. If already
+terminal, use diagnostic-only follow-up before replacement planning without
+resuming implementation. No edits, tests, qualification or permission widening
+are granted. See [consolidated diagnosis](../../capsule-controller-workflow.md#hold-execution-then-consolidate-diagnostic-findings).
+
 After a stopping result, diagnose before revising the capsule: authenticate the
 retained agent/gate/wrapper reason and evidence, and separate observed failure
 from hypothesis. If no reason is supplied, record `reason unknown` and use only
@@ -47,6 +74,15 @@ authorized bounded read-only diagnostics or an explanation request. Do not guess
 a capsule change, resume the stopped attempt, or reset its allowance. Record the
 smallest evidence-supported recovery in the existing checkpoint. Follow
 [stop diagnosis](../../capsule-controller-workflow.md#diagnose-a-stop-before-replanning).
+
+The authorized task includes a bounded diagnostic-only explanation request to
+the stopping implementor through its existing authorized channel, without another
+human approval. The original agent may explain its stop despite the normal
+fresh-context rule; it cannot resume implementation. Limit the request to retained
+facts and existing read scope, retain its answer separately and check it against
+the stopped record. No edits, tests, reruns, new exports or replacement authority
+are granted by this explanation request. See
+[standing diagnostic authority](../../capsule-controller-workflow.md#standing-authority-for-a-stop-explanation).
 
 Return a compact preflight record: verified capsule and repository identities, permitted next action, applicable lane and checks, unresolved gaps, and the exact source of each decision. Do not launch implementation, qualify, publish, accept, or merge unless the active request and consumer workflow authorize that step.
 

@@ -27,6 +27,7 @@ The map records:
 | Disclosure | Diagnostic/review destination visibility, permitted payload, disclosure authority and any explicit restrictions |
 | Completion | Verified destination and callback or bounded watcher; cancellation and deadline |
 | Recovery | Stop transitions, finite correction allowance, integration and terminal cleanup |
+| Standing authority | Routine coordination/diagnosis, permitted recovery and stage actions; exact boundaries requiring new approval |
 
 Retain an immutable RI checkout with its relative resources intact, or supply
 verified pinned instruction bytes through the role's supported handoff. A URL is
@@ -47,10 +48,17 @@ and local bindings, authenticate live state, then resume that phase. Compaction,
 a new chat or an adoption repair never resets an attempt or retry budget.
 
 A valid authenticated `STOP_REPLAN` for the active attempt halts implementation,
-qualification, review, publication and integration. Only bounded cancellation,
-cleanup, evidence preservation and recording the stop may continue. Later
+qualification, review, publication and integration. Bounded cancellation, cleanup, evidence preservation, recording the stop and
+read-only diagnosis or factual explanation requests may continue under existing
+authority; none resumes the stopped execution. Later
 success cannot clear it; a replacement needs explicit authority and a distinct
 attempt. Quoted, stale or unrelated text does not constitute an active stop.
+
+Apply [routine controller authority](capsule-controller-workflow.md#standing-authority-for-routine-controller-work)
+as part of adoption. Record it in the existing map so routine failure diagnosis,
+role clarification and authorized recovery do not require repeated human approvals.
+Preserve actual consumer/host restrictions; identify and resolve any conflict
+before relying on hands-off continuation.
 
 ### Repair an adoption before a product trial
 

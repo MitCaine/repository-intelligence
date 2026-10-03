@@ -97,6 +97,10 @@ Controller reconciles and uses consumer's guarded approval,
 publication, acceptance, and closeout commands
   verify integration and retained evidence; delete completed capsule branch
 
+Failure arrows in this overview route through
+[the failure transition map](#trace-failure-transitions-not-only-the-successful-sequence);
+they do not imply every failure needs new planning or implementation. Fresh
+contexts are the default, with the bounded [capacity exception](#release-completed-agent-capacity).
 The parent waits on each native subagent completion; it does not repeatedly
 poll unchanged status. Verify each returned identity and result before the
 next delegation. A long external qualification needs its own verified terminal
@@ -387,6 +391,51 @@ point/runtime, review lane/report validator, export contents/supplements, and
 approval/acceptance/closeout commands. The branch workflow is supported wherever
 these actors are authorized; role names alone do not grant Git mutation.
 
+### Standing authority for routine controller work
+
+A user-authorized task carried out under this adopted workflow includes routine
+coordination, diagnosis and preparation needed to complete it. Do not request a
+new human approval merely because a gate failed, an agent omitted information,
+or the controller must communicate with a role it dispatched. Apply the existing
+task authority and consumer map; a failure does not revoke unrelated authorized
+work or create a new authority grant.
+
+Within existing scope, permissions, evidence destinations and finite allowances,
+the controller may without another approval:
+
+- Read and authenticate retained source, logs, results, runtime identities and
+  actual operation state; ask assigned roles for factual clarification.
+- Validate handoffs, prepare bounded recovery proposals and correct controller-
+  owned preparation records through the permitted route.
+- Delegate authorized in-scope corrections to the appropriate role and advance
+  through already authorized checks, review, publication and integration stages.
+- Preserve failures, reconcile uncertain dispatch/integration, perform permitted
+  cancellation/cleanup and recover notification delivery without rerunning work.
+- Apply the documented capacity fallback and diagnostic-only stop-explanation
+  exception, keeping reviewer independence and one working subagent at a time.
+
+Keep implementation with its authorized actor; preparation authority is not a
+license for the controller to patch product or repair source. A STOP still halts
+that attempt and its dependent work. Diagnosis and preservation can continue,
+but execution recovery requires the existing correction/replacement authority,
+distinct identity where required, and remaining allowance. Standing authority
+never resets limits, transfers an old verdict or makes missing proof pass.
+
+Ask the user only for a concrete decision outside that authority: changed scope
+or objective, additional permissions, exhausted retry/correction budget, a new
+unapproved disclosure destination/payload, or an action reserved for explicit
+owner approval. Identify the exact boundary, evidence, available options and the
+smallest approval needed. Do not turn ordinary diagnosis into an approval request
+or invent a restriction not present in the adopted contract. New user-owned chats
+still follow the host's explicit creation-authorization requirement.
+
+Record standing authority once in the existing execution map/checkpoint and
+preserve it across compaction. Where a consumer rule actually contradicts this
+policy, resolve that adoption conflict explicitly; do not silently claim the
+shared doc overrides executable consumer policy. Host permissions and automatic
+approval review remain binding: retain any rejection, use an already authorized
+supported alternative where available, and report a specific unresolved boundary.
+
 Map diagnostic execution and evidence disclosure separately before dispatch.
 Record destination visibility (including public CI logs/artifacts), the bounded
 payload, and the existing authority permitting its release. Apply standing
@@ -620,6 +669,137 @@ may retain authenticated unchanged implementation judgments under the
 otherwise its existing original-outcome review requirement still applies. Installation success does not close an issue whose live
 probes or history gates remain pending.
 
+### Trace failure transitions, not only the successful sequence
+
+Use this routing map when checking the workflow end to end. It summarizes the
+existing recovery rules; it adds no mandatory artifact or review stage. Apply it
+at the current phase, including setup and planning, without demanding future P,
+C, qualification or review records that cannot yet exist.
+
+```text
+Troublesome state / stopping result
+  -> halt affected work; retain identity, output and actual execution state
+  -> is the reason supported by retained evidence?
+       no -> bounded authorized diagnosis -> still unknown? remain blocked
+       yes
+        -> did dispatch/integration possibly occur despite a missing response?
+             yes -> reconcile existing operation; do not duplicate it
+        -> select the smallest authorized recovery:
+             agent capacity -> supported cleanup or last-resort independent reuse
+             notification lost -> retrieve/redeliver result; do not rerun work
+             preparation/transport -> correct affected setup within authority
+             missing proof, same C -> permitted supplement or necessary gate rerun
+             in-scope source defect -> implementor correction -> new C -> checks
+             changed scope/base/authority -> replacement planning and validation
+             no authority/allowance/independent reviewer -> checkpoint and block
+        -> reauthenticate affected inputs; invalidate only proof required by
+           the consumer's adopted contract; enter the permitted recovery stage
+```
+
+A stopped attempt never returns to running. Recovery proceeds through the
+consumer's permitted correction/replacement identity and retained lineage;
+otherwise it remains blocked. A failure is not automatic authority for a new
+launch. Confirm applicable allowances and actual dispatch state before acting.
+Do not funnel an environment, notification or missing-evidence problem into a
+capsule rewrite merely because the status label says `STOP_REPLAN`.
+
+| Walkthrough branch | Required destination under the existing rules |
+| --- | --- |
+| Agent emits STOP at intake with no reason; no edits/tests | Keep the attempt stopped, record reason unknown, diagnose retained intake/trace/wrapper. No guessed scope revision. |
+| Fresh role cannot spawn; idle agents cannot be closed | Reauthenticate a last-resort reused role under the capacity exception; an involved implementor cannot become its candidate reviewer. With no independent option, review remains blocked. |
+| Job completed but its nudge/report delivery failed | Recover the existing result or use permitted delivery recovery; no second execution just to obtain a notification. |
+| Transport timed out or response was lost | Verify shutdown and reconcile actual startup/completion and consumed allowance before a permitted retry; an unknown response does not prove no launch occurred. |
+| Review finds missing logs with unchanged source | Preserve failed review; use consumer-permitted authenticated supplementation and required review. Do not invent historical logs or automatically rewrite source. |
+| Review finds an in-scope implementation defect | Give the evidence-backed correction to the implementor; retain prior work, capture new C, rerun affected gates under current authority. |
+| Required correction exceeds scope or budget | Diagnose the concrete missing authority, preserve the attempt, and follow replacement planning or request the specific decision. Do not reset limits by renaming the attempt. |
+| Integration response is lost | Inspect actual integrated refs/receipt for the same operation before retrying; never merge twice or declare closeout from uncertainty. |
+| Integration passed but retention/branch cleanup failed | Keep integration recorded as complete and closeout incomplete; fix only the pending closeout step. Retain needed refs until retrieval is verified. |
+
+Launch-wrapper validation also has two moments: validate deterministic inputs and
+route feasibility before READY; if the generated wrapper requires final P,
+validate that exact generated wrapper after P and before implementation dispatch.
+A published P alone grants no implementation readiness. Preserve any partial
+publication as such rather than dispatching to discover a setup defect.
+
+### Establish the trigger before emitting STOP_REPLAN
+
+`STOP_REPLAN` is the last resort when bounded permitted checks establish a
+blocking condition and no existing authorized route can resolve it within this
+attempt. It is not the default response to an unfamiliar handoff or evidence not
+yet inspected. **Not checked is not failed.** Inspect the relevant authentication
+records and actual source/runner state before claiming that authentication failed.
+Check the suspected blocker and related capsule prerequisites through one bounded
+read-only pass; do not run every test, expensive qualification or speculative
+investigation before stopping.
+
+Before emitting the stopping outcome, the implementor or other role must:
+
+1. Identify the capsule/consumer stop condition it believes applies.
+2. Inspect its supplied evidence and perform bounded checks within granted read
+   and execution authority. If a necessary observation is unavailable, describe
+   it as unavailable rather than inventing failure.
+3. Use an already permitted clarification, read expansion or in-scope correction
+   when it resolves the issue without changing scope, authority or frozen proof.
+4. If the blocker remains, hold implementation and run the bounded diagnostic
+   sweep below before finalizing the stopping outcome where the host permits it.
+   Return all supported blockers together, evidence locators, checks made,
+   unchecked prerequisites, uncertainty and why permitted routes cannot resolve them.
+
+A confirmed scope/authority violation, explicit owner stop, or consumer-required
+immediate halt must stop execution immediately; do not continue edits or run
+implementation/test work to exhaust alternatives. Read-only diagnostic interaction
+can continue within existing read authority unless the owner or host prohibits it. When safe diagnosis cannot establish required authority,
+hold dependent work and report the unresolved prerequisite through the accepted
+interface. Last resort never means proceeding without authentication or bypassing
+a mandatory guard. Failure of implementation or a test within scope should use
+its existing failure/correction route unless the adopted contract requires replan.
+
+Opening progress is **nonterminal**: state that intake/authentication is underway
+using the runner's supported progress channel. Do not populate a terminal result
+or emit the reserved `stop_replan` status as an opening acknowledgement, placeholder
+or prediction. If the interface lacks a nonterminal status, keep the structured
+outcome for completion rather than inventing a status. Authenticate this distinction
+when preparing the wrapper. An actual stopping event still halts the attempt even
+if emitted accidentally; preserve it and diagnose under the rules below rather
+than silently treating it as harmless progress or continuing the same attempt.
+
+### Hold execution, then consolidate diagnostic findings
+
+Finding a replan blocker must not end all interaction with the capsule at the
+first observation. Immediately hold edits, tests, qualification, publication and
+integration; keep bounded read-only diagnosis available. Before final terminal
+closure, where the host supports it, perform **one diagnostic sweep** of the
+capsule and existing handoff to find related blockers that would otherwise fail
+the replacement one at a time. Use the supported nonterminal progress channel
+to describe the execution hold; do not emit a terminal `stop_replan` to mean
+"diagnosis in progress" or invent a new status unsupported by the runner.
+
+The sweep checks relevant existing records: authentication/base/P and source
+identities, scope/path availability, required runtime/profile/command bindings,
+and evidence/reviewer delivery prerequisites observable at the current phase.
+Inspect repeated instances of the failed assumption elsewhere in the capsule.
+Respect the current read scope and existing diagnostic time/resource budget;
+no new mandatory test suite, review role or report format is required. It does
+not authorize edits, test runs, permission probing, new execution, broader reads
+or private-data export. Do not manufacture findings for future artifacts that
+cannot exist yet, or keep searching indefinitely for every conceivable defect.
+
+Return one consolidated diagnostic result in the existing handoff/checkpoint:
+confirmed blockers with evidence, unresolved observations clearly marked unknown,
+and checks completed or unavailable. The controller uses that set to prepare one
+coherent recovery instead of guessing successive capsule revisions. Revalidate
+all affected prerequisites after the recovery; the diagnostic sweep is not a
+promise that no further defect exists.
+
+If the wrapper has already made the stop terminal or killed the agent, preserve
+that terminal state. Use the standing diagnostic-only follow-up or retained-evidence
+route to perform the same bounded sweep **before replacement planning**; never
+resume the stopped implementation to finish diagnosis. If read authority is itself
+invalid, the host denies inspection, or the owner stopped all work, preserve what
+is available and report the diagnostic limit. Do not widen permissions to finish
+the sweep. Neither an execution hold nor a diagnostic response clears an existing
+STOP or authorizes a replacement launch.
+
 ### Diagnose a stop before replanning
 
 A `STOP_REPLAN` halts the affected attempt and dependent work. Preserve its exact
@@ -639,9 +819,38 @@ Before changing a capsule or dispatching replacement work, the controller must:
   authorized read-only diagnostic to inspect the preserved attempt or request an
   explanation. An explanation request is not permission to resume the stopped
   implementation, edit source, rerun a costly gate or create replacement work.
+- Complete the [bounded diagnostic sweep](#hold-execution-then-consolidate-diagnostic-findings)
+  of related capsule prerequisites before replacement planning; retain all findings
+  together instead of revising for each discovered blocker separately.
 - Select the smallest evidence-supported recovery under existing authority and
   remaining allowances. Record what must change and why in the existing
   checkpoint before returning a correction or replacement handoff.
+
+#### Standing authority for a stop explanation
+
+The controller may request the stopping implementor's factual explanation
+**without further human permission** as part of the authorized task's diagnosis.
+It may read retained results and send a bounded diagnostic-only follow-up through
+the existing authorized agent channel. This is an explicit exception to requiring
+a fresh context for every assignment: the original agent may explain its own
+stopped attempt, but may not resume implementation. If that agent is unavailable,
+use the existing read-only diagnostic route on retained evidence.
+
+The request names the stopped attempt and asks for the concrete trigger, evidence
+locator, whether any edits/tests or dispatch occurred, related prerequisite
+blockers from the bounded sweep, and any uncertainty.
+Allow only existing authorized reads; prohibit edits, tests, command re-execution,
+replacement dispatch and new evidence export. Retain the response separately as
+a diagnostic explanation, not a revised terminal result, reviewer verdict or
+recovery approval. The controller checks it against retained facts before choosing
+recovery. Use a bounded completion wait and report reason unknown if no usable
+answer returns; do not repeatedly ask or poll for an explanation.
+
+No new approval is required solely because the implementation is stopped or the
+reason was omitted. New permissions, destinations, sensitive disclosure or work
+outside the existing authority still follow their own rules. This authorization
+does not override a consumer's explicitly adopted prohibition; resolve such a
+conflict during adoption rather than silently treating the diagnosis as execution.
 
 Role handoffs require a concrete stop reason and evidence locator when available;
 if unavailable, the role must state that explicitly. Do not invent a reason to
