@@ -1,26 +1,17 @@
 # Start an issue in an established project
 
-**Read the complete directed orientation material before acting.** Before task
-decisions, edits or role dispatch, read this procedure, the project-root `docs/local_project_map.md`,
-the complete live issue and its required linked specifications/decisions, and
-applicable project instructions. Follow references necessary to understand them;
-do not replace unread requirements with summaries or assumptions. Resolve
-contradictions and identify missing information before dependent work proceeds.
-Read in bounded sections so output is complete. If a response truncates, reread
-its missing portions before relying on it. For checkpoints, read the directed
-active object, not the historical record. This is bounded task orientation, not
-a requirement to read the whole repository.
+**Read all directed orientation before acting:** this procedure, project-root
+`docs/local_project_map.md`, the complete live issue and required linked
+specifications/decisions, and applicable project instructions. Resolve conflicting
+or missing inputs before dependent decisions, edits or dispatch; summaries do
+not replace unread requirements. Read in bounded sections and recover truncated
+portions before reliance. Select the checkpoint's active object, not its history.
 
-This is the complete daily execution entrypoint for a controller in a project
-with an adopted RI map. Read this page, `docs/local_project_map.md`, and the live issue. Read
-relevant source and standards as needed. You do not need RI architecture, parser
-contracts, adoption history or the setup guide to execute an ordinary issue.
-
-The map always lives at `docs/local_project_map.md` relative to the consumer
-repository root. Its filename and location are the same in every adopted project.
-The project README/AGENTS entrypoint points there. Do not search for another map
-and silently substitute it. If it is missing, report the missing adoption input;
-authorize/create the bounded map before issue dispatch, rather than guessing.
+This is the complete daily entrypoint, not whole-repository orientation. Read
+relevant source/standards as needed; RI architecture, setup and adoption history
+are conditional. The project README/AGENTS points to the exact map above. If it
+is missing, report and resolve that adoption input rather than substitute another
+map or guess.
 
 ## Intake
 
@@ -83,13 +74,10 @@ controller owns Git, it creates the dedicated branch and supplies its identity t
 the builder. Otherwise explicitly grant only the needed branch action to the
 builder. The builder cannot infer Git permission from its role or these instructions.
 
-1. **Capsule builder:** work on the supplied dedicated task branch (or create it
-   only under the explicit branch grant), and use the
-   [shared RI capsule format above](#capsule-format). Include issue/objective, base/branch, authorized
-   paths, independently checkable acceptance criteria, required commands,
-   known prerequisites and affected current docs/examples/maps/links. Require
-   stale wording to be corrected, or justify why documentation is unaffected.
-   Identify genuinely post-installation checks and how to satisfy them.
+1. **Capsule builder:** use the supplied branch and [shared format](#capsule-format).
+   Require affected stale docs/examples/maps/links to be corrected, or justify why
+   documentation is unaffected. Name genuine post-installation checks and their
+   satisfaction method. Create the branch only under an explicit grant.
 2. **Controller:** check the returned plan against the original orientation, issue
    and relevant source, including scope, criteria, documentation and proof routes.
    Resolve scope/specification gaps and confirm the next role's actual command

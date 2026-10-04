@@ -5,111 +5,47 @@ description: Queue one terminal result for an external agent job, capsule qualif
 
 # Capsule queue
 
-Routine role coordination, failure-evidence inspection, factual explanation
-requests and permitted completion-delivery recovery are included in the authorized
-task; they do not require a new human approval just because a gate failed. Keep
-existing scope, disclosure rules, attempt limits and stops intact. Follow
-[standing controller authority](references/project-procedure.md#waiting-and-recovery)
-when deciding whether a genuinely new approval is needed.
+Use a watcher for an external job lacking reliable native completion. Native
+subagents default to event-based blocking waits; ordinary commands return directly.
+Do not duplicate a verified callback. Follow the selected
+[project procedure](references/project-procedure.md#waiting-and-recovery) for
+waiting discipline, agent capacity, terminal stops and bounded diagnosis. Routine
+coordination/diagnosis needs no repeated approval; preserve scope, disclosure,
+stops and attempt limits. A watcher only observes/reports, never grants retries,
+qualification, review approval or integration authority.
 
-Use this skill when an external agent or other process needs a watcher to detect its terminal state and wake its controller. Native subagents and Codex threads with reliable completion channels use those channels. Ordinary commands return directly. Do not create a second notification when the runner already provides a reliable terminal callback. Establish the completion route at dispatch; do not spend repeated controller turns checking unchanged status.
+## Delivery and routing
 
-## Verify wake-up before relying on queue
+- Establish the route before dispatch. Active-parent delivery does not prove idle
+  wake-up. End the turn only after the exact controller/host route has consumed
+  a harmless terminal notification without a human nudge. CLI acceptance is not
+  consumption. Reuse that observation until relevant inputs change or delivery
+  fails; otherwise use the supported bounded blocking wait.
+- Verify the destination task UUID from `CODEX_THREAD_ID` or runtime metadata,
+  never recency or role name. Check host `codex queue --help` for supported options.
+  Queue targets a Codex session; a ChatGPT Work controller needs a tested bridge.
+  Do not claim an untested native-subagent watcher is supported.
+- Bind the active assignment, job/candidate/check identity, destination, mechanism,
+  deadline and evidence paths. RI locations remain exact-source navigation, not
+  qualification or reviewer verdicts.
+- Launch a new command once. For an existing job, wrap its blocking completion
+  event/watch command, never restart it to attach a watcher. If only status checks
+  exist, use bounded polling/backoff inside a dedicated watcher, not model turns.
+- Retain raw untrusted logs outside the candidate under an authorized evidence
+  root. Send one concise terminal message with outcome, status path and next action.
+  On receipt authenticate `status.json`, `delivery.json` and relevant `output.log`
+  against the assignment before continuing.
 
-Before dispatch, select the terminal delivery route for the exact controller.
-For native subagents, default to the host's supported event-based blocking wait.
-Native result delivery to the parent and starting a new turn in an idle parent
-are separate capabilities. Built-in subagent support does not by itself establish
-idle wake-up. Keep the controller turn in the blocking wait; do not end it on an
-assumption that a terminal result will start another turn. End the turn only when
-idle wake-up has been verified for the selected route.
+## Terminal interpretation
 
-Queue is for external jobs lacking a reliable completion channel, or another
-route with a supported watcher and verified wake-up; it is not the default for
-native subagents. Before relying on it, verify that queue delivery actually wakes
-the intended controller on this host. A small harmless delivery probe must reach
-the exact idle controller and be consumed without a human nudge; CLI acceptance
-alone is insufficient. Reuse that observation for the same host/controller route
-until the route changes or delivery fails. Do not add duplicate notifications to
-a verified native route. If neither route has verified idle wake-up, keep the
-supported bounded blocking wait and state the limitation. Do not restart a job
-to attach a watcher or claim an untested native-subagent watcher is supported.
-
-## Authority and routing
-
-- Read the active capsule and current controller assignment before dispatch. The capsule alone defines owned paths, exact branch/base/overlay, checks, and stop conditions. A watcher may observe and report; it cannot broaden scope, choose replacement checks, retry a failed gate, publish, accept, or merge.
-- RI findings are navigation and source evidence. Bind any RI location to the exact consumer blob before use. Neither RI output nor watcher output establishes qualification or reviewer approval.
-- Queue to the exact task UUID that owns the next decision, normally the controller. Obtain it from `CODEX_THREAD_ID` or verified runtime metadata. Never infer it from recency, a role label, or a convenient open task. Check `codex queue --help` for `--thread` and `--message` on the host that will notify.
-- `codex queue` targets a Codex session, not an arbitrary ChatGPT Work chat. For a Work controller, verify its native agent completion route or a tested bridge to the exact controller task before relying on this helper. If no route exists, use the environment's supported bounded wait and report the limit.
-- An implementor may return its result to its controller through native agent or thread messaging. Queue an external gate result to the controller only when that controller has authorized the gate and the originating task UUID is verified. A fresh independent reviewer receives an exact candidate and evidence packet through the controller's normal review dispatch; do not treat a queued gate result as a reviewer verdict.
-
-## Watcher contract
-
-Before launch, record the mechanism, verified destination, job/candidate identity,
-deadline and retained evidence paths. A bounded wait means an event wait or
-blocking runner operation; putting a deadline around repeated model-driven
-status requests is still polling. If Work lacks a verified completion bridge,
-state that limitation once and use its supported blocking wait.
-
-After dispatch, wait for the terminal handoff. Reading the active workspace,
-source diff, logs or interim test results to track progress is monitoring too;
-it is not an alternative to status polling. Do not repeatedly restate the
-contract or produce interim acceptance judgments while a role is working.
-Controller candidate/scope/evidence verification begins after terminal delivery.
-Unsolicited progress may be received without starting a monitoring loop.
-
-Early intervention is limited to an actionable blocker/clarification delivered
-by the role, a concrete safety concern, failed completion delivery or a direct
-owner status request. Use only the reads necessary for that intervention, then
-return to waiting. Independent preparation must be a specific already-authorized
-activity that does not inspect or depend on the active role's unfinished work;
-do it once, not as a recurring excuse to stay active. Supported wait resumptions
-at host time limits are allowed; they do not authorize extra progress checks.
-
-For a native subagent terminal return, the controller retains and authenticates
-the handoff, records its disposition, then closes the completed agent, where available, through
-the host's supported operation before dispatching the next fresh role. Completed
-but open threads can consume capacity even with only one working subagent.
-Do not close a running agent or discard its evidence. If no close operation is
-available and fresh creation is blocked, record the limitation and use the
-workflow's authorized last-resort idle-agent reuse with a complete reauthenticated
-handoff. Keep review independent; never restart the completed job or reset its
-allowance to regain capacity. See
-[agent capacity recovery](references/project-procedure.md#waiting-and-recovery).
-
-Distinguish nonterminal opening progress from the accepted terminal outcome.
-Never use `stop_replan` as an acknowledgement while authentication is merely
-pending. The role must establish the relevant trigger through bounded authorized
-checks before emitting this last-resort outcome, with immediate stops retained
-for confirmed violations or explicit owner instructions. An actual stopping event
-still halts dependent work; do not reinterpret it as progress to resume a job.
-See [stop-trigger checks](references/project-procedure.md#waiting-and-recovery).
-
-When a blocker is found, hold execution and consolidate related findings through
-one bounded authorized read-only capsule sweep before terminal closure where
-supported. Keep diagnostic progress nonterminal; never misuse a stopping status
-as an interim hold. If the host already finalized the stop, recover diagnosis
-through a separate diagnostic-only follow-up before replacement planning, not
-by resuming the job. See [diagnostic sweep](references/project-procedure.md#waiting-and-recovery).
-
-A stopping terminal result requires diagnosis before replan: preserve its reason,
-raw output, exact attempt identity and cleanup state. A bare `stop_replan` is not
-proof the capsule needs rewriting. Record `reason unknown` if the evidence lacks
-an explanation; obtain bounded authorized diagnostics before selecting recovery.
-Do not restart or resume the stopped job to obtain that explanation. See
-[stop diagnosis](references/project-procedure.md#waiting-and-recovery).
-
-A bounded diagnostic-only follow-up to the stopping implementor is included in
-the authorized task and needs no additional human approval. It may explain its
-own stop through the existing authorized channel; this does not resume the job.
-Retain the answer separately and wait through the supported completion route.
-See [standing diagnostic authority](references/project-procedure.md#waiting-and-recovery).
-
-For a new external command, launch it once through the helper below. For an existing job, watch its blocking completion event or wrap a blocking watch command; never restart it to attach a watcher. If the service exposes only status checks, put bounded polling with backoff and a deadline inside a dedicated watcher script.
-
-Distinguish success, failure, timeout, signal termination, and lost connectivity using authoritative terminal evidence. The helper can classify its own watcher errors; a wrapped command that exits nonzero after losing connectivity is a failure unless its watcher records a more specific outcome. A signal alone does not prove an intentional cancellation. A missing PID or closed connection is not success. Save raw, potentially untrusted logs under an unused directory under the consumer-authorized external evidence root. Queue exactly one concise terminal message containing outcome, status path, and the controller's next action. The helper records command outcome in `status.json` and notification state in `delivery.json`; `accepted_by_cli` is not proof the controller consumed it.
-
-After launch, end the waiting turn only if the host has a verified terminal delivery route. Do not poll from later model turns or post periodic updates. On receipt, read `status.json`, `delivery.json`, and relevant `output.log`, verify the exact capsule/candidate/check identity, then continue the controller workflow. Failure or missing evidence blocks the affected qualification gate; it does not turn into a PASS. Preserve the failed candidate and evidence for independent review or replan.
+Keep command completion, cleanup, notification acceptance and controller consumption
+separate. Distinguish success, failure, timeout, signal and lost connectivity from
+actual evidence; missing PID/connection is not success and a signal alone is not
+intentional cancellation. Wrapped nonzero connectivity loss is failure unless its
+watcher records a more specific outcome. Preserve failures and unknown reasons;
+diagnose before selecting recovery, without resuming a stopped attempt. Missing
+proof cannot pass. Follow the selected procedure's bounded diagnostic-only route
+rather than guess a replan or reset an allowance.
 
 ## Monitored command
 

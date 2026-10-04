@@ -13,14 +13,10 @@ require a special capsule runner, SDK transport, evidence exporter or approval
 service. Existing projects adopt this replacement under owner authority rather
 than silently bypassing their current controls.
 
-The [Start an issue procedure](start-an-issue.md) owns daily RI workflow
-execution; this guide owns adoption and replacement guidance. Do not load archived
-procedures or previous plans as execution instructions. Use the current adopted
-project map and active task; resolve a conflicting map before dispatch.
-
-For daily execution in an established project, [Start an issue](start-an-issue.md)
-is the bounded controller entrypoint. This guide explains the wider adoption and
-replacement context; reading it all is not a prerequisite for every issue.
+[Start an issue](start-an-issue.md) owns daily execution; this guide owns adoption
+and replacement. Use the adopted map and active task, not archived procedures or
+previous plans. Resolve conflicting routing before dispatch. This broader guide
+is not required reading for every established-project issue.
 
 ## Keep the integration small
 
@@ -126,20 +122,16 @@ additional report or gate file is needed:
   unmerged recovery evidence. If any required outcome remains pending, leave
   the issue open and state it.
 
-Assign any genuinely post-installation obligation its actual stage and way to
-satisfy it in the existing capsule. Pre-integration review checks the implementation
-and the proposed post-installation check; it must not demand proof of an operation
-that requires that review's approval first. After authorized integration, perform
-the pending checks before issue closure. A failed installed check leaves the issue
-open and enters bounded recovery; approval does not turn that failure into a pass.
-Do not defer a prerequisite that must be satisfied before implementation/review.
+Record each post-installation obligation's stage and satisfaction method in the
+capsule. Review its implementation and check plan before integration; perform
+installed checks afterward and before closure. Do not demand proof that depends
+on prior approval, or defer prerequisites already due. Installed failure leaves
+the issue open for bounded recovery.
 
-Before each role dispatch, verify that role's actual required access/runtime and
-that its commands are usable in their intended environment. Planner intake needs
-the objective and base, not a capsule or candidate it has yet to create. Use a small relevant rehearsal for a known
-sandbox-sensitive command; no mandatory full adoption specimen chain. Setup proof
-is not candidate proof. Run required project checks on the candidate and preserve
-actual results/skips. Do not replace a project's substantive tests with RI output.
+Before dispatch, confirm the role's required access/runtime and command environment.
+Planner intake needs the objective/base, not its future capsule/candidate. Rehearse
+known sandbox-sensitive commands narrowly; no mandatory adoption specimen chain.
+Setup proof does not replace actual candidate checks or honest results/skips.
 
 Review covers the full change, original criteria and applicable standards. A
 normal supported independent subagent reading source/diffs/logs is sufficient
