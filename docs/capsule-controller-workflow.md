@@ -150,42 +150,14 @@ review route if one is required for reasons independent of RI.
 
 ## Waiting and recovery
 
-Before dispatch, select the terminal delivery route for the exact controller.
-For native subagents, default to the host's supported event-based blocking wait.
-Native result delivery to the parent and starting a new turn in an idle parent
-are separate capabilities. Built-in subagent support does not by itself establish
-idle wake-up. Keep the controller turn in the blocking wait; do not end it on an
-assumption that a terminal result will start another turn. End the turn only when
-idle wake-up has been verified for the selected route.
-
-Queue is for external jobs lacking a reliable completion channel, or another
-route with a supported watcher and verified wake-up; it is not the default for
-native subagents. Before relying on it, verify that queue delivery actually wakes
-the intended controller on this host. A small harmless delivery probe must reach
-the exact idle controller and be consumed without a human nudge; CLI acceptance
-alone is insufficient. Reuse that observation for the same host/controller route
-until the route changes or delivery fails. Do not add duplicate notifications to
-a verified native route. If neither route has verified idle wake-up, keep the
-supported bounded blocking wait and state the limitation. Do not restart a job
-to attach a watcher or claim an untested native-subagent watcher is supported.
-
-No repeated controller polls or invented work to avoid waiting. A failure callback
-wakes diagnosis, not an automatic cascade of prerequisite capsules.
-
-After dispatch, wait for the terminal handoff. Reading the active workspace,
-source diff, logs or interim test results to track progress is monitoring too;
-it is not an alternative to status polling. Do not repeatedly restate the
-contract or produce interim acceptance judgments while a role is working.
-Controller candidate/scope/evidence verification begins after terminal delivery.
-Unsolicited progress may be received without starting a monitoring loop.
-
-Early intervention is limited to an actionable blocker/clarification delivered
-by the role, a concrete safety concern, failed completion delivery or a direct
-owner status request. Use only the reads necessary for that intervention, then
-return to waiting. Independent preparation must be a specific already-authorized
-activity that does not inspect or depend on the active role's unfinished work;
-do it once, not as a recurring excuse to stay active. Supported wait resumptions
-at host time limits are allowed; they do not authorize extra progress checks.
+Follow [the daily waiting and recovery rules](start-an-issue.md#wait-recover-and-resume).
+Native subagents use an event-based blocking wait; idle wake-up requires separate
+verification. Queue is conditional on a supported observer and verified delivery.
+Do not inspect unfinished work or fill waiting time with monitoring. Diagnose
+suspected missed delivery from available completion/delivery/continuation events,
+not from a human bump alone. A failure callback starts bounded diagnosis, not an
+automatic cascade of prerequisite capsules. Check actual callers and the
+controlling requirement before declaring a repair necessary.
 
 Set any required finite deadline according to the actual task size and host
 limits. Do not impose an arbitrary 300-second model-review cap. Validate the
