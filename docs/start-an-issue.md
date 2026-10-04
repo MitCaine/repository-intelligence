@@ -145,8 +145,12 @@ independent no-change review and authorized closeout without an artificial commi
 
 At a blocker, hold consequential work and do one bounded authorized read-only
 sweep to consolidate real failures and unknowns. Routine clarification, diagnosis
-and in-scope correction need no repeated human approval. STOP_REPLAN is a last
-resort for an established blocker, not opening progress. Preserve terminal stops;
+and in-scope correction need no repeated human approval. STOP_REPLAN, replan,
+scope expansion and requests for broader authority are last resorts. First verify
+the blocker against exact source, controlling requirements and existing authorized
+routes; distinguish observed failures from assumptions. Prefer bounded in-scope
+correction and reuse valid work. Report confirmed blockers promptly; never bypass
+required checks. STOP_REPLAN is not opening progress. Preserve terminal stops;
 a diagnostic-only follow-up may explain one but cannot resume it. Request new
 authority only for uncovered scope, permission, disclosure or reserved actions.
 

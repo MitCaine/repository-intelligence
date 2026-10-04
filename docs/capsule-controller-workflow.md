@@ -172,8 +172,11 @@ When a blocker appears, hold edits and consequential actions. Perform one bounde
 read-only sweep of related task/runtime/command/delivery prerequisites within
 existing authority; return supported blockers together with unknown/unchecked
 items. Uninspected evidence is not failed authentication. Opening progress is
-nonterminal. STOP_REPLAN is a last-resort result for an established blocker, not
-an opening acknowledgement. Confirmed violations or explicit owner stops halt
+nonterminal. Follow the [daily last-resort recovery rule](start-an-issue.md#wait-recover-and-resume)
+before STOP_REPLAN, replan, scope expansion or broader-authority requests: verify
+exact source, controlling requirements and existing authorized routes; prefer
+bounded correction and valid work reuse. STOP_REPLAN is not an opening
+acknowledgement. Confirmed violations or explicit owner stops halt
 execution immediately; read-only diagnosis may continue if permitted.
 
 If a stop is already terminal, preserve it. A diagnostic-only follow-up can
