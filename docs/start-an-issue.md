@@ -155,7 +155,10 @@ a diagnostic-only follow-up may explain one but cannot resume it. Request new
 authority only for uncovered scope, permission, disclosure or reserved actions.
 
 Corrections start from authenticated recovery source, not necessarily the original
-planning HEAD. Preserve outcome identities; reused evidence is not newly executed.
+planning HEAD. Reuse evidence only under the project's accepted equivalence policy;
+retain its original source/command/environment identities, never label it newly
+executed. Rerun affected checks when equivalence is unknown or relevant inputs
+change, or when project rules require them.
 Changed integration source needs affected checks/review. Lost delivery or a timeout
 requires checking actual completion/cleanup before repeating any operation.
 
