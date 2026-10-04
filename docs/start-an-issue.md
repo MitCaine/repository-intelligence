@@ -59,7 +59,10 @@ Controller -> capsule builder -> controller checks plan
                         findings -> bounded correction -> review
 ```
 
-Run one assignment at a time, with fresh contexts by default. Each role receives
+Run one assignment at a time, with fresh contexts by default. Retain and
+authenticate a completed agent's terminal handoff before closing it through the
+host's supported operation to free capacity; do not close running agents.
+Each role receives
 this selected procedure, its bounded task, relevant map/standards/source locations
 and actual evidence it needs. No automatic full RI documentation read is required.
 
