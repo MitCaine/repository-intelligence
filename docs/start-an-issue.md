@@ -101,8 +101,13 @@ builder. The builder cannot infer Git permission from its role or these instruct
 6. **Controller:** return in-scope findings to an implementor, then obtain affected
    checks and independent review. Approval must cover the actual integrated result.
    Use authorized integration, verify it and any pending installed checks, record
-   necessary evidence, close only when all outcomes pass, and safely delete the
-   verified merged branch. Reconcile every current reference to this task's state
+   necessary evidence and the final accepted source. Resolve each retained finding
+   and obligation as satisfied, explicitly deferred under separate authority, or
+   still blocking; original required outcomes cannot be silently deferred to close.
+   Close only when all outcomes pass, then safely delete the verified merged branch.
+   Verify actual issue closure and applicable local/remote branch cleanup before
+   recording success. If either fails, retain and report partial closeout rather
+   than claiming completion. Reconcile every current reference to this task's state
    in the map, active checkpoint, entrypoints and capsule indexes with the verified
    closure and cleanup. Search for the task ID and stale status wording; preserve
    clearly historical stops and records. Do not declare closeout complete while
