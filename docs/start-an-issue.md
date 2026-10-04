@@ -102,7 +102,13 @@ builder. The builder cannot infer Git permission from its role or these instruct
    checks and independent review. Approval must cover the actual integrated result.
    Use authorized integration, verify it and any pending installed checks, record
    necessary evidence, close only when all outcomes pass, and safely delete the
-   verified merged branch. Preserve unrelated work and unmerged recovery evidence.
+   verified merged branch. Reconcile every current reference to this task's state
+   in the map, active checkpoint, entrypoints and capsule indexes with the verified
+   closure and cleanup. Search for the task ID and stale status wording; preserve
+   clearly historical stops and records. Do not declare closeout complete while
+   current references still say stopped, active or pending. Keep durable workflow
+   maps task-neutral where possible, pointing to the active checkpoint for status.
+   Preserve unrelated work and unmerged recovery evidence.
 
 RI is navigation/comparison support. Direct source, full diffs and ordinary logs
 suffice; RI gaps do not prove absence. No special runner, exporter, per-declaration

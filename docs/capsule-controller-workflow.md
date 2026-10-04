@@ -120,7 +120,9 @@ additional report or gate file is needed:
   concise result and necessary evidence in the existing project record. Remove
   only the verified merged task branch when safe; preserve unrelated work and
   unmerged recovery evidence. If any required outcome remains pending, leave
-  the issue open and state it.
+  the issue open and state it. Follow the [daily closeout step](start-an-issue.md#execute-serially)
+  to reconcile current task-state references; historical records remain unchanged.
+  Prefer task-neutral maps with a pointer to the active checkpoint.
 
 Record each post-installation obligation's stage and satisfaction method in the
 capsule. Review its implementation and check plan before integration; perform
