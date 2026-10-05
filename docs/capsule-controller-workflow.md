@@ -56,9 +56,12 @@ Controller: authorized integration --> verify result --> close issue
     --> retain necessary evidence --> delete merged task branch when safe
 ```
 
-The project map assigns branch creation: when Git is controller-owned, the
-controller creates the branch before builder dispatch; otherwise the builder
-receives an explicit narrow grant. Role names alone grant no Git action.
+Follow the [daily published-branch sequence](start-an-issue.md#execute-serially):
+the controller creates the GitHub task branch and the assigned actor publishes the capsule,
+and the assigned actor publishes implementation on that same branch before
+independent review. Bind handoffs to verified remote commits. Task publication
+is not main acceptance; no subagent pushes to main. Resolve conflicting project
+controls before dispatch rather than silently keeping the task local.
 
 Initial implementation starts from validated planning state. A correction starts
 from the authenticated recovery source/parent and retained finding, not from an

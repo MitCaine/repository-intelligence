@@ -72,15 +72,23 @@ and unresolved questions. A controller summary alone is insufficient. Each role
 reads its directed orientation before acting; inaccessible required material is
 a reported gap, not permission to guess.
 
-Before builder dispatch, identify the branch-creation actor from the map. If the
-controller owns Git, it creates the dedicated branch and supplies its identity to
-the builder. Otherwise explicitly grant only the needed branch action to the
-builder. The builder cannot infer Git permission from its role or these instructions.
+Before builder dispatch, the controller creates and publishes the dedicated
+non-main task branch on GitHub from the authenticated base. The builder returns
+the capsule; the map assigns its capsule-only commit/push to the builder or
+controller. Publish the planning commit before implementor dispatch. Implementation
+uses the same branch; its assigned actor publishes the exact candidate before
+independent review. The controller publishes for roles without Git authority.
+Use clear commit messages describing the changes. Verify
+remote refs at each handoff. Task-branch publication is separate from approval
+or main integration; main changes remain behind acceptance. If a project control
+blocks this sequence, resolve that explicit conflict before dispatch rather than
+silently substitute a local-only workflow. No subagent pushes to main.
 
 1. **Capsule builder:** use the supplied branch and [shared format](#capsule-format).
    Require affected stale docs/examples/maps/links to be corrected, or justify why
    documentation is unaffected. Name genuine post-installation checks and their
-   satisfaction method. Create the branch only under an explicit grant.
+   satisfaction method. Return the capsule for publication, or publish it under
+   the map's explicit capsule-only grant.
 2. **Controller:** check the returned plan against the original orientation, issue
    and relevant source, including scope, criteria, documentation and proof routes.
    Resolve scope/specification gaps and confirm the next role's actual command
@@ -90,7 +98,8 @@ builder. The builder cannot infer Git permission from its role or these instruct
    relevant checks. Return source/branch identity, changes, results/skips and gaps.
    Commit/push only when the map grants that action. Keep useful work for corrections.
 4. **Controller:** inspect the full diff, scope, documentation and criterion evidence;
-   capture the exact candidate when assigned that responsibility. Supply the
+   capture/publish the exact candidate when assigned that responsibility and verify
+   the remote branch matches it. Supply the
    reviewer with that source, the full diff, capsule, standards and actual test/log
    evidence.
 5. **Independent reviewer:** remain read-only and review the full change, not just
