@@ -163,14 +163,18 @@ Changed integration source needs affected checks/review. Lost delivery or a time
 requires checking actual completion/cleanup before repeating any operation.
 
 Provider model capacity is an availability failure, not a capsule defect or an
-agent-slot limit. Preserve the assignment and any partial work; check whether a
-job started or remains active before redispatch. Use a map/owner-authorized model
-and effort fallback, recording the actual selection; never silently substitute.
-If none is authorized, report the model decision or wait through a supported
-route without repeated availability checks. Do not replan, reset allowances or
-create parallel duplicate jobs. Resume an interrupted nonterminal assignment only
-after checking its state; a replacement keeps the same bounded handoff and role
-independence. Reusing an idle agent cannot solve unavailable model capacity.
+agent-slot limit. Dispatch once. On confirmed capacity failure, first establish
+whether work started or remains active; preserve the assignment and partial work.
+If safe to redispatch, try one map/owner-authorized model/effort fallback and
+record the actual selection. If none is authorized or that attempt also fails,
+save the checkpoint and report the availability blocker. No retry loop, repeated
+availability polling or follow-up messages merely to test capacity. Retry the
+original model only on a new availability signal from the host/provider or an
+explicit instruction; elapsed time alone is not such a signal.
+Do not replan, reset allowances or launch parallel duplicate jobs. Resume an
+interrupted nonterminal assignment only after checking its state; a replacement
+keeps the bounded handoff and role independence. Idle-agent reuse cannot solve
+unavailable model capacity.
 
 Keep phase, selected instructions, source, active job, results, pending obligations
 and next action in the existing checkpoint across compaction. Authenticate it on
