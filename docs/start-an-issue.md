@@ -124,10 +124,19 @@ silently substitute a local-only workflow. No subagent pushes to main.
    maps task-neutral where possible, pointing to the active checkpoint for status.
    Preserve unrelated work and unmerged recovery evidence.
 
+Plan tracked documentation corrections before final candidate review. After
+verified closeout, update authorized operational records with actual outcomes;
+these records do not change the reviewed candidate. A later tracked-document
+correction needs its own affected checks, review and authorized publication.
+
 RI is navigation/comparison support. Direct source, full diffs and ordinary logs
 suffice; RI gaps do not prove absence. No special runner, exporter, per-declaration
 verdict or new mandatory record is required. Already-satisfied work can receive
 independent no-change review and authorized closeout without an artificial commit.
+For a planning-only or no-change outcome, record why implementation and integration
+are unnecessary. Preserve the published capsule as the project requires, then use
+its authorized disposition for the unmerged planning branch. Do not describe that
+branch as merged or invent a product change merely to clean it up.
 
 ## Wait, recover and resume
 
@@ -185,8 +194,10 @@ interrupted nonterminal assignment only after checking its state; a replacement
 keeps the bounded handoff and role independence. Idle-agent reuse cannot solve
 unavailable model capacity.
 
-Keep phase, selected instructions, source, active job, results, pending obligations
-and next action in the existing checkpoint across compaction. Authenticate it on
+The project map names the active checkpoint and standard closeout route. Update
+that checkpoint after each authenticated transition, retaining phase, selected
+instructions, source, active job, results, pending obligations and next action.
+Record unknown or partial outcomes honestly; preserve this state across compaction. Authenticate it on
 resume; do not duplicate dispatch. If fresh agents cannot be created or freed,
 last-resort idle-context reuse is permitted with a complete handoff. The candidate
 implementor/author must never be its reviewer. If independence is unavailable,
