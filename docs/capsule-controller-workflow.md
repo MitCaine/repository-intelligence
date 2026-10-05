@@ -80,6 +80,11 @@ last resort with a complete reauthenticated handoff. A candidate's author or
 implementor cannot review it. If no independent reviewer is available, report
 that specific blocker rather than self-approving.
 
+For provider model capacity failures, follow the [daily recovery rule](start-an-issue.md#wait-recover-and-resume):
+preserve work, establish job state and use only authorized model/effort fallbacks.
+Keep optional fallback choices in the map to avoid repeated owner decisions;
+model availability does not justify a capsule replan or duplicate dispatch.
+
 The capsule records the objective/issue, base/branch, permitted edit scope,
 checkable acceptance criteria, required test commands and known prerequisites.
 Use the [shared RI Markdown capsule format](start-an-issue.md#capsule-format).

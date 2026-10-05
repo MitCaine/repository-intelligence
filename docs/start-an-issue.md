@@ -162,6 +162,16 @@ change, or when project rules require them.
 Changed integration source needs affected checks/review. Lost delivery or a timeout
 requires checking actual completion/cleanup before repeating any operation.
 
+Provider model capacity is an availability failure, not a capsule defect or an
+agent-slot limit. Preserve the assignment and any partial work; check whether a
+job started or remains active before redispatch. Use a map/owner-authorized model
+and effort fallback, recording the actual selection; never silently substitute.
+If none is authorized, report the model decision or wait through a supported
+route without repeated availability checks. Do not replan, reset allowances or
+create parallel duplicate jobs. Resume an interrupted nonterminal assignment only
+after checking its state; a replacement keeps the same bounded handoff and role
+independence. Reusing an idle agent cannot solve unavailable model capacity.
+
 Keep phase, selected instructions, source, active job, results, pending obligations
 and next action in the existing checkpoint across compaction. Authenticate it on
 resume; do not duplicate dispatch. If fresh agents cannot be created or freed,
