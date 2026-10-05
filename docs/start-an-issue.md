@@ -59,18 +59,40 @@ Controller -> capsule builder -> controller checks plan
                         findings -> bounded correction -> review
 ```
 
-Run one assignment at a time, with fresh contexts by default. Retain and
-authenticate a completed agent's terminal handoff before closing it through the
-host's supported operation to free capacity; do not close running agents.
-Each role receives
-this selected procedure, its bounded task, relevant map/standards/source locations
-and actual evidence it needs. No automatic full RI documentation read is required.
+### Assign roles and supply inputs
 
-Before planner dispatch, supply the builder with the original issue and required
+Only the controller dispatches assignments. Run them one at a time, using fresh
+contexts by default. The normal path uses one capsule builder, one implementor
+and one independent reviewer; already-satisfied work may use the no-change route
+below. Workers do not recruit other workers.
+
+An additional substantive assignment requires one of these reasons:
+
+- A specific rejected deliverable or failed required check.
+- An authorized scope change.
+- A confirmed inability of the assignee or host to proceed.
+- An independent scope challenge permitted in step 2.
+
+Before dispatch, record the reason and bounded objective in the existing
+checkpoint. Existing availability and recovery limits still apply. Clarification
+stays within the current assignment; do not use it to introduce new substantive
+work. Preserve completed phases and limit recovery to necessary corrections,
+affected checks and independent re-review. Routine controller verification,
+bookkeeping and closeout do not justify another assignment.
+
+Retain and authenticate each completed agent's terminal handoff before closing
+it through the host's supported operation to free capacity. Do not close running
+agents. Give each role this selected procedure, its bounded task, relevant map,
+standards and source locations, and the actual evidence it needs. Reading all RI
+documentation is not required.
+
+Before builder dispatch, supply it with the original issue and required
 orientation sources, their selected identities/locations, confirmed requirements
 and unresolved questions. A controller summary alone is insufficient. Each role
 reads its directed orientation before acting; inaccessible required material is
 a reported gap, not permission to guess.
+
+### Publish the task branch and handoffs
 
 Before builder dispatch, the controller creates and publishes the dedicated
 non-main task branch on GitHub from the authenticated base. The builder returns
@@ -78,11 +100,13 @@ the capsule; the map assigns its capsule-only commit/push to the builder or
 controller. Publish the planning commit before implementor dispatch. Implementation
 uses the same branch; its assigned actor publishes the exact candidate before
 independent review. The controller publishes for roles without Git authority.
-Use clear commit messages describing the changes. Verify
-remote refs at each handoff. Task-branch publication is separate from approval
+Use clear commit messages describing the changes. Verify remote refs at each
+handoff. Task-branch publication is separate from approval
 or main integration; main changes remain behind acceptance. If a project control
 blocks this sequence, resolve that explicit conflict before dispatch rather than
 silently substitute a local-only workflow. No subagent pushes to main.
+
+### Complete the phases
 
 1. **Capsule builder:** use the supplied branch and [shared format](#capsule-format).
    Require affected stale docs/examples/maps/links to be corrected, or justify why
@@ -92,16 +116,18 @@ silently substitute a local-only workflow. No subagent pushes to main.
 2. **Controller:** check the returned plan against the original orientation, issue
    and relevant source, including scope, criteria, documentation and proof routes.
    Resolve scope/specification gaps and confirm the next role's actual command
-   environment. Rehearse only known fragile commands. Independent scope challenge
-   is conditional, not an automatic fourth assignment.
+   environment. Rehearse only known fragile commands. An independent scope
+   challenge is permitted only for a concrete unresolved scope finding or an
+   explicit project requirement. First check whether the controller's plan check
+   resolves the finding or satisfies that requirement. Follow the additional
+   assignment rule above; a scope challenge is not a routine fourth role.
 3. **Implementor:** make only authorized changes, including affected docs, and run
    relevant checks. Return source/branch identity, changes, results/skips and gaps.
    Commit/push only when the map grants that action. Keep useful work for corrections.
 4. **Controller:** inspect the full diff, scope, documentation and criterion evidence;
    capture/publish the exact candidate when assigned that responsibility and verify
-   the remote branch matches it. Supply the
-   reviewer with that source, the full diff, capsule, standards and actual test/log
-   evidence.
+   the remote branch matches it. Supply the reviewer with that source, the full
+   diff, capsule, standards and actual test/log evidence.
 5. **Independent reviewer:** remain read-only and review the full change, not just
    RI declarations or a summary; return concise evidence-backed
    dispositions for every criterion and applicable standard. Check docs too.
@@ -116,7 +142,9 @@ silently substitute a local-only workflow. No subagent pushes to main.
    Close only when all outcomes pass, then safely delete the verified merged branch.
    Verify actual issue closure and applicable local/remote branch cleanup before
    recording success. If either fails, retain and report partial closeout rather
-   than claiming completion. Reconcile every current reference to this task's state
+   than claiming completion.
+
+   Reconcile every current reference to this task's state
    in the map, active checkpoint, entrypoints and capsule indexes with the verified
    closure and cleanup. Search for the task ID and stale status wording; preserve
    clearly historical stops and records. Do not declare closeout complete while
@@ -124,10 +152,17 @@ silently substitute a local-only workflow. No subagent pushes to main.
    maps task-neutral where possible, pointing to the active checkpoint for status.
    Preserve unrelated work and unmerged recovery evidence.
 
-Plan tracked documentation corrections before final candidate review. After
-verified closeout, update authorized operational records with actual outcomes;
-these records do not change the reviewed candidate. A later tracked-document
-correction needs its own affected checks, review and authorized publication.
+### Keep completion records external
+
+Before final candidate review, correct tracked task documentation: label preparation
+snapshots historical and point current status to the live issue and external
+controller checkpoint. After review, record authenticated qualification,
+integration, issue closure and cleanup in those existing operational records.
+Do not create another candidate merely to append completion evidence to the
+tracked task. A genuine later tracked-document correction still needs affected
+checks, review and authorized publication; operational bookkeeping does not.
+
+### Planning-only and no-change outcomes
 
 RI is navigation/comparison support. Direct source, full diffs and ordinary logs
 suffice; RI gaps do not prove absence. No special runner, exporter, per-declaration
@@ -139,6 +174,8 @@ its authorized disposition for the unmerged planning branch. Do not describe tha
 branch as merged or invent a product change merely to clean it up.
 
 ## Wait, recover and resume
+
+### Wait for completion
 
 - **Native subagents:** use the supported event-based blocking wait. Result
   delivery to an active parent does not prove an idle parent will start a new turn.
@@ -161,6 +198,8 @@ branch as merged or invent a product change merely to clean it up.
   mark missing timestamps unknown. A human bump alone does not prove a terminal
   result was waiting or that notification failed. No new timing ledger is required.
 
+### Diagnose blockers and recover
+
 At a blocker, hold consequential work and do one bounded authorized read-only
 sweep to consolidate real failures and unknowns. Routine clarification, diagnosis
 and in-scope correction need no repeated human approval. STOP_REPLAN, replan,
@@ -180,6 +219,8 @@ change, or when project rules require them.
 Changed integration source needs affected checks/review. Lost delivery or a timeout
 requires checking actual completion/cleanup before repeating any operation.
 
+### Handle model capacity
+
 Provider model capacity is an availability failure, not a capsule defect or an
 agent-slot limit. Dispatch once. On confirmed capacity failure, first establish
 whether work started or remains active; preserve the assignment and partial work.
@@ -194,11 +235,15 @@ interrupted nonterminal assignment only after checking its state; a replacement
 keeps the bounded handoff and role independence. Idle-agent reuse cannot solve
 unavailable model capacity.
 
+### Checkpoint and resume
+
 The project map names the active checkpoint and standard closeout route. Update
 that checkpoint after each authenticated transition, retaining phase, selected
 instructions, source, active job, results, pending obligations and next action.
-Record unknown or partial outcomes honestly; preserve this state across compaction. Authenticate it on
-resume; do not duplicate dispatch. If fresh agents cannot be created or freed,
+Record unknown or partial outcomes honestly and preserve this state across
+compaction. Authenticate it on resume; do not duplicate dispatch.
+
+If fresh agents cannot be created or freed,
 last-resort idle-context reuse is permitted with a complete handoff. The candidate
 implementor/author must never be its reviewer. If independence is unavailable,
 report that blocker. No allowance reset or self-approval is permitted.
