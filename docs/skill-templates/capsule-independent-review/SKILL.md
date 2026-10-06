@@ -5,7 +5,9 @@ description: Conduct or prepare a fresh, read-only review of one exact capsule c
 
 # Capsule independent review
 
-Follow the [current controller workflow](references/project-procedure.md).
+Resolve and read the selected **independent reviewer** document through the
+[role locator](references/project-procedure.md). Do not read the full controller
+procedure as reviewer orientation.
 Review the exact candidate or no-change source, bounded task, full diff, relevant
 tests/results and applicable repository standards. Use direct source and ordinary
 logs; RI navigation/comparison is supporting evidence, not a substitute for review.

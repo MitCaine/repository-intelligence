@@ -1,18 +1,25 @@
-# Selected project procedure
+# Selected role instructions
 
-Before using this skill, read `docs/local_project_map.md` relative to the consumer
-repository root, not this installed skill folder. Follow the map's exact selected
-instruction location and verify its recorded source/byte identity. Read the entire
-directed orientation before decisions or dispatch. Missing map or inaccessible
-selected instructions blocks dependent work; do not infer a different version.
+Resolve instructions through the controller’s authenticated handoff and the
+consumer project-root `docs/local_project_map.md`, not this installed folder.
+The controller supplies the selected RI revision, role-document location/identity,
+applicable project requirements and original task sources. Verify those resources
+are readable; never silently substitute newest RI main or a different role.
 
-This file is a relocatable locator, not a copy of the shared workflow. Installation
-must verify that the actual project map and selected procedure are readable from
-the consuming workspace. Supply the same selected instructions to delegated roles.
+Controllers read the selected Start an issue procedure. Builders, implementors
+and reviewers read their own selected role document and its directed shared rules,
+not the full controller procedure or unrelated project orientation. Optional
+helpers operate within the caller’s assigned role; they grant no new authority.
+If an older selected version lacks a role document, report that adoption gap to
+the controller rather than silently changing instructions during the attempt.
+
+This relocatable locator contains no copy of workflow rules. At installation,
+verify actual role resources through the consumer’s supported route. Copying a
+skill folder alone does not supply the selected instructions.
 
 ## Waiting and recovery
 
-Read the selected procedure's waiting/recovery instructions through the map.
-Use native completion or a supported bounded wait; queue is for external gates
-without native delivery. Routine diagnosis is included in task authority. Preserve
-terminal stops and independence; do not reset allowances or resume a stopped job.
+For a controller or assigned external watcher, resolve only the selected
+procedure’s waiting/recovery sections through the handoff/map. Other workers use
+their role’s bounded diagnosis and terminal handoff instructions. Read the
+relevant section, not the entire controller orientation.

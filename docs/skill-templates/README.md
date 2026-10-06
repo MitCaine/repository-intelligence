@@ -1,7 +1,8 @@
 # Optional capsule workflow skill templates
 
-Use the [controller workflow](../capsule-controller-workflow.md) by default.
-These current role templates are optional resources, not five mandatory installations
+Controllers use [Start an issue](../start-an-issue.md); workers use their
+[selected role document](../roles/README.md).
+These current skill templates are optional resources, not five mandatory installations
 or a reason to add packet/export/protected-launcher gates. Adopt only instructions
 needed by the selected consumer route; an ordinary role handoff can carry the
 lightweight instructions directly.
@@ -32,12 +33,13 @@ roles separate; no subagent publishes directly to main.
 
 For a project-scoped Codex installation, copy the chosen **whole skill folders**
 to that project's `.agents/skills/` (or the skill location supported by its
-actual Codex installation). Every folder includes `references/project-procedure.md`, which resolves shared
-instructions through project-root `docs/local_project_map.md`. The queue folder
+actual Codex installation). Every folder includes `references/project-procedure.md`, which resolves the
+caller’s selected role instructions through its handoff and the project map. The queue folder
 also includes its required helper script. For personal local Codex use, install under the local Codex skills
 directory instead. After copying, check every relative resource link in the installed folder, then
-from the consuming workspace open the map and its exact selected procedure and
-verify their recorded identities. Template-tree validation alone does not prove
+from the consuming workspace resolve the selected role resource through the
+existing handoff/map and verify its recorded identity. Workers read only their
+role/task inputs and relevant shared rules; the controller reads the full procedure. Template-tree validation alone does not prove
 installed-layout validity. Validate each copied folder with the available skill
 validator and try one realistic, non-destructive invocation before relying on
 it. Do not replace an existing project skill without comparing its instructions.
