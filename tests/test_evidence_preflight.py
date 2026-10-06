@@ -463,6 +463,17 @@ class EvidencePreflightTests(unittest.TestCase):
         with self.assertRaisesRegex(gate.Blocked, 'head differs'):
             self.check()
 
+    def test_successful_command_that_changes_source_is_ineligible(self):
+        self.assertEqual(self.check(), ['task.py'])
+        candidate = self.packet['checks'][0]['candidate']
+        result = subprocess.run([os.sys.executable, '-c',
+            'from pathlib import Path; Path("task.py").write_text("changed during check\\n")'],
+            cwd=self.root, capture_output=True)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(self.git('rev-parse', 'HEAD').strip(), candidate)
+        with self.assertRaisesRegex(gate.Blocked, 'dirty checkout'):
+            self.check()
+
     def test_duplicate_json_and_unsupported_schema(self):
         path = self.records / 'bad.json'
         path.write_text('{"schema_version":1,"schema_version":1}')
@@ -549,8 +560,13 @@ class EvidencePreflightTests(unittest.TestCase):
             gate.validate_reuse({**execution, 'candidate': current}, authorization, policy, self.root, self.records, current)
         with self.assertRaises(gate.Blocked):
             gate.validate_reuse(execution, authorization, {**policy, 'adopted': False}, self.root, self.records, current)
-        with self.assertRaises(gate.Blocked):
-            gate.validate_reuse(execution, {**authorization, 'inputs': {**authorization['inputs'], 'environment': 'b' * 64}}, policy, self.root, self.records, current)
+        for field in ('code', 'dependencies', 'environment', 'configuration',
+                      'selector', 'selecting_gate', 'toolchain', 'isolation', 'timeout_policy'):
+            with self.subTest(changed_input=field), self.assertRaises(gate.Blocked):
+                gate.validate_reuse(execution, {**authorization, 'inputs': {
+                    **authorization['inputs'], field: 'b' * 64}},
+                    policy, self.root, self.records, current)
+        self.assertEqual(execution, before)
 
     def test_reuse_rejects_malformed_claim_allowlists(self):
         execution = copy.deepcopy(self.packet['checks'][0])
