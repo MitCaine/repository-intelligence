@@ -266,8 +266,9 @@ that run's environment, not every future native release.
 
 ## Automated and reusable verification
 
-[Verify](../.github/workflows/verify.yml) runs on pull requests, main pushes,
-manual dispatch, and reusable-workflow calls, on macOS 15 with Python 3.12/3.13/3.14.
+[Verify](../.github/workflows/verify.yml) runs only on manual dispatch and
+reusable-workflow calls, on macOS 15 with Python 3.12/3.13/3.14. Pushes and pull
+requests do not start hosted checks; ordinary verification uses the local commands.
 It provisions functional native tools, runs `prepare`, checks local documentation
 links and skill manifests with `scripts/check_docs_and_skills.py`, then runs
 `bundle --require-native`, which includes full `verify` and an offline install
