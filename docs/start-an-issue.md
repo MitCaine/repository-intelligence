@@ -66,6 +66,27 @@ contexts by default. The normal path uses one capsule builder, one implementor
 and one independent reviewer; already-satisfied work may use the no-change route
 below. Workers do not recruit other workers.
 
+### Default models and efforts
+
+| Role | Model | Reasoning effort | Selector label |
+| --- | --- | --- | --- |
+| Controller | `gpt-6.1-sol` | `low` | Sol Light |
+| Capsule builder | `gpt-6.1-sol` | `low` | Sol Light |
+| Implementor | `gpt-5.6-luna` | `max` | Luna Max |
+| Independent reviewer | `gpt-6.1-sol` | `low` | Sol Light |
+
+Use these defaults unless the owner or selected project map authorizes a
+task-specific override. Record the exact model and effort before dispatch;
+explicitly configure each worker rather than inheriting the controller's pair.
+Verify the host's effective settings and retain them with the handoff. A role
+label alone does not establish configuration. For a controller the host cannot
+configure, report a mismatch before dispatching dependent work. Unsupported or
+unavailable pairs follow the model-capacity recovery rule; do not silently
+substitute a model or effort. These settings do not reduce any role's checks or
+responsibilities.
+
+### Additional assignments and orientation
+
 An additional substantive assignment requires one of these reasons:
 
 - A specific rejected deliverable or failed required check.
