@@ -129,6 +129,12 @@ silently substitute a local-only workflow. No subagent pushes to main.
 
 ### Complete the phases
 
+Before each dependent phase, confirm readiness through its actual selected wrapper,
+configuration and environment: guarded authentication, temporary paths, required
+recovery objects, and intended CI trigger/check identity where applicable. Use
+one small capability check, not a setup investigation or product-suite rehearsal;
+repeat only when relevant inputs change or a capability fails.
+
 1. **Capsule builder:** use the supplied branch and [shared format](#capsule-format).
    Require affected stale docs/examples/maps/links to be corrected, or justify why
    documentation is unaffected. Name genuine post-installation checks and their
@@ -136,8 +142,7 @@ silently substitute a local-only workflow. No subagent pushes to main.
    the map's explicit capsule-only grant.
 2. **Controller:** check the returned plan against the original orientation, issue
    and relevant source, including scope, criteria, documentation and proof routes.
-   Resolve scope/specification gaps and confirm the next role's actual command
-   environment. Rehearse only known fragile commands. An independent scope
+   Resolve scope/specification gaps. An independent scope
    challenge is permitted only for a concrete unresolved scope finding or an
    explicit project requirement. First check whether the controller's plan check
    resolves the finding or satisfies that requirement. Follow the additional
@@ -145,10 +150,15 @@ silently substitute a local-only workflow. No subagent pushes to main.
 3. **Implementor:** make only authorized changes, including affected docs, and run
    relevant checks. Return source/branch identity, changes, results/skips and gaps.
    Commit/push only when the map grants that action. Keep useful work for corrections.
+   For new restore paths, compare the complete existing validation path before
+   review, including terminal states, ownership, allocation limits and ordinary
+   application callers; test the applicable requirements within implementation.
 4. **Controller:** inspect the full diff, scope, documentation and criterion evidence;
    capture/publish the exact candidate when assigned that responsibility and verify
    the remote branch matches it. Supply the reviewer with that source, the full
    diff, capsule, standards and actual test/log evidence.
+   Checks must use a stable, identifiable source snapshot. Verify the tested source
+   and actual workflow/check identity; a matching check name alone is insufficient.
 5. **Independent reviewer:** remain read-only and review the full change, not just
    RI declarations or a summary; return concise evidence-backed
    dispositions for every criterion and applicable standard. Check docs too.
@@ -210,9 +220,13 @@ branch as merged or invent a product change merely to clean it up.
   and evidence after terminal handoff. Receive unsolicited progress without
   starting a monitoring loop. Use task-appropriate deadlines; supported wait
   resumptions at host limits do not authorize extra checks.
+- **After a status reply:** resume the recorded next authorized action, or return
+  to blocking wait for active work. Suspend only for an explicit pause, missing
+  authority or a confirmed blocker; answering a question does not end the task.
 - **Intervene only** for a delivered actionable blocker/clarification, concrete
   safety concern, failed delivery or owner status request, then return to waiting.
-  Independent preparation must be one named, already-authorized activity that
+  Wait by default. Independent preparation must be one genuinely useful, named,
+  already-authorized activity identified beforehand that
   does not inspect or depend on unfinished work; stop when its output is complete.
 - **Diagnose delays from events:** distinguish dispatch, terminal completion,
   delivery and controller continuation. Use existing records where available;
@@ -236,7 +250,8 @@ Corrections start from authenticated recovery source, not necessarily the origin
 planning HEAD. Reuse evidence only under the project's accepted equivalence policy;
 retain its original source/command/environment identities, never label it newly
 executed. Rerun affected checks when equivalence is unknown or relevant inputs
-change, or when project rules require them.
+change, or when project rules require them. Equivalence covers relevant transitive
+inputs and environment changes, not merely an unchanged test file or helper.
 Changed integration source needs affected checks/review. Lost delivery or a timeout
 requires checking actual completion/cleanup before repeating any operation.
 
