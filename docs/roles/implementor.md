@@ -5,6 +5,8 @@ original required specifications/decisions, relevant source and applicable stand
 Use the supplied commands, environment, evidence locations and authority limits.
 The controller has already selected the workflow and project route; do not repeat
 its issue-start orientation or dispatch other roles.
+For a Work-to-Codex handoff, return your terminal result to the assigned Codex
+dispatcher for relay to the Work controller; routing grants no additional authority.
 
 Implement only authorized paths and outcomes, including affected documentation.
 Inspect actual callers and existing validation before adding a parallel contract.

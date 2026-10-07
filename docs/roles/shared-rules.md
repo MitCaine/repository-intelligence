@@ -6,7 +6,9 @@ assigned source, phase, selected instruction resources and authority; missing or
 conflicting required inputs go to the controller, never guessed replacements.
 
 Stay within the assignment. Reading an instruction grants no additional authority.
-Only the controller recruits roles or advances workflow stages. Git, issue,
+Only the controller recruits roles or advances workflow stages. Its explicitly
+authorized Codex dispatcher may spawn the one assigned implementor and relay its
+handoff; it has no broader recruitment or controller authority. Git, issue,
 checkpoint and external actions require an explicit assignment grant. Preserve
 unrelated work, historical evidence and terminal stops. Do not change instruction,
 skill or runtime selection during an attempt.

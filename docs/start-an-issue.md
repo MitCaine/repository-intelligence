@@ -66,7 +66,8 @@ Controller -> capsule builder -> controller checks plan
 
 ### Assign roles and supply inputs
 
-Only the controller dispatches assignments. Run them one at a time, using fresh
+The controller owns assignment dispatch, including the bounded Codex dispatch
+delegation below. Run assignments one at a time, using fresh
 contexts by default. The normal path uses one capsule builder, one implementor
 and one independent reviewer; already-satisfied work may use the no-change route
 below. Workers do not recruit other workers.
@@ -75,10 +76,10 @@ below. Workers do not recruit other workers.
 
 | Role | Execution environment | Model | Reasoning effort | Selector label |
 | --- | --- | --- | --- | --- |
-| Controller | Work | `gpt-6.1-sol` | `low` | Sol Light |
-| Capsule builder | Work | `gpt-6.1-sol` | `low` | Sol Light |
-| Implementor | Codex | `gpt-5.6-luna` | `max` | Luna Max |
-| Independent reviewer | Work | `gpt-6.1-sol` | `low` | Sol Light |
+| Controller | Work | `gpt-6.1-sol` | `low` | Sol 6.1 Light |
+| Capsule builder | Work | `gpt-6.1-sol` | `low` | Sol 6.1 Light |
+| Implementor | Codex | `gpt-6-luna` | `max` | Luna 6 Max |
+| Independent reviewer | Work | `gpt-6.1-sol` | `low` | Sol 6.1 Light |
 
 Environment, model and effort are separate settings. Verify the actual supported
 dispatch route and effective environment; model selection or access to local
@@ -89,6 +90,7 @@ these defaults do not require a new launcher or service.
 Use these defaults unless the owner or selected project map authorizes a
 task-specific override. Record the exact model and effort before dispatch;
 explicitly configure each worker rather than inheriting the controller's pair.
+Match the full model ID: Sol 5.6/6 and Luna 5.6 do not satisfy these defaults.
 Verify the host's effective settings and retain them with the handoff. A role
 label alone does not establish configuration. For a controller the host cannot
 configure, report a mismatch before dispatching dependent work. Unsupported or
@@ -101,6 +103,42 @@ must perform the substantive inspection unless delegation is authorized. A
 delegated review plus controller sign-off is not equivalent. Identify the actual
 reviewer, environment, model/effort, controller's own inspection and evidence
 limits; distinguish requested settings from verified settings.
+
+### Work-to-Codex implementation handoff
+
+Native subagents stay within their host; changing a model does not switch Work
+and Codex. For mixed routing, use an existing Codex chat as a bounded implementation
+dispatcher:
+
+```text
+Work controller -> Work capsule builder -> controller checks/publishes plan
+                -> Codex chat -> one Codex implementor -> Codex terminal handoff
+                -> Work controller verifies -> Work reviewer -> controller closeout
+```
+
+The owner creates the Codex chat, or explicitly authorizes its creation, and
+authorizes messaging in both directions. Before implementation, verify both chats'
+actual messaging and result-recovery capabilities with a small harmless handoff.
+Reuse the established route until it changes or fails; sent-message acceptance
+does not prove consumption or idle wake-up. Apply the existing waiting/recovery
+rules, without polling loops or another transport framework.
+
+The Work controller supplies the exact chat/task/attempt, published branch/source,
+accepted capsule, complete selected implementor instructions and original inputs,
+authorized paths/checks, evidence locations and Git ownership. The Codex chat may
+spawn the single authorized implementor, verify its effective model/effort, wait
+for its terminal result and return source identity, full changes, actual check
+results/logs and unresolved findings. It does not select scope, recruit planning
+or review roles, approve, integrate or close the issue. Corrections require the
+controller's bounded direction; the dispatcher is not a second controller or an
+extra substantive role.
+
+Only the assigned actor edits or publishes the candidate; prevent simultaneous
+edits in the same checkout. The Work controller authenticates the returned source
+and evidence before advancing to independent Work review. A missing reply recovers
+the existing assignment rather than spawning another. Running this dispatcher in
+Codex does not satisfy the Work controller requirement; an unavailable route needs
+an explicit routing decision, not silent substitution.
 
 ### Additional assignments and orientation
 
