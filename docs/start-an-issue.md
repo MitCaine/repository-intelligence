@@ -8,7 +8,7 @@ not replace unread requirements. Read in bounded sections and recover truncated
 portions before reliance. Select the checkpoint's active object, not its history.
 
 This is the controller’s complete daily entrypoint. Workers use their own
-[role documents](roles/README.md), not this whole procedure. Read
+[worker instructions](worker-instructions.md#role-index), not this whole procedure. Read
 relevant source/standards as needed; RI architecture, setup and adoption history
 are conditional. The project README/AGENTS points to the exact map above. If it
 is missing, report and resolve that adoption input rather than substitute another
@@ -123,22 +123,15 @@ Reuse the established route until it changes or fails; sent-message acceptance
 does not prove consumption or idle wake-up. Apply the existing waiting/recovery
 rules, without polling loops or another transport framework.
 
-The Work controller supplies the exact chat/task/attempt, published branch/source,
-accepted capsule, complete selected implementor instructions and original inputs,
-authorized paths/checks, evidence locations and Git ownership. The Codex chat may
-spawn the single authorized implementor, verify its effective model/effort, wait
-for its terminal result and return source identity, full changes, actual check
-results/logs and unresolved findings. It does not select scope, recruit planning
-or review roles, approve, integrate or close the issue. Corrections require the
-controller's bounded direction; the dispatcher is not a second controller or an
-extra substantive role.
-
-Only the assigned actor edits or publishes the candidate; prevent simultaneous
-edits in the same checkout. The Work controller authenticates the returned source
-and evidence before advancing to independent Work review. A missing reply recovers
-the existing assignment rather than spawning another. Running this dispatcher in
-Codex does not satisfy the Work controller requirement; an unavailable route needs
-an explicit routing decision, not silent substitution.
+Use one reusable Codex dispatcher chat per project with the selected
+[dispatcher section](worker-instructions.md#codex-dispatcher). For each issue, give it the
+implementation handoff location: exact task/attempt, published capsule/branch/SHA,
+selected role instructions and original requirement pointers, permissions/checks,
+evidence locations, Git ownership and return destination. The dispatcher launches
+a fresh implementor and relays its terminal result; it does not repeat controller
+orientation, replan, review or integrate. Only the assigned actor edits/publishes;
+prevent simultaneous edits. Work authenticates the result before independent
+review. Unavailable routing requires an explicit decision, not substitution.
 
 ### Additional assignments and orientation
 
@@ -158,13 +151,20 @@ bookkeeping and closeout do not justify another assignment.
 
 Retain and authenticate each completed agent's terminal handoff before closing
 it through the host's supported operation to free capacity. Do not close running
-agents. Give each worker its selected [role document](roles/README.md), bounded
+agents. Give each worker its selected [worker instructions](worker-instructions.md#role-index), bounded
 task, original required specifications/decisions, applicable standards, source
 locations, commands, authority limits and actual evidence. Supply the relevant
 project-map requirements and their original locations; workers do not repeat
 controller intake or workflow selection. Do not supply the whole controller
 procedure as mandatory worker reading. Authenticate role resources from the same
 adopted RI revision; record their locations in the existing handoff.
+
+For example: “Your role is Implementor. At the selected RI revision, read
+`docs/worker-instructions.md` sections Shared worker rules and Implementor in full.
+Then read the published capsule, original requirements and applicable project
+instructions linked in this handoff.” Name stable headings, not line numbers;
+use a section-bounded read where supported, since an anchor alone does not limit
+loaded context.
 
 Before builder dispatch, supply it with the original issue and required
 orientation sources, their selected identities/locations, confirmed requirements

@@ -13,7 +13,7 @@ RI does not require an execution framework or all five skills to be installed.
    the project README/AGENTS entrypoint. Record shared instruction
    commit/byte identity, runtime/source and contract, role permissions, standards,
    required tests, permitted Git/issue actions and completion route.
-3. Supply each worker its [selected role document](roles/README.md), complete task
+3. Supply each worker its [selected worker instructions](worker-instructions.md#role-index), complete task
    inputs and applicable project requirements through the supported local handoff.
    Bind role-resource locations/identities to the selected RI revision; workers
    do not repeat controller orientation.

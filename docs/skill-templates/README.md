@@ -1,7 +1,7 @@
 # Optional capsule workflow skill templates
 
 Controllers use [Start an issue](../start-an-issue.md); workers use their
-[selected role document](../roles/README.md).
+[selected worker instructions](../worker-instructions.md#role-index).
 These current skill templates are optional resources, not five mandatory installations
 or a reason to add packet/export/protected-launcher gates. Adopt only instructions
 needed by the selected consumer route; an ordinary role handoff can carry the
