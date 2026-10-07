@@ -69,7 +69,7 @@ Use `docs/local_project_map.md` in every consumer project. Keep it short:
 
 - Selected RI execution instructions: source commit/bytes and usable location.
 - Compatible RI runtime/source and its invocation, plus any overrides to the
-  [shared role/model defaults](start-an-issue.md#default-models-and-efforts).
+  [shared routing/model defaults](start-an-issue.md#execution-routing-models-and-efforts).
 - Shared capsule instructions: the capsule-format section of the selected RI
   daily procedure, plus the project's task-file storage location and necessary
   additional fields. Do not maintain a competing local format.

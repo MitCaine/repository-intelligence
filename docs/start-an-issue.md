@@ -16,6 +16,10 @@ map or guess.
 
 ## Intake
 
+Start each new issue with a fresh controller context. A replacement during an
+active issue recovers its authenticated checkpoint and existing assignment;
+replacement is not a new attempt or permission to duplicate dispatch.
+
 - Check the map's selected instruction identity, compatible runtime, role/model
   settings, commands, standards and permitted Git/issue actions. Use the adopted
   version throughout the attempt; do not silently select new instructions,
@@ -67,14 +71,20 @@ contexts by default. The normal path uses one capsule builder, one implementor
 and one independent reviewer; already-satisfied work may use the no-change route
 below. Workers do not recruit other workers.
 
-### Default models and efforts
+### Execution routing, models and efforts
 
-| Role | Model | Reasoning effort | Selector label |
-| --- | --- | --- | --- |
-| Controller | `gpt-6.1-sol` | `low` | Sol Light |
-| Capsule builder | `gpt-6.1-sol` | `low` | Sol Light |
-| Implementor | `gpt-5.6-luna` | `max` | Luna Max |
-| Independent reviewer | `gpt-6.1-sol` | `low` | Sol Light |
+| Role | Execution environment | Model | Reasoning effort | Selector label |
+| --- | --- | --- | --- | --- |
+| Controller | Work | `gpt-6.1-sol` | `low` | Sol Light |
+| Capsule builder | Work | `gpt-6.1-sol` | `low` | Sol Light |
+| Implementor | Codex | `gpt-5.6-luna` | `max` | Luna Max |
+| Independent reviewer | Work | `gpt-6.1-sol` | `low` | Sol Light |
+
+Environment, model and effort are separate settings. Verify the actual supported
+dispatch route and effective environment; model selection or access to local
+files/GitHub does not establish routing. Report an unavailable route instead of
+silently substituting environments. The selected map names the supported route;
+these defaults do not require a new launcher or service.
 
 Use these defaults unless the owner or selected project map authorizes a
 task-specific override. Record the exact model and effort before dispatch;
@@ -85,6 +95,12 @@ configure, report a mismatch before dispatching dependent work. Unsupported or
 unavailable pairs follow the model-capacity recovery rule; do not silently
 substitute a model or effort. These settings do not reduce any role's checks or
 responsibilities.
+
+When an owner asks a particular model to personally audit or review, that model
+must perform the substantive inspection unless delegation is authorized. A
+delegated review plus controller sign-off is not equivalent. Identify the actual
+reviewer, environment, model/effort, controller's own inspection and evidence
+limits; distinguish requested settings from verified settings.
 
 ### Additional assignments and orientation
 
@@ -250,6 +266,14 @@ correction and reuse valid work. Report confirmed blockers promptly; never bypas
 required checks. STOP_REPLAN is not opening progress. Preserve terminal stops;
 a diagnostic-only follow-up may explain one but cannot resume it. Request new
 authority only for uncovered scope, permission, disclosure or reserved actions.
+
+After roughly three rejection/correction rounds in the same stage, use a fresh
+diagnostic reviewer under the additional-assignment rule. Supply original
+requirements, relevant source, capsule and retained rejection history. Ask it to
+identify missing decisions, a misstated capsule, missed implementation requirements
+or incorrect workflow execution, and return one bounded correction. Preserve valid
+completed phases; this conditional recovery is not another normal review or an
+automatic increase in effort. Record the trigger and scope in the checkpoint.
 
 Corrections start from authenticated recovery source, not necessarily the original
 planning HEAD. Reuse evidence only under the project's accepted equivalence policy;

@@ -19,6 +19,8 @@ Report actual failures and unknowns; terminal stops cannot be cleared by later s
 
 Return one terminal handoff with source/branch identity, completed work, actual
 checks and evidence locations, failures/skips, findings and remaining obligations.
+Include verified execution environment, model and effort; report unavailable or
+mismatched routing to the controller rather than substituting it.
 Keep progress distinct from terminal outcomes. Existing evidence retains its
 original execution identity; reuse requires the project’s accepted equivalence
 policy and relevant source, transitive-input and environment comparison. Missing
