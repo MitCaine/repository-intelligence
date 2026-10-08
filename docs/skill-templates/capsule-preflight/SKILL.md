@@ -7,7 +7,8 @@ description: Authenticate an active task capsule and its exact repository state 
 
 Resolve the caller’s selected role instructions through the
 [role locator](references/project-procedure.md). Controllers use the project map;
-workers use supplied role/task inputs and relevant original project requirements.
+workers use only inputs permitted by their selected role
+reading boundaries; preflight grants no additional issue or source-reading scope.
 Authenticate objective, current phase,
 base/branch/source, permitted scope, runtime compatibility and required commands.
 Initial dispatch starts at planning; correction dispatch starts at the authenticated

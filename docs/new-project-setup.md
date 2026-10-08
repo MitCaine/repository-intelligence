@@ -14,7 +14,8 @@ RI does not require an execution framework or all five skills to be installed.
    commit/byte identity, runtime/source and contract, role permissions, standards,
    required tests, permitted Git/issue actions and completion route.
 3. Supply each worker its [selected worker instructions](worker-instructions.md#role-index), complete task
-   inputs and applicable project requirements through the supported local handoff.
+   inputs and applicable project requirements under the [role-specific reading boundaries](worker-instructions.md#shared-worker-rules)
+   through the supported local handoff.
    Bind role-resource locations/identities to the selected RI revision; workers
    do not repeat controller orientation.
    Install only useful [skills](skill-templates/README.md), comparing complete folders
