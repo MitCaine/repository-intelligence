@@ -2,10 +2,14 @@
 
 Controllers use [Start an issue](../start-an-issue.md); workers use their
 [selected worker instructions](../worker-instructions.md#role-index).
-These current skill templates are optional resources, not five mandatory installations
+These current skill templates are optional resources, not mandatory installations
 or a reason to add packet/export/protected-launcher gates. Adopt only instructions
 needed by the selected consumer route; an ordinary role handoff can carry the
 lightweight instructions directly.
+
+Kickoff fields and queue/configuration rules have one owner in
+[new-project setup](../new-project-setup.md#kickoff-inputs-and-selected-configuration).
+The kickoff skills are locators, not copies of the controller/dispatcher workflow.
 
 These templates help a consumer project implement the
 [controller workflow](../capsule-controller-workflow.md). They are examples for
@@ -25,6 +29,8 @@ roles separate; no subagent publishes directly to main.
 
 | Template | Role | Copy when |
 | --- | --- | --- |
+| [ri-work-kickoff](ri-work-kickoff/SKILL.md) | Owner-selected Work controller | Explicit owner kickoff for an issue or bounded queue through adopted project instructions. |
+| [ri-codex-dispatcher-kickoff](ri-codex-dispatcher-kickoff/SKILL.md) | Owner-designated Codex dispatcher | Bounded orientation and waiting for a controller implementation handoff. |
 | [capsule-preflight](capsule-preflight/SKILL.md) | Controller, planner, or implementor | The project has an active capsule workflow with exact base/scope checks. |
 | [capsule-scope-review](capsule-scope-review/SKILL.md) | Fresh read-only scope challenger | The impact inventory needs independent challenge before implementation authorization. |
 | [ri-evidence-handoff](ri-evidence-handoff/SKILL.md) | Controller, implementor, or reviewer | RI locations or comparisons will enter a handoff. |
@@ -55,8 +61,8 @@ selects the intended skill for a representative request.
 ChatGPT Work has a separate skill lifecycle; copying files into a Mac checkout
 does not make them available in a Work chat. Give the conditional scope challenger, controller, planner,
 implementor, and reviewer their applicable instructions through the supported
-workspace route, then verify availability. The native subagents return to the
-same parent controller. Use the queue template for a long external gate that
+workspace route, then verify availability. Native subagents return to their parent; mixed Work/Codex routing uses the
+[selected dispatcher handoff](../start-an-issue.md#work-to-codex-implementation-handoff). Use the queue template for a long external gate that
 lacks native completion and has a verified destination; it is unnecessary for
 these subagents.
 
@@ -67,7 +73,7 @@ Copy its supporting resources with the skill and connect it to the consumer's
 trusted records before treating it as a blocking gate. The scope-review skill
 handles purpose and missing dependencies that deterministic checks cannot infer.
 
-Keep the templates narrow. A project need not install all five, and no skill
+Keep the templates narrow. A project need not install every template, and no skill
 creates capsule authority, review independence, or a successful qualification
 merely by being present.
 
@@ -81,3 +87,18 @@ extra/nested fields, duplicate keys and ambiguous scalars are rejected; double
 quoted strings use JSON-compatible escapes. This subset is not a general YAML
 parser or validation of arbitrary installed skills. Linked helpers must exist.
 Installation trials still check actual copied resources and skill behavior.
+
+## Kickoff availability and adoption
+
+Use the host's supported installation/skill selection interface and verify each
+name is discoverable before claiming availability. See the
+[official skill-loading guidance](https://learn.chatgpt.com/docs/build-skills).
+Codex folder installation and copied-layout checks do not prove Work registration
+or live invocation. Work installation needs its own supported import/registration;
+if no such interface is available, report that remaining step and use direct
+document-based kickoff. Do not build a new plugin or service merely to bridge it.
+Keep the installed source commit/path and declared local relocations in the existing
+maintenance record. After RI publication, consumers explicitly adopt the selected
+controller/worker/setup resources, update identities and configuration defaults,
+resolve the kickoff locators through their map, and check their supported host
+availability. Do not repin an active attempt or change runtime merely for kickoff.

@@ -148,6 +148,8 @@ chat serves one project; each accepted implementation assignment gets a fresh
 implementor by default. Exceptions require the controller-authorized fallback below.
 You relay work for the Work controller, not act as a second controller.
 Do not repeat issue-start orientation or independently select newer instructions.
+The optional [dispatcher kickoff](skill-templates/ri-codex-dispatcher-kickoff/SKILL.md)
+locates this selected section; it grants no implementation assignment.
 
 ### Read and dispatch
 
@@ -173,7 +175,8 @@ Use a fresh implementor unless the controller explicitly authorizes the document
 Reauthenticate the complete handoff and ensure the reused context has no active
 assignment; the dispatcher cannot select this exception. Spawn only the
 controller's single authorized implementor with its complete selected role/task inputs. Configure and verify the handoff's actual model and
-effort: default `gpt-6-luna` / `max`, not an inherited or older pair. Keep one
+effort from the controller's resolved project configuration, not an inherited or
+independently chosen pair. Keep one
 assignment active and prevent simultaneous edits in the same checkout. Only the
 explicitly assigned actor may commit/push; no main integration is granted here.
 

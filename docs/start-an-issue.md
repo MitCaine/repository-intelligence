@@ -16,7 +16,8 @@ map or guess.
 
 ## Intake
 
-Start each new issue with a fresh controller context. A replacement during an
+Start each new issue with a fresh controller context. For an owner-supplied queue,
+apply the [queue rules](new-project-setup.md#issue-queues). A replacement during an
 active issue recovers its authenticated checkpoint and existing assignment;
 replacement is not a new attempt or permission to duplicate dispatch.
 
@@ -80,17 +81,13 @@ when direct messaging is unavailable.
 
 ### Execution routing, models and efforts
 
-| Role | Execution environment | Model | Reasoning effort | Selector label |
-| --- | --- | --- | --- | --- |
-| Controller | Work | `gpt-6.1-sol` | `low` | Sol 6.1 Light |
-| Capsule builder | Work | `gpt-6.1-sol` | `low` | Sol 6.1 Light |
-| Implementor | Codex | `gpt-6-luna` | `max` | Luna 6 Max |
-| Independent reviewer | Work | `gpt-6.1-sol` | `low` | Sol 6.1 Light |
-
-Environment, model and effort are separate settings. Use the map's supported
-route and these defaults unless the owner/map authorizes an override; no new
-launcher or service is required. Configure each worker explicitly before dispatch
-and match the full model ID: Sol 5.6/6 and Luna 5.6 do not satisfy these defaults.
+Environment, model and effort are separate settings. Resolve them from the
+selected project configuration and explicit owner inputs under the
+[kickoff-input contract](new-project-setup.md#kickoff-inputs-and-selected-configuration).
+Use the map's supported route; no new launcher or service is required. Configure
+each worker explicitly before dispatch, matching the full selected model ID and
+effort rather than inheriting the controller's pair. Kickoff does not switch an
+already-running chat's model.
 Record requested settings separately from host-confirmed settings. A selected
 host mode or authoritative configuration/session record confirming the setting
 is sufficient evidence; dispatch options establish only what was requested.

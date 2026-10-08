@@ -15,7 +15,8 @@ execution, and acceptance stay with the consumer project.
 
 In an established project, read [Start an issue](docs/start-an-issue.md), the
 project's `docs/local_project_map.md` and the live issue. That is the bounded execution
-entrypoint; the package introduction and setup/reference docs below are not
+entrypoint. Optional [kickoff skills and inputs](docs/new-project-setup.md#kickoff-inputs-and-selected-configuration)
+locate that selected workflow; direct document-based launch also works. The package introduction and setup/reference docs below are not
 required controller reading.
 
 ## Choose a route

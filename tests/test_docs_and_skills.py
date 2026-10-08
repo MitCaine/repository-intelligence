@@ -24,7 +24,10 @@ class DocsCheckerTests(unittest.TestCase):
             self.assertEqual([e for e in errors if e !=
                               'docs/skill-templates: unexpected or missing skill manifests'], [])
             skills = list(installed.glob('*/SKILL.md'))
-            self.assertEqual(len(skills), 5)
+            self.assertEqual({skill.parent.name for skill in skills}, {
+                'capsule-preflight', 'capsule-scope-review', 'capsule-independent-review',
+                'capsule-queue', 'ri-evidence-handoff', 'ri-work-kickoff',
+                'ri-codex-dispatcher-kickoff'})
             for skill in skills:
                 self.assertEqual(checker.scalar_manifest(skill.read_text())['name'],
                                  skill.parent.name)

@@ -2,7 +2,7 @@
 
 Use the [controller workflow](capsule-controller-workflow.md) for RI-assisted
 capsule work, or the [consumer guide](consumer-guide.md) for ordinary navigation.
-RI does not require an execution framework or all five skills to be installed.
+RI does not require an execution framework or every optional skill to be installed.
 
 ## Minimal setup
 
@@ -39,29 +39,95 @@ Use the existing record; no extra mandatory artifact is needed.
 Once setup is adopted, direct new issue controllers to [Start an issue](start-an-issue.md)
 and `docs/local_project_map.md`. Do not repeat adoption or installation for each task.
 
-## Reusable controller launch prompt
+## Kickoff inputs and selected configuration
 
-The owner supplies the issue, project and actual chat selections. Include the
-selection statement below only when true; adjust it for other selections. It is
-owner confirmation, not a hardcoded RI environment or runtime observation.
+Use the optional `ri-work-kickoff` or `ri-codex-dispatcher-kickoff` skill, or give
+the same inputs directly with the selected document locations. Skills locate the
+existing workflow; they add no stage and do not grant task authority.
+
+For Work, supply **Repository** and **Issue(s)**: one issue, an explicit list or
+an inclusive numerical range. Optional fields are **Capsule builder**,
+**Independent reviewer**, **Implementor** (model/effort), **Controller selection**
+(owner-confirmed existing selection), **Codex dispatcher**, task-specific
+**Authority/constraints** and **Stopping conditions**. Resolve concrete chat IDs
+through the supported route; a display title is not an authenticated destination.
+For a dispatcher, only **Repository** is initially required. **Work controller**
+may be supplied or established by an authorized handoff; until then orient and
+wait without inventing a destination. Its implementor selection comes solely
+from that handoff, not a second dispatcher-side configuration.
+
+The project's selected configuration owns defaults. Adopt this initial
+configuration in the project map or its existing configuration record; these are
+setup values, not runtime observations or a competing daily-procedure table:
+
+| Role | Environment | Initial model / effort | Selector label |
+| --- | --- | --- | --- |
+| Controller | Work | `gpt-6.1-sol / low` | Sol 6.1 Light |
+| Capsule builder | Work | `gpt-6.1-sol / low` | Sol 6.1 Light |
+| Independent reviewer | Work | `gpt-6.1-sol / low` | Sol 6.1 Light |
+| Implementor | Codex | `gpt-6-luna / max` | Luna 6 Max |
+
+Accept full IDs and explicit efforts, or these unambiguous labels. Explicit owner
+kickoff values select run-specific overrides within applicable permissions;
+omitted worker values use the selected project defaults. If a default is missing,
+resolve it rather than silently selecting upstream values. Kickoff cannot switch
+the controller or dispatcher's already-running model. Resolve configuration once
+per assignment and retain it in the existing checkpoint and handoffs.
+
+Explicit owner invocation of the Work/Codex kickoff skill confirms the named
+product selection for that chat, not its model or provider-effective telemetry.
+Automatic loading or incidental mention supplies no confirmation. Distinguish
+requested settings, owner-confirmed selection, host-confirmed settings and
+unavailable telemetry under the project's
+[accepted confirmation policy](start-an-issue.md#execution-routing-models-and-efforts).
+Do not invent omitted controller telemetry, waive required confirmation, infer a
+conflicting mode from tools/metadata or establish a model fallback. Each new chat
+or worker needs its own confirmation; another chat's confirmation is not proof.
+Do not ask the owner to reconfirm unchanged accepted selections.
+
+### Issue queues
+
+Process ranges in numerical order; preserve explicit list order. Skip only issues
+already closed or explicitly deferred under owner/project authority, without
+reopening or closing them. Difficulty, age and transient failure are not deferral.
+Complete the current issue before advancing; each new issue uses a fresh controller
+through a supported, authorized handoff. Queue scope does not authorize indefinite
+controller reuse. Keep recurring coordination limited to assignment, verified
+closeout and advancement in existing operational records; no scheduler is needed.
+If fresh-controller continuation is unavailable, report it. If an eligible issue
+cannot proceed within existing authority, report the blocker and pause rather
+than silently skip it or expand scope. At queue exhaustion or a stopping condition,
+report completed, closed-skipped, deferred-skipped and unresolved items accurately.
+Skill invocation does not grant Git, merge, settings or cross-chat disclosure
+permissions; apply actual owner grants and project policy.
+
+### Brief invocation examples
+
+Use these only in the products actually selected by the owner. Installed skills
+must be available through that host's supported selector; otherwise use direct
+instructions with the same input contract.
 
 ```text
-You are the controller for this issue. I created this chat in Work and selected
-Sol 6.1 Light (gpt-6.1-sol / low). Record this as owner-confirmed selection, not
-independently observed runtime telemetry. Do not infer a conflicting mode from
-tools or backing metadata, or ask me to reconfirm unchanged selections. Configure
-and confirm workers separately under the project policy.
-
-Project: <repository/location>
-Issue: <live issue URL>
-Read the complete selected controller procedure through the project's
-docs/local_project_map.md and its directed issue inputs before acting.
-Follow that selected procedure and the project's authority through closeout;
-report unresolved blockers and workflow deviations.
+@ri-work-kickoff
+Repository: MitCaine/poker-app
+Issue(s): #447–#458, skipping closed or explicitly deferred issues
+Capsule builder: gpt-6.1-sol / low
+Independent reviewer: gpt-6.1-sol / low
+Codex dispatcher: Wait for controller handoff
 ```
 
-Apply the project's [accepted confirmation policy](start-an-issue.md#execution-routing-models-and-efforts).
-This statement does not independently verify runtime settings or confirm workers.
+```text
+@ri-codex-dispatcher-kickoff
+Repository: MitCaine/poker-app
+Work controller: [designated chat, if already available]
+```
+
+The implementor uses the project's adopted initial selection through the
+controller's resolved handoff. Additional fields are needed only when defaults
+or existing authority do not cover the assignment. Direct document-based kickoff
+remains supported: supply the same fields and actual product/controller selection
+statement, then read the selected procedure through `docs/local_project_map.md`.
+A direct statement is owner confirmation, not runtime telemetry.
 
 ## Recovery and resume
 
@@ -93,8 +159,9 @@ instructions. Record the adopted source/bytes and verify the actual replacement.
 Use `docs/local_project_map.md` in every consumer project. Keep it short:
 
 - Selected RI execution instructions: source commit/bytes and usable location.
-- Compatible RI runtime/source and its invocation, plus any overrides to the
-  [shared routing/model defaults](start-an-issue.md#execution-routing-models-and-efforts).
+- Compatible RI runtime/source and its invocation, plus selected role environments,
+  models/efforts and permitted overrides from the
+  [initial configuration](#kickoff-inputs-and-selected-configuration).
 - Accepted confirmation for required environment/model/effort settings and the
   authorized disposition when confirmation is unavailable, as defined in the
   [shared reporting rule](start-an-issue.md#execution-routing-models-and-efforts).
