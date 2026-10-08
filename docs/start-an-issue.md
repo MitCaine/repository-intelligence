@@ -72,6 +72,12 @@ contexts by default. The normal path uses one capsule builder, one implementor
 and one independent reviewer; already-satisfied work may use the no-change route
 below. Workers do not recruit other workers.
 
+Each assignment names its immediate return destination by concrete identifier and
+the actor responsible for onward relay. Return the terminal handoff through that
+route; the relay actor confirms controller consumption. A local report or send
+acceptance does not establish delivery. Use the selected supported manual route
+when direct messaging is unavailable.
+
 ### Execution routing, models and efforts
 
 | Role | Execution environment | Model | Reasoning effort | Selector label |
@@ -88,9 +94,11 @@ and match the full model ID: Sol 5.6/6 and Luna 5.6 do not satisfy these default
 Record requested settings separately from host-confirmed settings. A selected
 host mode or authoritative configuration/session record confirming the setting
 is sufficient evidence; dispatch options establish only what was requested.
-Unavailable telemetry is not evidence of a mismatch. Do not infer product mode
-from tool names, backing metadata or an agent's self-description. If mandatory
-verification remains unsatisfied, use the project's authorized disposition.
+The project map names accepted confirmation for required settings and the
+response when confirmation is unavailable; it may select a shared policy.
+Unknown proves neither compliance nor mismatch. Proceed only under that
+authorization. Do not infer product mode from tool names, backing metadata or
+an agent's self-description.
 Distinguish confirmed configuration mismatch, unavailable routing, unknown
 settings and confirmed provider capacity failure; apply capacity recovery only
 to the last. Diagnose other failures narrowly and never silently substitute
@@ -186,13 +194,22 @@ silently substitute a local-only workflow. No subagent pushes to main.
 
 ### Complete the phases
 
-Before each dependent phase, confirm readiness through its actual selected wrapper,
-configuration and environment: guarded authentication, temporary paths, required
-recovery objects, and intended CI trigger/check identity where applicable. Verify the dependent subprocess's effective inputs, not merely its parent's.
-Initially use the smallest checks sufficient to establish the selected command's
-prerequisites; do not rehearse the product suite or investigate unrelated setup.
-Reuse readiness while relevant inputs remain unchanged; recheck affected
-prerequisites when those inputs change or a capability fails.
+The actor launching a command verifies its required inputs in the actual
+execution context before expensive or dependent work: command, working directory,
+paths and effective child configuration, not merely the parent's. The controller verifies dispatch prerequisites and may
+rely on authenticated launcher or worker checks. Examples include guarded
+authentication, temporary paths, recovery objects and CI trigger/check identity.
+Use the smallest sufficient checks, not a product-suite rehearsal or unrelated
+setup investigation. Reuse readiness only while relevant inputs remain unchanged;
+recheck affected prerequisites on changes or capability failure, and report
+unresolved prerequisites before proceeding. After setup fails, continue only
+checks whose own prerequisites are satisfied. Results qualify for acceptance only
+when source, dependencies and environment meet the selected requirements;
+otherwise label them diagnostic and report required checks still blocked.
+Where required gate order permits, run inexpensive source-validity checks before
+costly qualification. On failure, report before further expensive checks unless
+the assignment requires collecting independent results. This grants no frozen
+candidate edits or omission of required checks.
 
 1. **Capsule builder:** use the supplied branch and [shared format](#capsule-format).
    Require affected stale docs/examples/maps/links to be corrected, or justify why
@@ -203,15 +220,15 @@ prerequisites when those inputs change or a capability fails.
    and relevant source, including scope, criteria, documentation and proof routes.
    Resolve scope/specification gaps. An independent scope
    challenge is permitted only for a concrete unresolved scope finding or an
-   explicit project requirement. First check whether the controller's plan check
-   resolves the finding or satisfies that requirement. Follow the additional
+   explicit project requirement. The controller may resolve findings through its
+   plan check, but may satisfy a required review only when that requirement permits
+   controller review. A required separate independent reviewer cannot be replaced
+   by the controller. Follow the additional
    assignment rule above; a scope challenge is not a routine fourth role.
 3. **Implementor:** make only authorized changes, including affected docs, and run
    relevant checks. Return source/branch identity, changes, results/skips and gaps.
    Commit/push only when the map grants that action. Keep useful work for corrections.
-   For new restore paths, compare the complete existing validation path before
-   review, including terminal states, ownership, allocation limits and ordinary
-   application callers; test the applicable requirements within implementation.
+   Follow the worker instructions for alternate execution paths and their tests.
 4. **Controller:** inspect the full diff, scope, documentation and criterion evidence;
    capture/publish the exact candidate when assigned that responsibility and verify
    the remote branch matches it. Supply the reviewer with that source, the full
@@ -303,8 +320,11 @@ scope expansion and requests for broader authority are last resorts. First verif
 the blocker against exact source, controlling requirements and existing authorized
 routes; distinguish observed failures from assumptions. Prefer bounded in-scope
 correction and reuse valid work. Report confirmed blockers promptly; never bypass
-required checks. STOP_REPLAN is not opening progress. Preserve terminal stops;
-a diagnostic-only follow-up may explain one but cannot resume it. Request new
+required checks. A failed command or terminal worker handoff does not itself stop
+an active task: preserve the result and use authorized in-scope correction.
+An explicit task/attempt stop or owner pause blocks execution until continuation
+is authorized; diagnosis grants no continuation authority. STOP_REPLAN is not
+opening progress, and later success cannot clear a terminal stop. Request new
 authority only for uncovered scope, permission, disclosure or reserved actions.
 
 After roughly three rejection/correction rounds in the same stage, use a fresh
@@ -315,12 +335,25 @@ or incorrect workflow execution, and return one bounded correction. Preserve val
 completed phases; this conditional recovery is not another normal review or an
 automatic increase in effort. Record the trigger and scope in the checkpoint.
 
-Corrections start from authenticated recovery source, not necessarily the original
-planning HEAD. Reuse evidence only under the project's accepted equivalence policy;
-retain its original source/command/environment identities, never label it newly
-executed. Rerun affected checks when equivalence is unknown or relevant inputs
-change, or when project rules require them. Equivalence covers relevant transitive
-inputs and environment changes, not merely an unchanged test file or helper.
+Identify the authenticated correction recovery source separately from the full
+integration baseline. A correction does not reset task scope or narrow acceptance
+to its own diff. Supply the full proposed integration diff and retained findings.
+Keep correction handoffs short: identify the rejected finding, authorized changes,
+recovery source, changed execution inputs, required checks and return destination.
+Reference unchanged instructions/evidence by authenticated accessible location;
+repeat only to resolve ambiguity. Workers still read required original inputs.
+
+After correction, the controller selects reruns from changed inputs and the
+project's accepted evidence-equivalence policy. Preserve eligible results under
+their original source/command/environment identities; never label them newly
+executed. Run full qualification when required, or record why reuse is insufficient.
+Rerun affected checks when equivalence is unknown. Equivalence covers relevant
+transitive inputs and environment changes, not merely unchanged tests/helpers.
+Workers follow assigned checks and cannot waive them independently.
+When a reported pass conflicts with a later result, compare source, command,
+working directory, toolchain and configuration. Record the demonstrated cause or
+remaining uncertainty; do not reuse the earlier pass without establishing its
+eligibility. A successful repetition alone does not explain the discrepancy.
 Changed integration source needs affected checks/review. An ordinary blocking-wait
 interval expiring means continue waiting. A reported delivery failure or task
 deadline permits bounded reconciliation of authoritative assignment state and

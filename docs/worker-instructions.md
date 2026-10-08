@@ -47,16 +47,15 @@ Report actual failures and unknowns; terminal stops cannot be cleared by later s
 
 Return one terminal handoff with source/branch identity, completed work, actual
 checks and evidence locations, failures/skips, findings and remaining obligations.
-Separate requested environment/model/effort from host-confirmed settings, using
-selected host mode or authoritative configuration/session records. Unavailable
-telemetry is not a mismatch; tool names, backing metadata and self-description
-are not mode evidence. Report unsatisfied mandatory verification, unavailable
-routing or confirmed mismatches to the controller; never silently substitute.
-Capacity recovery applies only to confirmed provider capacity failures.
-Keep progress distinct from terminal outcomes. Existing evidence retains its
-original execution identity; reuse requires the project’s accepted equivalence
-policy and relevant source, transitive-input and environment comparison. Missing
-proof is not PASS. Do not relabel retained results as newly executed.
+Separate requested settings from host-confirmed settings under the selected map's
+accepted confirmation policy and [shared reporting rule](start-an-issue.md#execution-routing-models-and-efforts).
+Unknown proves neither compliance nor mismatch; proceed only under the map's
+authorized disposition. Report unresolved mandatory confirmation to the controller;
+never silently substitute or treat missing confirmation as provider capacity.
+Follow the assigned [return and relay route](start-an-issue.md#assign-roles-and-supply-inputs).
+Keep progress distinct from terminal outcomes. Evidence retains its original
+execution identity; apply the controller's [correction and reuse rules](start-an-issue.md#diagnose-blockers-and-recover).
+Missing proof is not PASS; retained results are not newly executed.
 
 ## Capsule builder
 
@@ -89,11 +88,14 @@ For a Work-to-Codex handoff, return your terminal result to the assigned Codex
 dispatcher for relay to the Work controller; routing grants no additional authority.
 
 Implement only authorized paths and outcomes, including affected documentation.
-Inspect actual callers and existing validation before adding a parallel contract.
-For new restore paths, cover terminal states, ownership, allocation limits and
-ordinary application callers. Add discriminating valid/invalid controls for defects;
-passing counts alone do not prove a required behavior.
+For a new or changed path to existing behavior, inspect the established contract,
+validation and relevant callers. Preserve applicable invariants unless a difference
+is explicitly authorized, and test distinguishing valid and invalid cases through
+the affected paths. Restoration examples include terminal states, ownership,
+allocation limits and ordinary application callers. Passing counts alone do not
+prove a required behavior.
 
+Follow the [command readiness and check-order rules](start-an-issue.md#complete-the-phases).
 Run the selected checks against stable, identifiable source. Retain exact commands,
 source/environment identity and actual results/logs, including failures and skips.
 If source or relevant inputs change during a check, report the evidence as ineligible.
@@ -156,8 +158,11 @@ not prove idle wake-up. Reuse the proven route until it changes or fails. If dir
 messaging is unavailable, return the handoff location through the explicitly
 selected manual route rather than claiming automatic delivery.
 
-Spawn only the controller's single authorized implementor with its complete
-selected role/task inputs. Configure and verify the handoff's actual model and
+Use a fresh implementor unless the controller explicitly authorizes the documented
+[last-resort idle-context fallback](start-an-issue.md#checkpoint-and-resume).
+Reauthenticate the complete handoff and ensure the reused context has no active
+assignment; the dispatcher cannot select this exception. Spawn only the
+controller's single authorized implementor with its complete selected role/task inputs. Configure and verify the handoff's actual model and
 effort: default `gpt-6-luna` / `max`, not an inherited or older pair. Keep one
 assignment active and prevent simultaneous edits in the same checkout. Only the
 explicitly assigned actor may commit/push; no main integration is granted here.
@@ -172,7 +177,8 @@ Retain the terminal handoff, then return its location and task/attempt/source
 identity, full diff/change locations, actual commands/results/logs, requested and
 host-confirmed environment/model/effort under the Shared worker rules, failures/skips
 and unresolved findings to Work. Preserve
-original evidence identities. Work verifies the candidate and owns review,
+original evidence identities. Follow the [return and relay ownership rule](start-an-issue.md#assign-roles-and-supply-inputs)
+and confirm Work controller consumption. Work verifies the candidate and owns review,
 approval, integration and closeout; your relay is not an independent review.
 
 Keep only enough durable state in the existing handoff/checkpoint location to
@@ -186,7 +192,7 @@ work inspection. Duplicate/stale handoffs cannot start another assignment.
 Preserve terminal stops. Capacity or routing failures go to Work without silent
 model/environment substitution or retry loops.
 
-Corrections require a bounded controller handoff. Do not replan, recruit builders
+Corrections require a bounded controller handoff under the [correction rules](start-an-issue.md#diagnose-blockers-and-recover). Do not replan, recruit builders
 or reviewers, implement the task yourself, mutate controller decisions, approve,
 integrate or close issues. No new service, receipt framework or additional normal
 reasoning stage is implied.
