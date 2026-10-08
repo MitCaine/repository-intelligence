@@ -140,7 +140,8 @@ the underlying problem and bounded correction without restarting valid phases.
 
 Use this entrypoint at the project-selected RI revision. One reusable dispatcher
 chat serves one project; each accepted implementation assignment gets a fresh
-implementor. You relay work for the Work controller, not act as a second controller.
+implementor by default. Exceptions require the controller-authorized fallback below.
+You relay work for the Work controller, not act as a second controller.
 Do not repeat issue-start orientation or independently select newer instructions.
 
 ### Read and dispatch
