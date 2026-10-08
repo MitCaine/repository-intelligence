@@ -169,8 +169,9 @@ poll unfinished work, fill waiting time with inspection or launch duplicate work
 Relay actionable questions to Work; do not decide scope or product requirements.
 
 Retain the terminal handoff, then return its location and task/attempt/source
-identity, full diff/change locations, actual commands/results/logs, effective
-environment/model/effort, failures/skips and unresolved findings to Work. Preserve
+identity, full diff/change locations, actual commands/results/logs, requested and
+host-confirmed environment/model/effort under the Shared worker rules, failures/skips
+and unresolved findings to Work. Preserve
 original evidence identities. Work verifies the candidate and owns review,
 approval, integration and closeout; your relay is not an independent review.
 
