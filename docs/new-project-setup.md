@@ -38,6 +38,30 @@ Use the existing record; no extra mandatory artifact is needed.
 Once setup is adopted, direct new issue controllers to [Start an issue](start-an-issue.md)
 and `docs/local_project_map.md`. Do not repeat adoption or installation for each task.
 
+## Reusable controller launch prompt
+
+The owner supplies the issue, project and actual chat selections. Include the
+selection statement below only when true; adjust it for other selections. It is
+owner confirmation, not a hardcoded RI environment or runtime observation.
+
+```text
+You are the controller for this issue. I created this chat in Work and selected
+Sol 6.1 Light (gpt-6.1-sol / low). Record this as owner-confirmed selection, not
+independently observed runtime telemetry. Do not infer a conflicting mode from
+tools or backing metadata, or ask me to reconfirm unchanged selections. Configure
+and confirm workers separately under the project policy.
+
+Project: <repository/location>
+Issue: <live issue URL>
+Read the complete selected controller procedure through the project's
+docs/local_project_map.md and its directed issue inputs before acting.
+Follow that selected procedure and the project's authority through closeout;
+report unresolved blockers and workflow deviations.
+```
+
+Apply the project's [accepted confirmation policy](start-an-issue.md#execution-routing-models-and-efforts).
+This statement does not independently verify runtime settings or confirm workers.
+
 ## Recovery and resume
 
 Record current phase, branch/source, task, criteria, tests, active job, results,
