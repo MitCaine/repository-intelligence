@@ -130,9 +130,9 @@ criteria, assess the implementation/check plan now and identify proof still due;
 do not require installation before the approval needed to install. The controller
 records approval, integration and closeout separately; review grants none of them.
 
-Identify who performed the substantive review and the verified environment,
-model/effort and inspection limits. Do not present delegated inspection as a
-requested model's personal review. For an assigned repeated-rejection diagnosis,
+Identify the substantive reviewer, report settings under the
+[shared confirmation policy](#shared-worker-rules), and state inspection limits.
+Do not present delegated inspection as a requested model's personal review. For an assigned repeated-rejection diagnosis,
 compare the original requirements, capsule, source and rejection history; return
 the underlying problem and bounded correction without restarting valid phases.
 

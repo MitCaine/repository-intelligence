@@ -134,8 +134,10 @@ Use one reusable Codex dispatcher chat per project with the selected
 implementation handoff location: exact task/attempt, published capsule/branch/SHA,
 selected role instructions and original requirement pointers, permissions/checks,
 evidence locations, Git ownership and return destination. The dispatcher launches
-a fresh implementor and relays its terminal result; it does not repeat controller
-orientation, replan, review or integrate. Only the assigned actor edits/publishes;
+the implementor under the selected
+[context and fallback rules](worker-instructions.md#read-and-dispatch), then relays
+its terminal result; it does not repeat controller orientation, replan, review or
+integrate. Only the assigned actor edits/publishes;
 prevent simultaneous edits. Work authenticates the result before independent
 review. Unavailable routing requires an explicit decision, not substitution.
 
@@ -193,6 +195,13 @@ blocks this sequence, resolve that explicit conflict before dispatch rather than
 silently substitute a local-only workflow. No subagent pushes to main.
 
 ### Complete the phases
+
+Before establishing or changing inputs to a required downstream gate, verify
+its applicable source, history, authorization and configuration constraints.
+Resolve conflicts before acting. Use bounded prerequisite checks, not premature
+qualification; recheck when relevant inputs change. History constraints and any
+authorized-base reconciliation are defined by the consumer project, not a
+universal RI linear-history requirement.
 
 The actor launching a command verifies its required inputs in the actual
 execution context before expensive or dependent work: command, working directory,

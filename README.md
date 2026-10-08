@@ -23,7 +23,7 @@ required controller reading.
 | Your task | Start here | What you get |
 | --- | --- | --- |
 | Use RI in an ordinary project | [Consumer guide](docs/consumer-guide.md), then the `locator` command below | Source navigation and coverage evidence; no capsule is required. |
-| Set up RI workflow in a new project | [New-project setup](docs/new-project-setup.md), [controller workflow](docs/capsule-controller-workflow.md), and [skill templates](docs/skill-templates/README.md) | One controller delegates capsule planning, implementation, and independent review to native subagents. |
+| Set up RI workflow in a new project | [New-project setup](docs/new-project-setup.md), [controller workflow](docs/capsule-controller-workflow.md), and [skill templates](docs/skill-templates/README.md) | The controller delegates planning, implementation and independent review through the selected project route. |
 | Maintain the RI package | [Architecture](docs/architecture.md), [maintenance](docs/maintenance.md), and [documentation index](docs/README.md) | Module boundaries, updater/bundle commands, and verification requirements. |
 
 RI does not supply a consumer capsule runner, project permissions, or approval
@@ -79,9 +79,10 @@ Keep the original structural evidence; the providers have different coverage.
 The [capsule controller workflow](docs/capsule-controller-workflow.md) explains
 the purpose, capsule requirements and checkable acceptance criteria, full
 handoff, native subagent completion, recovery decisions, and optional project
-skill templates. The controller verifies the planner's P and authorized captured C
-before delegating a fresh read-only review. The consumer's capsule remains the
-execution authority; its own workflow controls publication and integration.
+skill templates. The controller verifies the accepted planning capsule and exact
+published candidate before assigning independent review. Publication and
+integration remain subject to project authority. The consumer's capsule remains
+the execution authority.
 
 ## Develop and verify
 

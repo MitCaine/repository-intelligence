@@ -28,7 +28,7 @@ roles separate; no subagent publishes directly to main.
 | [capsule-preflight](capsule-preflight/SKILL.md) | Controller, planner, or implementor | The project has an active capsule workflow with exact base/scope checks. |
 | [capsule-scope-review](capsule-scope-review/SKILL.md) | Fresh read-only scope challenger | The impact inventory needs independent challenge before implementation authorization. |
 | [ri-evidence-handoff](ri-evidence-handoff/SKILL.md) | Controller, implementor, or reviewer | RI locations or comparisons will enter a handoff. |
-| [capsule-independent-review](capsule-independent-review/SKILL.md) | Fresh reviewer | The consumer requires candidate-bound independent review. |
+| [capsule-independent-review](capsule-independent-review/SKILL.md) | Fresh inspection-only reviewer | The selected candidate-bound review route permits inspection-only review using controller-supplied evidence; this skill does not execute tests. |
 | [capsule-queue](capsule-queue/SKILL.md) | External gate watcher | A long non-subagent job has no native completion and its exact Codex controller destination is verified. Use a tested Work bridge or bounded wait for a Work controller. Native subagent handoffs use their completion events. |
 
 For a project-scoped Codex installation, copy the chosen **whole skill folders**

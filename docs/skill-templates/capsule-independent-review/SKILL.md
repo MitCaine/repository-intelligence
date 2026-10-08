@@ -1,6 +1,6 @@
 ---
 name: capsule-independent-review
-description: Conduct or prepare a fresh, read-only review of one exact capsule candidate against its acceptance criteria and repository standards. Use for the independent reviewer lane, not self-review or controller approval.
+description: Conduct or prepare a fresh, inspection-only review of one exact capsule candidate against its acceptance criteria and repository standards. Use for the independent reviewer lane, not self-review or controller approval.
 ---
 
 # Capsule independent review
@@ -22,8 +22,11 @@ unless a separately adopted project requirement genuinely needs one.
 
 The candidate's author/implementor cannot review it. Fresh context is default;
 last-resort capacity reuse may use an uninvolved idle agent, recording that fact.
-A reused verdict is not a new review. No nested agents, tests or source writes as
-part of this read-only review; request existing evidence through the controller.
+A reused verdict is not a new review. No nested agents or source writes.
+This skill is inspection-only: do not execute tests. Use it only when compatible
+with the selected review route; obtain required evidence through the controller.
+A route requiring reviewer-executed checks needs its expressly authorized review
+instructions instead; this skill cannot override that route or broaden authority.
 
 Return PASS, findings or unresolved gaps with candidate identity and supporting
 evidence using the host's normal handoff. Missing required evidence cannot pass.
