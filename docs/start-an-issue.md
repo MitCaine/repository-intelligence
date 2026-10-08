@@ -81,22 +81,20 @@ below. Workers do not recruit other workers.
 | Implementor | Codex | `gpt-6-luna` | `max` | Luna 6 Max |
 | Independent reviewer | Work | `gpt-6.1-sol` | `low` | Sol 6.1 Light |
 
-Environment, model and effort are separate settings. Verify the actual supported
-dispatch route and effective environment; model selection or access to local
-files/GitHub does not establish routing. Report an unavailable route instead of
-silently substituting environments. The selected map names the supported route;
-these defaults do not require a new launcher or service.
-
-Use these defaults unless the owner or selected project map authorizes a
-task-specific override. Record the exact model and effort before dispatch;
-explicitly configure each worker rather than inheriting the controller's pair.
-Match the full model ID: Sol 5.6/6 and Luna 5.6 do not satisfy these defaults.
-Verify the host's effective settings and retain them with the handoff. A role
-label alone does not establish configuration. For a controller the host cannot
-configure, report a mismatch before dispatching dependent work. Unsupported or
-unavailable pairs follow the model-capacity recovery rule; do not silently
-substitute a model or effort. These settings do not reduce any role's checks or
-responsibilities.
+Environment, model and effort are separate settings. Use the map's supported
+route and these defaults unless the owner/map authorizes an override; no new
+launcher or service is required. Configure each worker explicitly before dispatch
+and match the full model ID: Sol 5.6/6 and Luna 5.6 do not satisfy these defaults.
+Record requested settings separately from host-confirmed settings. A selected
+host mode or authoritative configuration/session record confirming the setting
+is sufficient evidence; dispatch options establish only what was requested.
+Unavailable telemetry is not evidence of a mismatch. Do not infer product mode
+from tool names, backing metadata or an agent's self-description. If mandatory
+verification remains unsatisfied, use the project's authorized disposition.
+Distinguish confirmed configuration mismatch, unavailable routing, unknown
+settings and confirmed provider capacity failure; apply capacity recovery only
+to the last. Diagnose other failures narrowly and never silently substitute
+an environment, model or effort. These settings do not reduce role duties.
 
 When an owner asks a particular model to personally audit or review, that model
 must perform the substantive inspection unless delegation is authorized. A
@@ -190,9 +188,11 @@ silently substitute a local-only workflow. No subagent pushes to main.
 
 Before each dependent phase, confirm readiness through its actual selected wrapper,
 configuration and environment: guarded authentication, temporary paths, required
-recovery objects, and intended CI trigger/check identity where applicable. Use
-one small capability check, not a setup investigation or product-suite rehearsal;
-repeat only when relevant inputs change or a capability fails.
+recovery objects, and intended CI trigger/check identity where applicable. Verify the dependent subprocess's effective inputs, not merely its parent's.
+Initially use the smallest checks sufficient to establish the selected command's
+prerequisites; do not rehearse the product suite or investigate unrelated setup.
+Reuse readiness while relevant inputs remain unchanged; recheck affected
+prerequisites when those inputs change or a capability fails.
 
 1. **Capsule builder:** use the supplied branch and [shared format](#capsule-format).
    Require affected stale docs/examples/maps/links to be corrected, or justify why
@@ -215,7 +215,9 @@ repeat only when relevant inputs change or a capability fails.
 4. **Controller:** inspect the full diff, scope, documentation and criterion evidence;
    capture/publish the exact candidate when assigned that responsibility and verify
    the remote branch matches it. Supply the reviewer with that source, the full
-   diff, capsule, standards and actual test/log evidence.
+   diff, capsule, standards and actual test/log evidence. Use the project's existing
+   source-capture and evidence route; this instruction does not itself require
+   a new export, manifest, upload or local copy.
    Checks must use a stable, identifiable source snapshot. Verify the tested source
    and actual workflow/check identity; a matching check name alone is insufficient.
 5. **Independent reviewer:** remain read-only and review the full change, not just
@@ -319,8 +321,11 @@ retain its original source/command/environment identities, never label it newly
 executed. Rerun affected checks when equivalence is unknown or relevant inputs
 change, or when project rules require them. Equivalence covers relevant transitive
 inputs and environment changes, not merely an unchanged test file or helper.
-Changed integration source needs affected checks/review. Lost delivery or a timeout
-requires checking actual completion/cleanup before repeating any operation.
+Changed integration source needs affected checks/review. An ordinary blocking-wait
+interval expiring means continue waiting. A reported delivery failure or task
+deadline permits bounded reconciliation of authoritative assignment state and
+cleanup before retrying; it does not authorize unfinished-work inspection or a
+monitoring loop.
 
 ### Handle model capacity
 
@@ -344,7 +349,11 @@ The project map names the active checkpoint and standard closeout route. Update
 that checkpoint after each authenticated transition, retaining phase, selected
 instructions, source, active job, results, pending obligations and next action.
 Record unknown or partial outcomes honestly and preserve this state across
-compaction. Authenticate it on resume; do not duplicate dispatch.
+compaction. On recovery, reconcile the checkpoint with authenticated source,
+active-assignment state and retained terminal evidence before selecting the next
+action. Preserve history and record the reconciliation; do not repeat completed
+work merely because the checkpoint is stale. This grants no additional writer
+or dispatch authority.
 
 If fresh agents cannot be created or freed,
 last-resort idle-context reuse is permitted with a complete handoff. The candidate

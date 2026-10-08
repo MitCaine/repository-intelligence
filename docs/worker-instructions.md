@@ -47,8 +47,12 @@ Report actual failures and unknowns; terminal stops cannot be cleared by later s
 
 Return one terminal handoff with source/branch identity, completed work, actual
 checks and evidence locations, failures/skips, findings and remaining obligations.
-Include verified execution environment, model and effort; report unavailable or
-mismatched routing to the controller rather than substituting it.
+Separate requested environment/model/effort from host-confirmed settings, using
+selected host mode or authoritative configuration/session records. Unavailable
+telemetry is not a mismatch; tool names, backing metadata and self-description
+are not mode evidence. Report unsatisfied mandatory verification, unavailable
+routing or confirmed mismatches to the controller; never silently substitute.
+Capacity recovery applies only to confirmed provider capacity failures.
 Keep progress distinct from terminal outcomes. Existing evidence retains its
 original execution identity; reuse requires the project’s accepted equivalence
 policy and relevant source, transitive-input and environment comparison. Missing
@@ -173,8 +177,11 @@ approval, integration and closeout; your relay is not an independent review.
 Keep only enough durable state in the existing handoff/checkpoint location to
 identify the assignment, active job, selected instructions/source, result and
 delivery status. After compaction or dispatcher replacement, recover that state
-before dispatch. Missing replies and timeouts reconcile the existing job and
-terminal result first; duplicate/stale handoffs cannot start another assignment.
+before dispatch; reconcile stale records with authenticated assignment/source
+and terminal evidence without repeating completed work. Ordinary wait intervals
+mean continue waiting. Delivery failure or task deadline permits bounded job,
+terminal-result and cleanup reconciliation, not a monitoring loop or unfinished
+work inspection. Duplicate/stale handoffs cannot start another assignment.
 Preserve terminal stops. Capacity or routing failures go to Work without silent
 model/environment substitution or retry loops.
 
