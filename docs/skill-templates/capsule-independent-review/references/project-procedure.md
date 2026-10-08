@@ -3,7 +3,7 @@
 Resolve instructions through the controller’s authenticated handoff and the
 consumer project-root `docs/local_project_map.md`, not this installed folder.
 The controller supplies the selected RI revision, worker-document location/identity and assigned heading,
-applicable project requirements and original task sources. Verify those resources
+applicable project requirements and task inputs permitted for the selected role. Verify those resources
 are readable; never silently substitute newest RI main or a different role.
 
 Controllers read the selected Start an issue procedure. Builders, implementors

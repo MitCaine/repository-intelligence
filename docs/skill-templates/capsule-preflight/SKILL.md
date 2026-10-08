@@ -14,11 +14,15 @@ base/branch/source, permitted scope, runtime compatibility and required commands
 Initial dispatch starts at planning; correction dispatch starts at the authenticated
 recovery parent. Do not require nonexistent future candidate or review records.
 
-Inspect relevant source, callers and tests to check scope and criterion coverage.
-Require affected current documentation/link updates (or an evidenced not-applicable
-conclusion) in scope and acceptance. Resolve specification gaps before dispatch.
-Use the project's existing task record, not a new packet/schema. Independent scope
-challenge is optional unless a separately adopted project requirement needs it.
+Controllers and capsule builders inspect relevant source, callers and tests to
+check scope and criterion coverage; include affected current documentation/link
+updates or an evidenced not-applicable conclusion. The controller resolves
+specification gaps before dispatch. Implementors authenticate the accepted capsule
+and assigned inputs within their read scope; report an insufficient or conflicting
+capsule to the controller before dependent work, without reconstructing scope or
+retrieving original issues/decision history. Use the existing task record, not a
+new packet/schema. Independent scope challenge remains optional unless a
+separately adopted project requirement needs it.
 
 Uninspected evidence is not failed authentication. Use bounded clarification and
 read-only diagnosis without another human approval. Hold execution at a blocker,

@@ -276,13 +276,14 @@ candidate edits or omission of required checks.
 
 ### Keep completion records external
 
-Before final candidate review, correct tracked task documentation: label preparation
-snapshots historical and point current status to the live issue and external
-controller checkpoint. After review, record authenticated qualification,
-integration, issue closure and cleanup in those existing operational records.
-Do not create another candidate merely to append completion evidence to the
-tracked task. A genuine later tracked-document correction still needs affected
-checks, review and authorized publication; operational bookkeeping does not.
+Finalize tracked preparation records before freezing the candidate for
+exact-candidate qualification and review: label preparation snapshots historical
+and point current status to the live issue and external controller checkpoint.
+Record subsequent check attempts and operational outcomes, including integration,
+issue closure and cleanup, externally in those existing records. Do not create
+another candidate merely to append completion evidence. A necessary tracked
+correction creates a new candidate and follows the existing affected-check,
+review and authorized-publication rules; operational bookkeeping does not.
 
 ### Planning-only and no-change outcomes
 
