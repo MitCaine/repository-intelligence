@@ -13,71 +13,72 @@ execution, and acceptance stay with the consumer project.
 
 ## Start work with the kickoff skills
 
-For an established project, use **ri-work-kickoff** in the owner-selected Work
-controller chat and **ri-codex-dispatcher-kickoff** in a Codex dispatcher chat for
-the same repository. First [install and verify skill availability](docs/skill-templates/README.md#kickoff-availability-and-adoption)
-through each host's supported mechanism; repository templates alone are not
-installed skills. These thin entrypoints locate the project's adopted workflow,
-not automatically the newest RI main. They add no planning or review stage.
+The default RI workflow uses two chats for the same project: a **Work
+controller**, which manages the issue, planning and review; and a **Codex
+dispatcher**, which launches the implementation worker and returns its results.
+Create both before starting an issue. Using RI's source-navigation tools alone
+does not require this workflow.
 
-### 1. Work controller: send this prompt
+**New project?** Complete [project setup](docs/new-project-setup.md) first,
+including the adopted project map, configuration and
+[verified skill availability](docs/skill-templates/README.md#kickoff-availability-and-adoption).
+Repository templates alone are not installed skills. Kickoff uses the project's
+adopted instructions, not automatically the newest RI main.
 
-Open Work, select the controller model/effort you actually intend, and replace the
-example repository, issue and chat identifiers. Include the selection statement
-only when true. Use the host's skill selector to invoke the installed skill.
+### 1. Create and connect the chats
+
+Open Work with your actual controller selection and Codex for the same repository.
+Identify both chats through the host's supported chat mention/link or authenticated
+chat-list route; have the controller resolve those references to concrete IDs.
+Display titles alone do not identify a destination. Supply each chat's reference
+to the other and send this owner authorization, replacing the placeholders:
+
+```text
+I authorize <Work controller chat> and <Codex dispatcher chat> to exchange this
+issue's bounded handoffs, status, questions and results in both directions.
+```
+
+Use the selected project's supported messaging route and verify delivery before
+implementation. Opening chats or pasting kickoff prompts does not connect them.
+If direct communication is unavailable, select manual relay: copy the bounded
+handoff or its accessible location from Work to Codex, then copy the terminal
+result back to Work and confirm consumption. A pending dispatcher may orient
+and wait; do not launch implementation without its authorized handoff.
+
+### 2. Work controller: send this prompt
+
+Use the installed skill selector and replace the project, issue and dispatcher.
+Include the controller selection only when it matches your actual choice.
 
 ```text
 @ri-work-kickoff
 Repository: MitCaine/poker-app
 Issue(s): #447
-Controller selection: I created this chat in Work and selected Sol 6.1 Light
-(gpt-6.1-sol / low). Record this as owner-confirmed selection, not independently
-observed runtime telemetry. Do not infer conflicting mode from tools or metadata,
-or ask me to reconfirm unchanged accepted selections.
-Capsule builder: gpt-6.1-sol / low
-Independent reviewer: gpt-6.1-sol / low
-Implementor: gpt-6-luna / max
-Codex dispatcher: <exact designated dispatcher chat ID, or pending handoff>
-Authority/constraints: Follow the project's existing task permissions. Ask only
-for genuinely uncovered authority; no repository settings changes are granted.
-Stopping conditions: Verified issue closeout, or a genuine unresolved blocker.
+Controller selection: Work; gpt-6.1-sol / low, owner-confirmed
+Codex dispatcher: <designated dispatcher chat ID or supported reference>
 ```
 
-The example names the initial selections explicitly; omit those worker fields when
-the project already selects them. Omitted worker settings use the project's selected defaults; optional explicit
-Capsule builder, Independent reviewer and Implementor fields select authorized
-run-specific overrides. The controller configures workers separately. For a queue,
-replace Issue(s) with a list or inclusive range, such as `#447–#458`; the existing
-[queue rules](docs/new-project-setup.md#issue-queues) require eligible-order processing
-and a fresh controller for each issue. A range does not authorize context reuse.
+This short example uses existing project defaults and task authority. See the
+[kickoff-input contract](docs/new-project-setup.md#kickoff-inputs-and-selected-configuration)
+for optional worker overrides, issue queues, permissions and stopping conditions.
 
-### 2. Codex dispatcher: send this prompt
-
-Open Codex for the same project. The dispatcher waits for the controller's bounded
-handoff; kickoff does not authorize implementation or spawning a worker.
+### 3. Codex dispatcher: send this prompt
 
 ```text
 $ri-codex-dispatcher-kickoff
 Repository: MitCaine/poker-app
-Work controller: <exact designated Work controller chat ID, or pending>
-I designate this Codex chat as this project's implementation dispatcher.
+Work controller: <designated Work controller chat ID or supported reference>
 ```
 
-Use the installed host selector (`@` in Work, `$` in Codex) rather than assuming
-plain pasted text proves skill discovery. If the controller is not designated,
-the dispatcher completes bounded orientation and waits. To connect designated
-chats, the owner separately authorizes messaging in both directions for the
-bounded task; naming a chat is not disclosure permission. The implementor's
-model/effort comes from the controller's resolved handoff, not a second dispatcher
-configuration. See the [input and selected-configuration contract](docs/new-project-setup.md#kickoff-inputs-and-selected-configuration)
-for initial defaults, overrides and confirmation requirements.
+The dispatcher gets the implementor selection and authority from Work's resolved
+handoff; it does not configure a competing workflow. Invoke the actual installed
+host selector (`@` in Work, `$` in Codex); pasted text alone does not prove discovery.
 
-Without installed skills, supply the same fields and actual selection directly,
-then use [Start an issue](docs/start-an-issue.md) through the project's
-`docs/local_project_map.md`. The dispatcher instead reads its selected
-[worker section](docs/worker-instructions.md#codex-dispatcher). Direct document-based
-launch remains supported; package introduction and setup/reference material
-below are not required daily controller reading.
+Without installed skills, send the same fields and actual product selection
+through [direct document-based kickoff](docs/new-project-setup.md#brief-invocation-examples).
+The controller follows its map's selected [Start an issue](docs/start-an-issue.md),
+and the dispatcher its selected [worker section](docs/worker-instructions.md#codex-dispatcher).
+No additional orientation stage is needed.
 
 ## Choose a route
 

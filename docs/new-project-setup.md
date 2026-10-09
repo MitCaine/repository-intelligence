@@ -117,7 +117,7 @@ Codex dispatcher: Wait for controller handoff
 ```
 
 ```text
-@ri-codex-dispatcher-kickoff
+$ri-codex-dispatcher-kickoff
 Repository: MitCaine/poker-app
 Work controller: [designated chat, if already available]
 ```
