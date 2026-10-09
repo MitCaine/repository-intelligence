@@ -11,13 +11,73 @@ TypeScript/TSX, Java, Go, C#, C, C++, and Markdown**. Native analyzers are optio
 RI needs no service, database, or maintained symbol index. Task scope, capsule
 execution, and acceptance stay with the consumer project.
 
-## Controller starting an issue
+## Start work with the kickoff skills
 
-In an established project, read [Start an issue](docs/start-an-issue.md), the
-project's `docs/local_project_map.md` and the live issue. That is the bounded execution
-entrypoint. Optional [kickoff skills and inputs](docs/new-project-setup.md#kickoff-inputs-and-selected-configuration)
-locate that selected workflow; direct document-based launch also works. The package introduction and setup/reference docs below are not
-required controller reading.
+For an established project, use **ri-work-kickoff** in the owner-selected Work
+controller chat and **ri-codex-dispatcher-kickoff** in a Codex dispatcher chat for
+the same repository. First [install and verify skill availability](docs/skill-templates/README.md#kickoff-availability-and-adoption)
+through each host's supported mechanism; repository templates alone are not
+installed skills. These thin entrypoints locate the project's adopted workflow,
+not automatically the newest RI main. They add no planning or review stage.
+
+### 1. Work controller: send this prompt
+
+Open Work, select the controller model/effort you actually intend, and replace the
+example repository, issue and chat identifiers. Include the selection statement
+only when true. Use the host's skill selector to invoke the installed skill.
+
+```text
+@ri-work-kickoff
+Repository: MitCaine/poker-app
+Issue(s): #447
+Controller selection: I created this chat in Work and selected Sol 6.1 Light
+(gpt-6.1-sol / low). Record this as owner-confirmed selection, not independently
+observed runtime telemetry. Do not infer conflicting mode from tools or metadata,
+or ask me to reconfirm unchanged accepted selections.
+Capsule builder: gpt-6.1-sol / low
+Independent reviewer: gpt-6.1-sol / low
+Implementor: gpt-6-luna / max
+Codex dispatcher: <exact designated dispatcher chat ID, or pending handoff>
+Authority/constraints: Follow the project's existing task permissions. Ask only
+for genuinely uncovered authority; no repository settings changes are granted.
+Stopping conditions: Verified issue closeout, or a genuine unresolved blocker.
+```
+
+The example names the initial selections explicitly; omit those worker fields when
+the project already selects them. Omitted worker settings use the project's selected defaults; optional explicit
+Capsule builder, Independent reviewer and Implementor fields select authorized
+run-specific overrides. The controller configures workers separately. For a queue,
+replace Issue(s) with a list or inclusive range, such as `#447–#458`; the existing
+[queue rules](docs/new-project-setup.md#issue-queues) require eligible-order processing
+and a fresh controller for each issue. A range does not authorize context reuse.
+
+### 2. Codex dispatcher: send this prompt
+
+Open Codex for the same project. The dispatcher waits for the controller's bounded
+handoff; kickoff does not authorize implementation or spawning a worker.
+
+```text
+$ri-codex-dispatcher-kickoff
+Repository: MitCaine/poker-app
+Work controller: <exact designated Work controller chat ID, or pending>
+I designate this Codex chat as this project's implementation dispatcher.
+```
+
+Use the installed host selector (`@` in Work, `$` in Codex) rather than assuming
+plain pasted text proves skill discovery. If the controller is not designated,
+the dispatcher completes bounded orientation and waits. To connect designated
+chats, the owner separately authorizes messaging in both directions for the
+bounded task; naming a chat is not disclosure permission. The implementor's
+model/effort comes from the controller's resolved handoff, not a second dispatcher
+configuration. See the [input and selected-configuration contract](docs/new-project-setup.md#kickoff-inputs-and-selected-configuration)
+for initial defaults, overrides and confirmation requirements.
+
+Without installed skills, supply the same fields and actual selection directly,
+then use [Start an issue](docs/start-an-issue.md) through the project's
+`docs/local_project_map.md`. The dispatcher instead reads its selected
+[worker section](docs/worker-instructions.md#codex-dispatcher). Direct document-based
+launch remains supported; package introduction and setup/reference material
+below are not required daily controller reading.
 
 ## Choose a route
 
