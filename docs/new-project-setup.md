@@ -54,7 +54,8 @@ an inclusive numerical range. Optional fields are **Capsule builder**,
 (normal or maintenance), plus **Implementation execution** (`direct Work controller`
 when permitted by the map). A maintenance request follows the controller
 [eligibility decision](start-an-issue.md#optional-maintenance-route), not an automatic
-waiver of planning or project controls. Resolve concrete chat IDs
+waiver of project controls. Dependency/runtime or instruction changes alone do
+not require a capsule; use the linked eligibility rule. Resolve concrete chat IDs
 through the supported route; a display title is not an authenticated destination.
 For a dispatcher, only **Repository** is initially required. **Work controller**
 may be supplied or established by an authorized handoff; until then orient and

@@ -73,8 +73,8 @@ This short example uses existing project defaults and task authority. See the
 [kickoff-input contract](docs/new-project-setup.md#kickoff-inputs-and-selected-configuration)
 for optional worker overrides, issue queues, permissions and stopping conditions.
 
-For bounded mechanical maintenance, use the same kickoff with a specific issue
-and request the optional route:
+For bounded upkeep, including an identified dependency update or inspected RI
+adoption, use the same kickoff with a specific issue and request the optional route:
 
 ```text
 @ri-work-kickoff
@@ -177,7 +177,7 @@ Keep the original structural evidence; the providers have different coverage.
 The [capsule controller workflow](docs/capsule-controller-workflow.md) explains
 the purpose, capsule requirements and checkable acceptance criteria, full
 handoff, native subagent completion, recovery decisions, and optional project
-skill templates. For eligible mechanical work, the optional
+skill templates. For eligible bounded upkeep, the optional
 [maintenance route](docs/start-an-issue.md#optional-maintenance-route) replaces
 planning with a brief controller handoff. The controller verifies the accepted
 capsule or maintenance handoff and exact published candidate before assigning independent review. Publication and

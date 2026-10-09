@@ -93,7 +93,10 @@ requirement is missing, contradictory or insufficient, report the gap to the
 controller before dependent work; do not reconstruct requirements yourself.
 Use supplied commands, environment, evidence locations and authority limits.
 The controller has already selected the workflow and project route; do not repeat
-its issue-start orientation or dispatch other roles.
+its issue-start orientation or dispatch other roles. A failed assigned check permits
+bounded correction within the accepted handoff; unresolved decisions or wider
+impact go to the controller under the governing maintenance rule. Preserve valid
+work/evidence and pause only the affected part pending that decision.
 For a Work-to-Codex handoff, return your terminal result to the assigned Codex
 dispatcher for relay to the Work controller; routing grants no additional authority.
 
