@@ -70,6 +70,7 @@ and request the optional route:
 Repository: <owner/repository>
 Issue(s): #<maintenance issue>
 Requested route: maintenance
+Implementation execution: direct Work controller
 Controller selection: Work; gpt-6.1-sol / low, owner-confirmed
 Codex dispatcher: <designated dispatcher chat ID or supported reference>
 ```
@@ -77,7 +78,10 @@ Codex dispatcher: <designated dispatcher chat ID or supported reference>
 The issue should name the bounded objective, such as correcting identified broken
 documentation links. The controller confirms
 [maintenance eligibility](docs/start-an-issue.md#optional-maintenance-route);
-an open-ended “upkeep pass” is insufficient. The dispatcher kickoff stays the same.
+an open-ended “upkeep pass” is insufficient. Direct controller implementation
+also requires the map's permission and retains fresh independent review. It needs
+no Codex dispatcher; when implementation is delegated, the dispatcher kickoff
+stays the same.
 
 ### 3. Codex dispatcher: send this prompt
 
