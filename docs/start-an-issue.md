@@ -26,7 +26,12 @@ replacement is not a new attempt or permission to duplicate dispatch.
   version throughout the attempt; do not silently select new instructions,
   reinstall skills or upgrade the runtime. Resolve a conflicting map first.
 - Authenticate the live issue, current base/branch and checkout. Preserve unrelated
-  edits. Check for an active task/checkpoint before starting a duplicate attempt.
+  edits and parked branches. Follow [per-chat source orientation](new-project-setup.md#chat-source-orientation)
+  and reconcile existing assignments before dispatch; missing assignee/default
+  checkpoint alone does not establish inactivity.
+- Resolve connector access separately from [task authority](new-project-setup.md#access-and-task-authority).
+  Reuse applicable recorded owner grants; hold only uncovered actions, not every
+  routine publication or closeout step.
 - Resolve missing product decisions; do not invent requirements or parameters.
   Check a suspected prerequisite against actual current callers, reachable behavior
   and its controlling requirement before expanding scope or starting a repair.
@@ -128,8 +133,10 @@ already-running chat's model.
 Record requested settings separately from host-confirmed settings. A selected
 host mode or authoritative configuration/session record confirming the setting
 is sufficient evidence; dispatch options establish only what was requested.
-The project map names accepted confirmation for required settings and the
-response when confirmation is unavailable; it may select a shared policy.
+The project map names accepted launch routes and confirmation for required
+settings, including the [optional native Work policy](new-project-setup.md#accepted-worker-launch-routes),
+and the response when confirmation is unavailable. Policy acceptance is separate
+from measured runtime confirmation.
 Unknown proves neither compliance nor mismatch. Proceed only under that
 authorization. Do not infer product mode from tool names, backing metadata or
 an agent's self-description.

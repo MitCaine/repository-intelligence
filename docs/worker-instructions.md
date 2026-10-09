@@ -48,8 +48,10 @@ Return one terminal handoff with source/branch identity, completed work, actual
 checks and evidence locations, failures/skips, findings and remaining obligations.
 Separate requested settings from host-confirmed settings under the selected map's
 accepted confirmation policy and [shared reporting rule](start-an-issue.md#execution-routing-models-and-efforts).
-Unknown proves neither compliance nor mismatch; proceed only under the map's
-authorized disposition. Report unresolved mandatory confirmation to the controller;
+Unknown proves neither compliance nor mismatch; proceed under the map's
+[accepted launch/confirmation policy](new-project-setup.md#accepted-worker-launch-routes),
+without treating missing telemetry as launch failure. Report unresolved mandatory
+confirmation to the controller;
 never silently substitute or treat missing confirmation as provider capacity.
 Follow the assigned [return and relay route](start-an-issue.md#assign-roles-and-supply-inputs).
 Keep progress distinct from terminal outcomes. Evidence retains its original
@@ -168,7 +170,8 @@ Read the complete controller handoff before acting. It names the project,
 controller/return destination, task and attempt, accepted capsule or maintenance handoff,
 branch and exact source, selected implementor/shared instructions, authorized
 read/edit scopes, checks, evidence locations and Git ownership. Authenticate the
-handoff, task-record/source identities, dispatcher instructions and launch configuration;
+handoff, task-record/source identities, dispatcher instructions and launch configuration
+under the [per-chat source orientation rule](new-project-setup.md#chat-source-orientation);
 report missing or conflicting dispatch inputs to Work. Relay the supplied
 implementation inputs unchanged. Do not retrieve original issues/decision history,
 inspect product source to reassess requirements or repeat planning. Requirement

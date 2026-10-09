@@ -51,14 +51,22 @@ and wait; do not launch implementation without its authorized handoff.
 ### 2. Work controller: send this prompt
 
 Use the installed skill selector and replace the project, issue and dispatcher.
+Include `@GitHub` where supported; another project-permitted GitHub route is fine.
+Connector access is not publication or integration authority. The optional Authority
+field below explicitly selects the [reusable task grant](docs/new-project-setup.md#access-and-task-authority);
+use it only when you intend that grant, or name an applicable recorded grant.
 Include the controller selection only when it matches your actual choice.
 
 ```text
 @ri-work-kickoff
+@GitHub
 Repository: MitCaine/poker-app
 Issue(s): #447
+Authority: I select the reusable task grant for #447.
 Controller selection: Work; gpt-6.1-sol / low, owner-confirmed
-Codex dispatcher: <designated dispatcher chat ID or supported reference>
+Codex dispatcher: <concrete dispatcher chat ID or supported reference>
+I authorize this controller and that dispatcher to exchange this issue's bounded
+handoffs, questions, status and results in both directions.
 ```
 
 This short example uses existing project defaults and task authority. See the
@@ -70,8 +78,10 @@ and request the optional route:
 
 ```text
 @ri-work-kickoff
+@GitHub
 Repository: <owner/repository>
 Issue(s): #<maintenance issue>
+Authority: I select the reusable task grant for this issue.
 Requested route: maintenance
 Implementation execution: direct Work controller
 Controller selection: Work; gpt-6.1-sol / low, owner-confirmed
@@ -89,8 +99,11 @@ stays the same.
 
 ```text
 $ri-codex-dispatcher-kickoff
+@GitHub
 Repository: MitCaine/poker-app
-Work controller: <designated Work controller chat ID or supported reference>
+Work controller: <concrete Work controller chat ID or supported reference>
+I authorize bounded bidirectional communication with that controller for its
+named issue assignment.
 ```
 
 The dispatcher gets the implementor selection and authority from Work's resolved
