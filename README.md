@@ -62,6 +62,23 @@ This short example uses existing project defaults and task authority. See the
 [kickoff-input contract](docs/new-project-setup.md#kickoff-inputs-and-selected-configuration)
 for optional worker overrides, issue queues, permissions and stopping conditions.
 
+For bounded mechanical maintenance, use the same kickoff with a specific issue
+and request the optional route:
+
+```text
+@ri-work-kickoff
+Repository: <owner/repository>
+Issue(s): #<maintenance issue>
+Requested route: maintenance
+Controller selection: Work; gpt-6.1-sol / low, owner-confirmed
+Codex dispatcher: <designated dispatcher chat ID or supported reference>
+```
+
+The issue should name the bounded objective, such as correcting identified broken
+documentation links. The controller confirms
+[maintenance eligibility](docs/start-an-issue.md#optional-maintenance-route);
+an open-ended “upkeep pass” is insufficient. The dispatcher kickoff stays the same.
+
 ### 3. Codex dispatcher: send this prompt
 
 ```text
