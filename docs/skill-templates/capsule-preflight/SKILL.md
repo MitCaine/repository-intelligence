@@ -11,15 +11,16 @@ workers use only inputs permitted by their selected role
 reading boundaries; preflight grants no additional issue or source-reading scope.
 Authenticate objective, current phase,
 base/branch/source, permitted scope, runtime compatibility and required commands.
-Initial dispatch starts at planning; correction dispatch starts at the authenticated
+Initial dispatch starts at planning or the controller-approved maintenance
+handoff under the selected procedure; correction dispatch starts at the authenticated
 recovery parent. Do not require nonexistent future candidate or review records.
 
 Controllers and capsule builders inspect relevant source, callers and tests to
 check scope and criterion coverage; include affected current documentation/link
 updates or an evidenced not-applicable conclusion. The controller resolves
-specification gaps before dispatch. Implementors authenticate the accepted capsule
+specification gaps before dispatch. Implementors authenticate the accepted capsule or approved maintenance handoff
 and assigned inputs within their read scope; report an insufficient or conflicting
-capsule to the controller before dependent work, without reconstructing scope or
+task input to the controller before dependent work, without reconstructing scope or
 retrieving original issues/decision history. Use the existing task record, not a
 new packet/schema. Independent scope challenge remains optional unless a
 separately adopted project requirement needs it.

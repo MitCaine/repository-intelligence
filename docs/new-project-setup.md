@@ -49,7 +49,10 @@ For Work, supply **Repository** and **Issue(s)**: one issue, an explicit list or
 an inclusive numerical range. Optional fields are **Capsule builder**,
 **Independent reviewer**, **Implementor** (model/effort), **Controller selection**
 (owner-confirmed existing selection), **Codex dispatcher**, task-specific
-**Authority/constraints** and **Stopping conditions**. Resolve concrete chat IDs
+**Authority/constraints**, **Stopping conditions** and **Requested route**
+(normal or maintenance). A maintenance request follows the controller
+[eligibility decision](start-an-issue.md#optional-maintenance-route), not an automatic
+waiver of planning or project controls. Resolve concrete chat IDs
 through the supported route; a display title is not an authenticated destination.
 For a dispatcher, only **Repository** is initially required. **Work controller**
 may be supplied or established by an authorized handoff; until then orient and
@@ -167,7 +170,9 @@ Use `docs/local_project_map.md` in every consumer project. Keep it short:
   [shared reporting rule](start-an-issue.md#execution-routing-models-and-efforts).
 - Shared capsule instructions: the capsule-format section of the selected RI
   daily procedure, plus the project's task-file storage location and necessary
-  additional fields. Do not maintain a competing local format.
+  additional fields. If adopting the optional maintenance route, use that existing
+  task record for its brief handoff and resolve capsule-only local validators
+  explicitly. Do not maintain a competing local format.
 - Project standards and required test commands or their authoritative locations;
   use focused selection-section links rather than unrelated historical reading.
 - Role permissions, including the branch-creation actor and any explicit builder

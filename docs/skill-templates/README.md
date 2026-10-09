@@ -21,7 +21,9 @@ Start with the [new-project setup checklist](../new-project-setup.md) when
 adopting the workflow in a consumer repository.
 Follow the [daily publication sequence](../start-an-issue.md#execute-serially):
 the controller creates and publishes the task branch; the authorized actor publishes
-the planning capsule before implementation and the exact candidate before review.
+the planning capsule before implementation on the normal route and the exact
+candidate before review. The adopted [maintenance route](../start-an-issue.md#optional-maintenance-route)
+instead uses a brief controller handoff without planning-only publication.
 The project map assigns actors, tracked capsule storage and commands; implementor
 commit/push requires an explicit grant. Keep private operational records out of
 publication unless authorized. Keep planning, implementation and fresh review

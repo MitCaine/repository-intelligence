@@ -141,9 +141,11 @@ Keep the original structural evidence; the providers have different coverage.
 The [capsule controller workflow](docs/capsule-controller-workflow.md) explains
 the purpose, capsule requirements and checkable acceptance criteria, full
 handoff, native subagent completion, recovery decisions, and optional project
-skill templates. The controller verifies the accepted planning capsule and exact
-published candidate before assigning independent review. Publication and
-integration remain subject to project authority. The consumer's capsule remains
+skill templates. For eligible mechanical work, the optional
+[maintenance route](docs/start-an-issue.md#optional-maintenance-route) replaces
+planning with a brief controller handoff. The controller verifies the accepted
+capsule or maintenance handoff and exact published candidate before assigning independent review. Publication and
+integration remain subject to project authority. The accepted task record remains
 the execution authority.
 
 ## Develop and verify
