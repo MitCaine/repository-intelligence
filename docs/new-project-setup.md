@@ -155,11 +155,11 @@ project's authoritative assignment/recovery locations; no new tracking system.
 Process ranges in numerical order; preserve explicit list order. Skip only issues
 already closed or explicitly deferred under owner/project authority, without
 reopening or closing them. Difficulty, age and transient failure are not deferral.
-Complete the current issue before advancing; each new issue uses a fresh controller
-through a supported, authorized handoff. Queue scope does not authorize indefinite
-controller reuse. Keep recurring coordination limited to assignment, verified
-closeout and advancement in existing operational records; no scheduler is needed.
-If fresh-controller continuation is unavailable, report it. If an eligible issue
+Complete and verify closeout before advancing. Reorient the same or an owner-selected
+fresh controller under [daily intake](start-an-issue.md#intake); preserve issue
+ordering and boundaries. Keep coordination in existing assignment, closeout and
+advancement records; no scheduler is needed.
+If an eligible issue
 cannot proceed within existing authority, report the blocker and pause rather
 than silently skip it or expand scope. At queue exhaustion or a stopping condition,
 report completed, closed-skipped, deferred-skipped and unresolved items accurately.

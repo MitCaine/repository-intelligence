@@ -50,7 +50,8 @@ and wait; do not launch implementation without its authorized handoff.
 
 ### 2. Work controller: send this prompt
 
-Use the installed skill selector and replace the project, issue and dispatcher.
+Use the installed skill selector to orient a new or existing controller under
+[daily intake](docs/start-an-issue.md#intake); replace the project, issue and dispatcher.
 Include `@GitHub` where supported; another project-permitted GitHub route is fine.
 Connector access is not publication or integration authority. The optional Authority
 field below explicitly selects the [reusable task grant](docs/new-project-setup.md#access-and-task-authority);
