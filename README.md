@@ -16,8 +16,9 @@ execution, and acceptance stay with the consumer project.
 The default RI workflow uses two chats for the same project: a **Work
 controller**, which manages the issue, planning and review; and a **Codex
 dispatcher**, which launches the implementation worker and returns its results.
-Create both before starting an issue. Using RI's source-navigation tools alone
-does not require this workflow.
+For delegated implementation, create and connect both chats. Permitted direct
+Work maintenance needs only the Work controller chat. Using RI's source-navigation
+tools alone does not require this workflow.
 
 **New project?** Complete [project setup](docs/new-project-setup.md) first,
 including the adopted project map, configuration and
@@ -27,7 +28,9 @@ adopted instructions, not automatically the newest RI main.
 
 ### 1. Create and connect the chats
 
-Open Work with your actual controller selection and Codex for the same repository.
+For delegated implementation, open Work with your actual controller selection
+and Codex for the same repository. For permitted direct Work maintenance, open
+only Work and proceed to its kickoff below.
 Identify both chats through the host's supported chat mention/link or authenticated
 chat-list route; have the controller resolve those references to concrete IDs.
 Display titles alone do not identify a destination. Supply each chat's reference
@@ -72,7 +75,6 @@ Issue(s): #<maintenance issue>
 Requested route: maintenance
 Implementation execution: direct Work controller
 Controller selection: Work; gpt-6.1-sol / low, owner-confirmed
-Codex dispatcher: <designated dispatcher chat ID or supported reference>
 ```
 
 The issue should name the bounded objective, such as correcting identified broken

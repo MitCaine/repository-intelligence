@@ -298,7 +298,8 @@ Steps 1–2 apply to the normal route.
    dispositions for every criterion and applicable standard. Check docs too.
    Missing evidence already due cannot pass. For post-installation obligations,
    assess the implementation/check plan now; installed proof remains due at closeout.
-6. **Controller:** return in-scope findings to an implementor, then obtain affected
+6. **Controller:** have the selected implementation actor address in-scope findings,
+   then obtain affected
    checks and independent review. Approval must cover the actual integrated result.
    Use authorized integration, verify it and any pending installed checks, record
    necessary evidence and the final accepted source. Resolve each retained finding
