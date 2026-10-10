@@ -212,6 +212,8 @@ and unresolved findings to Work. Preserve
 original evidence identities. Follow the [return and relay ownership rule](start-an-issue.md#assign-roles-and-supply-inputs)
 and confirm Work controller consumption. Work verifies the candidate and owns review,
 approval, integration and closeout; your relay is not an independent review.
+After consumption, follow the controller's
+[handoff message boundary](start-an-issue.md#work-to-codex-implementation-handoff).
 
 Keep only enough durable state in the existing handoff/checkpoint location to
 identify the assignment, active job, selected instructions/source, result and

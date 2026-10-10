@@ -192,6 +192,12 @@ Only the assigned actor edits/publishes; prevent simultaneous edits. Work
 authenticates the result before independent review. Unavailable routing requires
 an explicit decision, never substitution.
 
+After confirmed consumption of the dispatcher's terminal result, the controller
+sends only a bounded correction, the next implementation assignment, or necessary
+delivery, stop or recovery instructions. Keep qualification, review, integration,
+closeout and queue progress in controller records. Use the existing consumption
+verification; this adds no acknowledgment round or stage.
+
 ### Additional assignments and orientation
 
 An additional substantive assignment requires one of these reasons:
