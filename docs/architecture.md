@@ -71,3 +71,13 @@ source orientation. Historical extraction decisions are in the [archive](archive
 ## Review transport
 
 [`review_bundle.py`](../src/repository_intelligence/review_bundle.py) factors repeated inventory/comparison JSON objects into content-addressed records. It owns only transport integrity and selective access; inventory comparison and consumer authority remain at their existing seams. See [review evidence](review-evidence.md).
+
+## Instruction acquisition and adoption
+
+[`section_reader.py`](../src/repository_intelligence/section_reader.py) owns explicit,
+commit-bound Markdown section selection and output coverage using the existing
+grammar. [`adoption.py`](../src/repository_intelligence/adoption.py) owns declared
+resource copies, counted literal relocations and destination conflict handling.
+These optional modules have separate result contracts; they do not change source
+classification, navigation or inventory versions. Command execution and source
+projection remain consumer-owned. See [bounded workflow tools](workflow-tools.md).

@@ -11,6 +11,10 @@ TypeScript/TSX, Java, Go, C#, C, C++, and Markdown**. Native analyzers are optio
 RI needs no service, database, or maintained symbol index. Task scope, capsule
 execution, and acceptance stay with the consumer project.
 
+[Bounded workflow helpers](docs/workflow-tools.md) support explicit section reading
+and declared-resource adoption. Consumer check execution stays in the project's
+selected runner; these helpers do not add acceptance gates.
+
 ## Start work with the kickoff skills
 
 The default RI workflow uses two chats for the same project: a **Work

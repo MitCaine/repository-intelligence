@@ -24,3 +24,8 @@ For a controller or assigned external watcher, resolve only the selected
 procedure’s waiting/recovery sections through the handoff/map. Other workers use
 their role’s bounded diagnosis and terminal handoff instructions. Read the
 relevant section, not the entire controller orientation.
+
+For bounded reads, use the map/handoff-selected section reader under its
+workflow-tools contract when available. Select only role-permitted inputs and
+check identity/coverage; resolve incomplete output through the governing role rule.
+Ordinary reads remain supported.
