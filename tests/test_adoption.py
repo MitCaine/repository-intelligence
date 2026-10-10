@@ -113,3 +113,24 @@ class AdoptionTests(unittest.TestCase):
         self.assertEqual(self.cli('apply')[0], 0)
         self.assertEqual((self.destination / 'existing.txt').stat().st_mode & 0o777, 0o755)
         self.assertEqual(self.cli('apply')[1]['status'], 'unchanged')
+
+    def test_public_cli_native_metadata_alias_is_readonly(self):
+        config = self.destination / '.git' / 'config'
+        before = config.read_bytes()
+        alias = self.destination / '.GIT'
+        if not alias.exists() or not alias.samefile(self.destination / '.git'):
+            self.skipTest('Temporary filesystem does not alias .GIT to .git')
+        resource = self.request['resources'][0]
+        resource['destination'] = '.GIT/config'
+        resource['expected_destination_sha256'] = hashlib.sha256(before).hexdigest()
+        for mode in ('preview', 'verify', 'apply'):
+            code, report = self.cli(mode)
+            self.assertEqual(code, 1)
+            self.assertEqual(report['status'], 'error')
+            self.assertIn('Git metadata', report['error'])
+            self.assertEqual(config.read_bytes(), before)
+        resource['destination'] = 'ordinary.GIT/config.txt'
+        resource['expected_destination_sha256'] = None
+        self.assertEqual(self.cli('apply')[0], 0)
+        self.assertEqual((self.destination / 'ordinary.GIT/config.txt').read_bytes(), b'hello new\n')
+        self.assertEqual(config.read_bytes(), before)

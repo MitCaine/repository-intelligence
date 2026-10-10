@@ -60,11 +60,26 @@ def _root(value: object) -> Path:
 
 def _target(root: Path, relative: str) -> Path:
     target = root / relative
+    # Filesystem identity catches case-insensitive and other native aliases.
+    # Do not reject unrelated filenames merely because their spelling resembles .git.
+    metadata_paths = [root / '.git']
+    for option in ('--absolute-git-dir', '--git-common-dir'):
+        location = Path(_git(root, 'rev-parse', option).decode().strip())
+        metadata_paths.append(location if location.is_absolute() else root / location)
+    resolved_root = root.resolve(strict=True)
     cursor = root
     for part in relative.split('/'):
         cursor = cursor / part
         if cursor.is_symlink():
             raise AdoptionError('Destination contains a symlink: ' + relative)
+        resolved = cursor.resolve(strict=False)
+        if not resolved.is_relative_to(resolved_root):
+            raise AdoptionError('Destination ancestor escapes repository: ' + relative)
+        for metadata in metadata_paths:
+            if metadata.exists() and cursor.exists() and cursor.samefile(metadata):
+                raise AdoptionError('Destination addresses Git metadata: ' + relative)
+            if resolved.is_relative_to(metadata.resolve(strict=False)):
+                raise AdoptionError('Destination resolves into Git metadata: ' + relative)
         if cursor.exists() and cursor != target and not cursor.is_dir():
             raise AdoptionError('Destination ancestor is not a directory: ' + relative)
     if target.exists() and not target.is_file():
