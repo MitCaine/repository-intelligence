@@ -134,3 +134,117 @@ class AdoptionTests(unittest.TestCase):
         self.assertEqual(self.cli('apply')[0], 0)
         self.assertEqual((self.destination / 'ordinary.GIT/config.txt').read_bytes(), b'hello new\n')
         self.assertEqual(config.read_bytes(), before)
+
+    def test_public_cli_absent_case_aliases_and_ancestor_overlap(self):
+        if sys.platform != 'darwin' or os.pathconf(self.destination, 11):
+            self.skipTest('Actual case-insensitive Darwin filesystem required')
+        first = self.request['resources'][0]
+        for left, right in [('A.txt', 'a.txt'), ('Dir/A.txt', 'dir/a.txt'), ('Dir', 'dir/file.txt')]:
+            first['destination'] = left
+            self.request['resources'] = [first, dict(source='source.txt', destination=right, expected_destination_sha256=None)]
+            for mode in ('preview', 'verify', 'apply'):
+                code, report = self.cli(mode)
+                self.assertEqual(code, 1, report)
+                self.assertIn('alias or overlap', report['error'])
+                self.assertFalse((self.destination / left).exists())
+                self.assertFalse((self.destination / right).exists())
+
+    def test_public_cli_existing_noop_alias_preserves_bytes(self):
+        upper = self.destination / 'A.txt'
+        upper.write_bytes(b'hello new\n')
+        self.git(self.destination, 'add', '.')
+        self.git(self.destination, 'commit', '-qm', 'existing alias')
+        lower = self.destination / 'a.txt'
+        if not lower.exists() or not upper.samefile(lower):
+            self.skipTest('Actual filesystem case alias required')
+        first = self.request['resources'][0]
+        first.update(destination='A.txt', expected_destination_sha256=hashlib.sha256(upper.read_bytes()).hexdigest())
+        self.request['resources'].append(dict(source='source.txt', destination='a.txt', expected_destination_sha256=first['expected_destination_sha256']))
+        before = upper.read_bytes()
+        for mode in ('preview', 'verify', 'apply'):
+            self.assertEqual(self.cli(mode)[0], 1)
+            self.assertEqual(upper.read_bytes(), before)
+
+    def test_public_cli_existing_ancestor_alias_refuses_before_write(self):
+        folder = self.destination / 'Dir'
+        folder.mkdir()
+        (folder / 'keep').write_bytes(b'preserved')
+        self.git(self.destination, 'add', '.')
+        self.git(self.destination, 'commit', '-qm', 'existing directory')
+        if not (self.destination / 'dir').exists() or not folder.samefile(self.destination / 'dir'):
+            self.skipTest('Actual filesystem directory alias required')
+        self.request['resources'][0]['destination'] = 'Dir/A.txt'
+        self.request['resources'].append(dict(source='source.txt', destination='dir/a.txt', expected_destination_sha256=None))
+        self.assertEqual(self.cli('apply')[0], 1)
+        self.assertEqual((folder / 'keep').read_bytes(), b'preserved')
+        self.assertFalse((folder / 'A.txt').exists())
+
+    def test_public_cli_nested_repository_and_submodule_refusal(self):
+        self.git(self.destination, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', str(self.source), 'sub')
+        self.git(self.destination, 'commit', '-qam', 'submodule')
+        pointer = self.destination / 'sub/.git'
+        before = pointer.read_bytes()
+        metadata = (self.destination / '.git/config').read_bytes()
+        for location in ('sub/new.txt', 'sub/.GIT'):
+            self.request['resources'] = [self.request['resources'][0], dict(source='source.txt', destination=location, expected_destination_sha256=None)]
+            for mode in ('preview', 'verify', 'apply'):
+                code, report = self.cli(mode)
+                self.assertEqual(code, 1, report)
+                self.assertIn('Nested repository', report['error'])
+                self.assertEqual(pointer.read_bytes(), before)
+                self.assertEqual((self.destination / '.git/config').read_bytes(), metadata)
+                self.assertFalse((self.destination / 'adopted.txt').exists())
+                self.assertEqual(self.git(self.destination / 'sub', 'rev-parse', 'HEAD').strip(), self.request['revision'])
+        nested = self.destination / 'nested'
+        nested.mkdir()
+        self.git(nested, 'init', '-q')
+        self.request['resources'] = [dict(source='source.txt', destination='nested/new.txt', expected_destination_sha256=None)]
+        self.assertEqual(self.cli('apply')[0], 1)
+        self.assertFalse((nested / 'new.txt').exists())
+
+    def test_public_cli_actual_case_sensitive_distinct_paths(self):
+        upper, lower = self.destination / 'A.txt', self.destination / 'a.txt'
+        upper.write_bytes(b'upper')
+        lower.write_bytes(b'lower')
+        if upper.samefile(lower):
+            self.skipTest('Actual case-sensitive filesystem required')
+        self.git(self.destination, 'add', '.')
+        self.git(self.destination, 'commit', '-qm', 'distinct names')
+        self.request['resources'] = [dict(source='source.txt', destination=name, expected_destination_sha256=hashlib.sha256((self.destination / name).read_bytes()).hexdigest()) for name in ('A.txt', 'a.txt')]
+        self.assertEqual(self.cli('apply')[0], 0)
+        self.assertEqual(upper.read_bytes(), b'hello old\n')
+        self.assertEqual(lower.read_bytes(), b'hello old\n')
+        self.assertEqual(self.cli('verify')[0], 0)
+
+    def test_public_cli_hardlinked_destinations_refuse_before_write(self):
+        first = self.destination / 'first.txt'
+        first.write_bytes(b'preserved')
+        (self.destination / 'nested').mkdir()
+        os.link(first, self.destination / 'nested/other.txt')
+        self.git(self.destination, 'add', '.')
+        self.git(self.destination, 'commit', '-qm', 'hardlinked names')
+        self.request['resources'] = [dict(source='source.txt', destination=name, expected_destination_sha256=hashlib.sha256(b'preserved').hexdigest()) for name in ('first.txt', 'nested/other.txt')]
+        self.assertEqual(self.cli('apply')[0], 1)
+        self.assertEqual(first.read_bytes(), b'preserved')
+        self.assertEqual((self.destination / 'nested/other.txt').read_bytes(), b'preserved')
+
+    def test_public_cli_absent_unicode_alias_is_explicitly_unsupported(self):
+        self.request['resources'][0]['destination'] = '\u00e9.txt'
+        self.request['resources'].append(dict(source='source.txt', destination='e\u0301.txt', expected_destination_sha256=None))
+        code, report = self.cli('apply')
+        self.assertEqual(code, 1)
+        self.assertIn('Unsupported absent Unicode', report['error'])
+        self.assertFalse((self.destination / '\u00e9.txt').exists())
+
+    def test_unknown_host_absent_case_policy_is_not_assumed(self):
+        with patch.object(adoption.sys, 'platform', 'unknown'):
+            with self.assertRaisesRegex(adoption.AdoptionError, 'Unsupported absent'):
+                adoption._same_component(self.destination, 'A.txt', 'a.txt')
+            self.assertFalse(adoption._same_component(self.destination, 'one.txt', 'two.txt'))
+
+    def test_portable_absent_case_sensitive_policy_control(self):
+        with patch.object(adoption.sys, 'platform', 'darwin'), patch.object(adoption.os, 'pathconf', return_value=1) as query:
+            self.assertFalse(adoption._same_component(self.destination, 'A.txt', 'a.txt'))
+            query.assert_called_once_with(self.destination, 11)
+        with patch.object(adoption.sys, 'platform', 'darwin'), patch.object(adoption.os, 'pathconf', return_value=0):
+            self.assertTrue(adoption._same_component(self.destination, 'A.txt', 'a.txt'))

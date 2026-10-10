@@ -123,6 +123,20 @@ staged changes, hidden index flags and unrelated/drifting worktree files; use a
 clean owned worktree. Already matching declared resources permit repeat no-op
 application despite their first application's unstaged output.
 
+The whole destination inventory is checked before application writes, including
+filesystem aliases and file/ancestor overlaps with already matching resources.
+Existing identities use native filesystem identity. Missing ASCII case-equivalent
+names use Darwin's read-only filesystem case-sensitivity query; on other hosts
+that ambiguous missing-name comparison is explicitly unsupported. Comparisons involving differing missing Unicode
+components are unsupported rather than approximating native Unicode mappings.
+Distinct existing paths on case-sensitive filesystems remain valid. No universal
+lowercase destination policy or filesystem probe writes are used.
+
+Destinations inside nested repositories or submodules are unsupported, including
+Git metadata aliases. Apply them separately through a request naming that nested
+worktree's own root, subject to the ordinary root metadata protections. A refusal
+preserves all declared destination bytes, including earlier ordinary resources.
+
 Preview exits 0 for a valid plan, including reported differences/conflicts; inspect
 the result rather than treating its exit as verification. Verification exits 0
 only for matching resources. Application reports `applied` or `unchanged`; errors

@@ -10,6 +10,7 @@ import re
 import stat
 import subprocess
 import tempfile
+import sys
 
 MAX_REQUEST_BYTES = 1_000_000
 MAX_RESOURCE_BYTES = 8_000_000
@@ -69,6 +70,8 @@ def _target(root: Path, relative: str) -> Path:
     resolved_root = root.resolve(strict=True)
     cursor = root
     for part in relative.split('/'):
+        if cursor != root and (cursor / '.git').exists():
+            raise AdoptionError('Nested repository destinations are unsupported: ' + relative)
         cursor = cursor / part
         if cursor.is_symlink():
             raise AdoptionError('Destination contains a symlink: ' + relative)
@@ -85,6 +88,49 @@ def _target(root: Path, relative: str) -> Path:
     if target.exists() and not target.is_file():
         raise AdoptionError('Destination is not a regular file: ' + relative)
     return target
+
+
+def _same_component(parent: Path, left: str, right: str) -> bool:
+    if left == right:
+        return True
+    a, b = parent / left, parent / right
+    if a.exists() and b.exists():
+        return a.samefile(b)
+    # Native lookup authenticates existing aliases; missing names need the
+    # filesystem's policy rather than a universal lowercase path key.
+    if not left.isascii() or not right.isascii():
+        raise AdoptionError('Unsupported absent Unicode destination alias comparison')
+    folded_left = left.casefold()
+    folded_right = right.casefold()
+    if folded_left != folded_right:
+        return False
+    anchor = parent
+    while not anchor.exists():
+        anchor = anchor.parent
+    if sys.platform == 'darwin':
+        # Darwin SDK sys/unistd.h: _PC_CASE_SENSITIVE = 11. Query the
+        # actual existing ancestor; absent directories inherit its policy.
+        sensitive = os.pathconf(anchor, 11)
+        if sensitive not in (0, 1):
+            raise AdoptionError('Unsupported destination case-sensitivity policy')
+        return not sensitive
+    raise AdoptionError('Unsupported absent destination case-alias comparison')
+
+
+def _validate_destination_pairs(root: Path, destinations: list[str]) -> None:
+    for index, left in enumerate(destinations):
+        for right in destinations[:index]:
+            a_target, b_target = root / left, root / right
+            if a_target.exists() and b_target.exists() and a_target.samefile(b_target):
+                raise AdoptionError('Destinations alias or overlap as file and ancestor: ' + left + ' / ' + right)
+            parent = root
+            left_parts, right_parts = left.split('/'), right.split('/')
+            for a, b in zip(left_parts, right_parts):
+                if not _same_component(parent, a, b):
+                    break
+                parent = parent / a
+            else:
+                raise AdoptionError('Destinations alias or overlap as file and ancestor: ' + left + ' / ' + right)
 
 
 def _read(path: Path) -> bytes | None:
@@ -177,6 +223,7 @@ def adopt(request: dict, mode: str) -> dict:
         reports.append(dict(source=src, destination=dst, source_blob=blob.decode(), source_sha256=_hash(raw), source_bytes=len(raw), replacements=replacements, output_sha256=_hash(output), output_bytes=len(output), destination_sha256=None if current is None else _hash(current), conflict=conflict, status='unchanged' if matches else 'conflict' if conflict else 'different'))
         permissions_out = stat.S_IMODE(target.stat().st_mode) if current is not None else int(permissions, 8) & 0o777
         plan.append((target, current, output, permissions_out, dst))
+    _validate_destination_pairs(destination, [p[4] for p in plan])
     report = dict(schema_version=SCHEMA_VERSION, mode=mode, source_repository=str(source), revision=revision, destination_repository=str(destination), resources=reports, status='verified' if all(p[1] == p[2] for p in plan) else 'differences')
     if mode != 'apply':
         return report
