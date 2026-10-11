@@ -225,19 +225,38 @@ class ReviewBundleTests(unittest.TestCase):
                 self.assertEqual(rb.canonical(rb.read_record(bundle, key)), rb.canonical(value))
 
     def test_index_bounds_failure_and_mismatch_metadata(self):
-        candidate = deepcopy(self.candidate)
+        # This boundary concerns metadata rows, not declaration amplification.
+        # Other fixtures retain large declarations and unsupported inventories.
+        (self.p / 'tests.py').write_text('def before():\n    return 1\n')
+        (self.c / 'tests.py').write_text('def after():\n    return 2\n')
+        planning = inventory_tree(self.p, stable=True)
+        minimal = inventory_tree(self.c, stable=True)
+        candidate = deepcopy(minimal)
         candidate['status'] = 'incomplete'
         candidate['failures'] = [{'path': f'p{i}', 'error': 'fixture'} for i in range(1000)]
         candidate['incomplete_reasons'] = ['file_or_scan_failure']
-        index = rb.review_index(rb.build_review_bundle(self.planning, candidate), limit=1)
+        bundle = rb.build_review_bundle(planning, candidate)
+        index = rb.review_index(bundle, limit=1)
         self.assertEqual(index['delta']['status'], 'incomplete')
         self.assertEqual(index['delta']['candidate']['failures']['count'], 1000)
         self.assertEqual(len(index['delta']['candidate']['failures']['sample']), 1)
-        incompatible = deepcopy(self.candidate)
+        self.assertTrue(index['delta']['candidate']['failures']['truncated'])
+        failure_view = index['delta']['candidate']['failures']
+        self.assertEqual(rb.read_document_path(bundle, failure_view['document'], failure_view['path']),
+                         [{'path': f'p{i}', 'error': 'fixture'} for i in range(1000)])
+        incompatible = deepcopy(minimal)
         incompatible['files'] = incompatible['files'] * 1000
-        index = rb.review_index(rb.build_review_bundle(self.planning, incompatible), limit=1)
+        self.assertEqual(len(incompatible['files']), 1000)
+        bundle = rb.build_review_bundle(planning, incompatible)
+        index = rb.review_index(bundle, limit=1)
         self.assertEqual(index['delta']['status'], 'incompatible')
+        self.assertEqual(index['delta']['mismatches']['count'], 2)
+        self.assertEqual(len(index['delta']['mismatches']['sample']), 1)
         self.assertTrue(index['delta']['mismatches']['truncated'])
+        mismatch_view = index['delta']['mismatches']
+        self.assertEqual(rb.read_document_path(bundle, mismatch_view['document'], mismatch_view['path']),
+                         ['candidate_duplicate_file_path', 'candidate_inventory_digest_mismatch'])
+        self.assertEqual(rb.read_document_path(bundle, 'candidate', ['files']), incompatible['files'])
 
     def test_missing_extra_and_tampered_record(self):
         for fault in ('missing','extra','tamper'):
