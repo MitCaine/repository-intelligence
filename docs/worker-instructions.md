@@ -26,8 +26,8 @@ Read the complete Shared worker rules, assigned role section and that role's
 supplied inputs before acting. Original issue/decision reading belongs to the
 controller, capsule builder and independent reviewer, not the implementor or
 dispatcher. Initial capsule creation does not require an existing capsule.
-Handoffs identify authorized read scope separately from edit scope; neither
-implies the other. Recover truncated reads and authenticate assigned source,
+Handoffs distinguish the initial reading set and any explicit access limits from
+edit authorization; reading relevant source does not expand edit authority. Recover truncated reads and authenticate assigned source,
 phase, instruction resources and authority. Missing or conflicting required
 inputs go to the controller, never guessed replacements.
 
@@ -81,8 +81,10 @@ turn an advisory scope opinion into independent candidate acceptance.
 ## Implementor
 
 Implement the accepted capsule or controller-approved maintenance handoff using
-only supplied implementation inputs,
-authorized source-reading scope and applicable implementation standards. Read the
+the supplied implementation inputs and applicable implementation standards.
+The initial reading list is a starting set: follow task-relevant source, callers,
+tests and contracts as needed for correct implementation, subject to explicit
+project access restrictions. This does not expand authorized edits. Read the
 [Shared worker rules](#shared-worker-rules) and the complete assigned task input.
 The maintenance handoff replaces the capsule only under the controller-selected
 [maintenance route](start-an-issue.md#optional-maintenance-route). Do not

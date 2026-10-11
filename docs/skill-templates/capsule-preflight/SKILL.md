@@ -19,7 +19,8 @@ Controllers and capsule builders inspect relevant source, callers and tests to
 check scope and criterion coverage; include affected current documentation/link
 updates or an evidenced not-applicable conclusion. The controller resolves
 specification gaps before dispatch. Implementors authenticate the accepted capsule or approved maintenance handoff
-and assigned inputs within their read scope; report an insufficient or conflicting
+and assigned inputs, following relevant source under the governing
+implementor rule selected through the role locator; report an insufficient or conflicting
 task input to the controller before dependent work, without reconstructing scope or
 retrieving original issues/decision history. Use the existing task record, not a
 new packet/schema. Independent scope challenge remains optional unless a

@@ -220,8 +220,10 @@ bookkeeping and closeout do not justify another assignment.
 Retain and authenticate each completed agent's terminal handoff before closing
 it through the host's supported operation to free capacity. Do not close running
 agents. Give each worker its selected [worker instructions](worker-instructions.md#role-index), bounded
-task inputs appropriate to its role, applicable standards, authorized source-read
-locations, commands, edit limits and actual evidence. Original issues and required
+task inputs appropriate to its role, applicable standards, initial source-reading
+locations, explicit access restrictions, commands, edit limits and actual evidence.
+Implementors may follow relevant source under their governing role rule; the
+initial reading list is not an exhaustive file allowlist. Original issues and required
 decision history go to the builder and reviewer; the implementor receives a
 complete accepted capsule or maintenance handoff and bounded implementation inputs, and the dispatcher
 only authenticates and relays the handoff. Follow the role-specific reading rules. Supply the relevant
