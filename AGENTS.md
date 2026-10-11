@@ -24,9 +24,11 @@ apply here. The current user request defines the task scope.
   persistent indexes, or consumer permission policy without a concrete need.
 - For this standalone RI checkout, do not commit, push, merge, or change
   repository settings unless requested. This restriction does not override the
-  documented consumer capsule workflow: its controller directs draft planning,
-  resolves any required scope challenge, and verifies final planning state P
-  before implementation. The consumer execution map assigns candidate capture
+  documented consumer workflow: for the normal route, its controller directs
+  capsule planning, resolves any required scope challenge, and verifies the
+  accepted capsule before implementation. For eligible maintenance, the controller
+  verifies the brief accepted handoff under the selected maintenance rules instead.
+  The consumer execution map assigns candidate capture
   and publication to an authorized actor and stage. Implementor commit/push is
   allowed only when explicitly granted there. No subagent pushes directly to
   `main`; the consumer's acceptance route controls integration.
