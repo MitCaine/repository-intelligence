@@ -3,6 +3,7 @@
 
 import argparse
 import fcntl
+import hashlib
 import tempfile
 import json
 import math
@@ -82,6 +83,13 @@ def save_json(path, data):
         temporary.unlink(missing_ok=True)
 
 
+def save_exclusive(path, text):
+    """Attempt evidence is append-only; never replace a prior record."""
+    with path.open('x') as output:
+        output.write(text)
+
+
+
 def notify(config, *, recovery=False):
     # Serialize notification attempts; an accepted attempt cannot be resent by recovery.
     with (Path(config['job_dir']) / 'delivery.lock').open('a') as lock:
@@ -98,9 +106,25 @@ def notify_locked(config, *, recovery=False):
     existing = json.loads(delivery_path.read_text()) if delivery_path.exists() else None
     if recovery and existing and existing['state'] == 'accepted_by_cli':
         raise ValueError('Notification was accepted by codex queue; do not resend')
-    attempts = 1 + (existing['attempts'] if existing else 0)
+    history = job_dir / 'delivery-attempts'
+    history.mkdir(exist_ok=True)
+    # Preserve summaries produced by older helpers before replacing them.
+    if existing:
+        prior = history / f"{existing['attempts']:06d}"
+        if not prior.exists():
+            prior.mkdir()
+            save_exclusive(prior / 'legacy.json', delivery_path.read_text())
+            if queue_path.exists():
+                save_exclusive(prior / 'queue.log', queue_path.read_text())
+    attempts = 1 + max([existing['attempts'] if existing else 0] +
+                       [int(path.name) for path in history.iterdir() if path.name.isdecimal()])
+    attempt = history / f'{attempts:06d}'
+    attempt.mkdir()  # Reserved while holding the notification lock.
     delivery = {'state': 'attempting', 'attempts': attempts,
-                'status_path': str(status_path), 'thread': config['thread']}
+                'status_path': str(status_path), 'thread': config['thread'],
+                'attempt_path': str(attempt), 'started_at_epoch': time.time(),
+                'status_sha256': hashlib.sha256(status_path.read_bytes()).hexdigest()}
+    save_exclusive(attempt / 'attempting.json', json.dumps(delivery, indent=2) + '\n')
     save_json(delivery_path, delivery)
     message = (f"{config['label']}: {status['outcome']}. Status: {status_path}. "
                f"{config['follow_up']}" + (' Cleanup unresolved; block overlapping follow-up.'
@@ -112,11 +136,15 @@ def notify_locked(config, *, recovery=False):
                                 timeout=QUEUE_TIMEOUT_SECONDS)
         delivery['state'] = 'accepted_by_cli' if queued.returncode == 0 else 'rejected_by_cli'
         delivery['exit_code'] = queued.returncode
-        queue_path.write_text(f"exit_code={queued.returncode}\n{queued.stdout}")
+        diagnostic = f"exit_code={queued.returncode}\n{queued.stdout}"
     except (OSError, subprocess.SubprocessError) as error:
         delivery['state'] = 'uncertain'
         delivery['error'] = f'{type(error).__name__}: {error}'
-        queue_path.write_text(f"delivery uncertain: {delivery['error']}\n")
+        diagnostic = f"delivery uncertain: {delivery['error']}\n"
+    delivery['finished_at_epoch'] = time.time()
+    save_exclusive(attempt / 'queue.log', diagnostic)
+    save_exclusive(attempt / 'result.json', json.dumps(delivery, indent=2) + '\n')
+    queue_path.write_text(diagnostic)
     save_json(delivery_path, delivery)
     return delivery
 

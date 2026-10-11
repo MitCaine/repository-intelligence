@@ -312,16 +312,98 @@ class QueueHelperTests(unittest.TestCase):
             config = self.config(root)
             queue.save_json(root / 'status.json', {'outcome': 'success'})
             queue.save_json(root / 'delivery.json', {'state': 'rejected_by_cli', 'attempts': 1})
+            (root / 'queue.log').write_text('legacy rejection diagnostic')
+            legacy = (root / 'delivery.json').read_bytes()
             with mock.patch.object(queue.subprocess, 'Popen') as popen, \
                     mock.patch.object(queue.subprocess, 'run', return_value=
                                       subprocess.CompletedProcess([], 0, 'queued')) as run:
                 result = queue.notify(config, recovery=True)
             self.assertEqual(result['state'], 'accepted_by_cli')
             self.assertEqual(result['attempts'], 2)
+            self.assertEqual((root / 'delivery-attempts/000001/legacy.json').read_bytes(), legacy)
+            self.assertEqual((root / 'delivery-attempts/000001/queue.log').read_text(), 'legacy rejection diagnostic')
             popen.assert_not_called()
             self.assertEqual(run.call_count, 1)
             with self.assertRaisesRegex(ValueError, 'do not resend'):
                 queue.notify(config, recovery=True)
+
+    def test_public_redelivery_retains_rejected_then_accepted_and_refuses_resend(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            config = self.config(root)
+            queue.save_json(root / 'config.json', config)
+            queue.save_json(root / 'status.json', {'outcome': 'success'})
+            (root / 'output.log').write_bytes(b'original command output')
+            originals = {name: (root / name).read_bytes() for name in ('status.json', 'output.log')}
+            executable = root / 'codex'
+            executable.write_text(f'#!{Path(sys.executable).resolve()}\n'
+                'from pathlib import Path\nimport sys\n'
+                f'p=Path({str(root / "sends")!r})\n'
+                'n=int(p.read_text())+1 if p.exists() else 1\np.write_text(str(n))\n'
+                'print("rejection-original" if n == 1 else "accepted-original")\n'
+                'sys.exit(7 if n == 1 else 0)\n')
+            executable.chmod(0o755)
+            command = [sys.executable, str(SCRIPT), '--redeliver', str(root / 'config.json')]
+            env = dict(os.environ, PATH=raw)
+            first = subprocess.run(command, env=env, capture_output=True)
+            self.assertEqual(first.returncode, 0)
+            first_files = {p.name: p.read_bytes() for p in (root / 'delivery-attempts/000001').iterdir()}
+            second = subprocess.run(command, env=env, capture_output=True)
+            self.assertEqual(second.returncode, 0)
+            self.assertEqual(json.loads((root / 'delivery-attempts/000001/result.json').read_text())['exit_code'], 7)
+            self.assertIn(b'rejection-original', first_files['queue.log'])
+            self.assertIn('accepted-original', (root / 'delivery-attempts/000002/queue.log').read_text())
+            third = subprocess.run(command, env=env, capture_output=True)
+            self.assertNotEqual(third.returncode, 0)
+            self.assertEqual((root / 'sends').read_text(), '2')
+            for name, original in first_files.items():
+                self.assertEqual((root / 'delivery-attempts/000001' / name).read_bytes(), original)
+            for name, original in originals.items():
+                self.assertEqual((root / name).read_bytes(), original)
+            self.assertFalse((root / 'watcher.log').exists())
+
+    def test_public_concurrent_redelivery_sends_once(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            queue.save_json(root / 'config.json', self.config(root))
+            queue.save_json(root / 'status.json', {'outcome': 'success'})
+            (root / 'output.log').write_bytes(b'unchanged')
+            originals = {name: (root / name).read_bytes() for name in ('status.json', 'output.log')}
+            executable = root / 'codex'
+            executable.write_text(f'#!{Path(sys.executable).resolve()}\nimport time\nfrom pathlib import Path\n'
+                f'p=Path({str(root / "sends")!r})\n'
+                'p.write_text(p.read_text()+"send\\n" if p.exists() else "send\\n")\n'
+                'time.sleep(.3)\nprint("accepted")\n')
+            executable.chmod(0o755)
+            command = [sys.executable, str(SCRIPT), '--redeliver', str(root / 'config.json')]
+            processes = [subprocess.Popen(command, env=dict(os.environ, PATH=raw),
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE) for _ in range(2)]
+            for process in processes:
+                process.communicate(timeout=10)
+            self.assertCountEqual([p.returncode for p in processes], [0, 1])
+            self.assertEqual((root / 'sends').read_text(), 'send\n')
+            self.assertEqual(len(list((root / 'delivery-attempts').iterdir())), 1)
+            for name, original in originals.items():
+                self.assertEqual((root / name).read_bytes(), original)
+            self.assertFalse((root / 'watcher.log').exists())
+
+    def test_interrupted_attempt_remains_immutable_during_authorized_retry(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            queue.save_json(root / 'status.json', {'outcome': 'success'})
+            with mock.patch.object(queue.subprocess, 'run', side_effect=KeyboardInterrupt):
+                with self.assertRaises(KeyboardInterrupt):
+                    queue.notify(self.config(root))
+            original = (root / 'delivery-attempts/000001/attempting.json').read_bytes()
+            self.assertFalse((root / 'delivery-attempts/000001/result.json').exists())
+            with mock.patch.object(queue.subprocess, 'run', side_effect=subprocess.TimeoutExpired('codex', 30)):
+                delivery = queue.notify(self.config(root), recovery=True)
+            self.assertEqual(delivery['state'], 'uncertain')
+            uncertain = (root / 'delivery-attempts/000002/result.json').read_bytes()
+            with mock.patch.object(queue.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, 'ok')):
+                queue.notify(self.config(root), recovery=True)
+            self.assertEqual((root / 'delivery-attempts/000001/attempting.json').read_bytes(), original)
+            self.assertEqual((root / 'delivery-attempts/000002/result.json').read_bytes(), uncertain)
 
     def test_first_success_inspection_error_enters_bounded_cleanup(self):
         with tempfile.TemporaryDirectory() as raw:

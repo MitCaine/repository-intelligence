@@ -75,8 +75,9 @@ not force capsule planning: permit bounded in-scope correction under existing
 authority, followed by affected checks and independent review.
 
 For eligible work, record a brief controller handoff in the existing task record:
-objective, exact base, allowed changes, required checks and concrete return
-destination. It replaces the capsule builder, full capsule and planning-only
+objective, expected outcomes, required decisions sufficient for implementation,
+exact base, allowed changes, required checks and concrete return destination.
+It replaces the capsule builder, full capsule and planning-only
 publication; no new template or tracking system is needed. The sequence is
 controller → implementor → independent reviewer → controller closeout by default.
 Where the selected project map permits **direct Work controller** implementation,
@@ -242,7 +243,8 @@ inaccessible material is a gap, not permission to guess.
 
 ### Publish the task branch and handoffs
 
-Before worker dispatch, the controller creates and publishes the dedicated
+Except for [permitted no-change review](#planning-only-and-no-change-outcomes),
+before worker dispatch the controller creates and publishes the dedicated
 non-main task branch on GitHub from the authenticated base. For direct-controller
 maintenance, do this before implementation rather than worker dispatch. On the normal route,
 the builder returns the capsule; the map assigns its capsule-only commit/push to
@@ -361,10 +363,18 @@ RI is navigation/comparison support. Direct source, full diffs and ordinary logs
 suffice; RI gaps do not prove absence. No special runner, exporter, per-declaration
 verdict or new mandatory record is required. Already-satisfied work can receive
 independent no-change review and authorized closeout without an artificial commit.
+Where consumer controls permit, review an authenticated existing remote source
+against the original criteria and criterion evidence in the existing task record,
+without creating a capsule, task branch or commit solely for that disposition.
+Fresh independent review and closure authority still apply. A consumer requiring
+a branch retains that requirement. If review finds needed edits, preserve the
+finding and create the ordinary task branch before implementation. If the target
+source changes, reconcile its identity and affected evidence/review before
+closeout. Reconcile an unknown issue-close response before retrying.
 For a planning-only or no-change outcome, record why implementation and integration
 are unnecessary. Preserve the task record (and published capsule where applicable) as the project
 requires, then use
-its authorized disposition for the unmerged planning branch. Do not describe that
+its authorized disposition for any existing unmerged planning branch. Do not describe that
 branch as merged or invent a product change merely to clean it up.
 
 ## Wait, recover and resume

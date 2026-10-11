@@ -128,6 +128,9 @@ Read the [Shared worker rules](#shared-worker-rules), complete task and original
 requirements, exact candidate, full diff, applicable standards and actual check evidence.
 The task is the accepted capsule or maintenance handoff under the selected route;
 maintenance retains independent review of the original objective and full change.
+For [permitted no-change review](start-an-issue.md#planning-only-and-no-change-outcomes),
+use the existing task record, original criteria and evidence against the exact
+existing remote source; no capsule or implementation is implied.
 Use the supplied selected review route and limits; do not repeat controller intake.
 The author/implementor cannot be its reviewer. A previous verdict is not a new review.
 

@@ -5,6 +5,7 @@ import argparse
 from copy import deepcopy
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import stat
 import subprocess
@@ -120,7 +121,12 @@ def load(path):
 
 
 def git(root, *args):
-    return subprocess.check_output(['git', '-C', str(root), *args],
+    # Bind every observation to the named checkout, never ambient Git routing.
+    environment = {key: value for key, value in os.environ.items()
+                   if not key.startswith('GIT_')}
+    environment['GIT_NO_REPLACE_OBJECTS'] = '1'
+    return subprocess.check_output(['git', '--no-replace-objects', '-C', str(root), *args],
+                                   env=environment, stdin=subprocess.DEVNULL,
                                    stderr=subprocess.PIPE, timeout=30)
 
 
@@ -377,6 +383,9 @@ def validate_closeout(expected, observed, checks, root, packet_dir):
 
 
 def validate(contract, packet, root, packet_dir):
+    root = Path(root).resolve(strict=True)
+    observed_root = Path(git(root, 'rev-parse', '--show-toplevel').decode().strip()).resolve(strict=True)
+    require(observed_root == root, 'repository must name its worktree root')
     contract, packet = expand_source_maps(contract), expand_source_maps(packet)
     identity = contract.get('identity')
     require(isinstance(identity, dict) and set(identity) ==

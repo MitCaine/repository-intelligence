@@ -151,6 +151,46 @@ class EvidencePreflightTests(unittest.TestCase):
             text=True, env=self.env, timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_cli_named_root_ignores_inherited_routing_and_supports_linked_worktree(self):
+        import sys
+        for name, value in (('contract', self.contract), ('packet', self.packet)):
+            (self.records / f'{name}.json').write_text(json.dumps(value))
+        candidate = self.contract['identity']['candidate']
+        base = self.contract['identity']['base']
+        wrong = Path(self.temp.name) / 'wrong'
+        linked = Path(self.temp.name) / 'linked'
+        subprocess.run(['git', 'clone', '-q', str(self.root), str(wrong)],
+                       check=True, env=self.env)
+        subprocess.run(['git', '-C', str(wrong), 'checkout', '-q', base],
+                       check=True, env=self.env)
+        self.git('worktree', 'add', '--detach', '-q', str(linked), candidate)
+        inherited = dict(self.env, GIT_DIR=str(self.root / '.git'),
+                         GIT_WORK_TREE=str(self.root), GIT_INDEX_FILE=str(self.root / '.git/index'))
+        # Independently establish which actual commits each named worktree holds.
+        self.assertEqual(subprocess.check_output(['git', '-C', str(wrong), 'rev-parse', 'HEAD'],
+                                                env=self.env).decode().strip(), base)
+        self.assertEqual(subprocess.check_output(['git', '-C', str(linked), 'rev-parse', 'HEAD'],
+                                                env=self.env).decode().strip(), candidate)
+        foreign = dict(self.env, GIT_DIR=str(wrong / '.git'), GIT_WORK_TREE=str(wrong))
+        nested = self.root / 'nested'
+        nested.mkdir()
+        for root, environment, expected in ((self.root, self.env, 'checked'),
+                (wrong, self.env, 'blocked'), (wrong, inherited, 'blocked'),
+                (self.root, inherited, 'checked'), (self.root, foreign, 'checked'),
+                (linked, inherited, 'checked'),
+                (nested, inherited, 'blocked')):
+            result = subprocess.run([sys.executable, str(SCRIPT), '--repository', str(root),
+                '--contract', str(self.records / 'contract.json'),
+                '--packet', str(self.records / 'packet.json')], capture_output=True,
+                text=True, env=environment, timeout=30)
+            observed = json.loads(result.stdout)
+            with self.subTest(root=root, inherited=environment is inherited):
+                self.assertEqual(observed['disposition'], expected, result.stdout + result.stderr)
+                self.assertEqual(result.returncode, 0 if expected == 'checked' else 2)
+                if expected == 'checked':
+                    self.assertEqual(observed['changed_paths'], ['task.py'])
+                    self.assertEqual(observed['schema_version'], 1)
+
     def test_shared_maps_fit_budget_without_merging_evidence_roles(self):
         self.repeat_checks(30)
         sources = {'directory-' + 'x' * 150 + f'/file-{i}.py':

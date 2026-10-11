@@ -6,6 +6,9 @@ retain execution HEAD at P while holding promoted C as an immutable object.
 Materialize C through the consumer-authorized read/snapshot route before invoking
 this helper. This helper does not change refs or require the execution branch
 to advance.
+Git observations authenticate the supplied canonical worktree root and ignore
+inherited Git configuration/routing variables. Supported linked worktrees retain
+their own HEAD and status; a nested directory is not a substitute root.
 
 Use [the helper](../scripts/evidence_preflight.py) after candidate freeze and
 before qualification/review handoff. It reads Git and local files, executes no
