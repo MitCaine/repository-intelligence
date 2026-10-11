@@ -387,6 +387,37 @@ class QueueHelperTests(unittest.TestCase):
                 self.assertEqual((root / name).read_bytes(), original)
             self.assertFalse((root / 'watcher.log').exists())
 
+    def test_accepted_result_prevents_resend_after_summary_write_interruption(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            queue.save_json(root / 'status.json', {'outcome': 'success'})
+            (root / 'output.log').write_bytes(b'original output')
+            original_status = (root / 'status.json').read_bytes()
+            original_output = (root / 'output.log').read_bytes()
+            real_save = queue.save_json
+            def interrupted_summary(path, value):
+                if path.name == 'delivery.json' and value['state'] == 'accepted_by_cli':
+                    raise KeyboardInterrupt('after durable accepted result')
+                real_save(path, value)
+            with mock.patch.object(queue, 'save_json', side_effect=interrupted_summary), \
+                    mock.patch.object(queue.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, 'accepted diagnostic')) as run:
+                with self.assertRaises(KeyboardInterrupt):
+                    queue.notify(self.config(root))
+            self.assertEqual(run.call_count, 1)
+            self.assertEqual(json.loads((root / 'delivery.json').read_text())['state'], 'attempting')
+            retained = {path.name: path.read_bytes() for path in (root / 'delivery-attempts/000001').iterdir()}
+            self.assertEqual(json.loads(retained['result.json'])['state'], 'accepted_by_cli')
+            with mock.patch.object(queue.subprocess, 'run') as resend:
+                with self.assertRaisesRegex(ValueError, 'do not resend'):
+                    queue.notify(self.config(root), recovery=True)
+                resend.assert_not_called()
+            self.assertEqual(json.loads((root / 'delivery.json').read_text())['state'], 'accepted_by_cli')
+            self.assertEqual(len(list((root / 'delivery-attempts').iterdir())), 1)
+            for name, value in retained.items():
+                self.assertEqual((root / 'delivery-attempts/000001' / name).read_bytes(), value)
+            self.assertEqual((root / 'status.json').read_bytes(), original_status)
+            self.assertEqual((root / 'output.log').read_bytes(), original_output)
+
     def test_interrupted_attempt_remains_immutable_during_authorized_retry(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

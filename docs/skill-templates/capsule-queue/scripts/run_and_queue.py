@@ -108,6 +108,18 @@ def notify_locked(config, *, recovery=False):
         raise ValueError('Notification was accepted by codex queue; do not resend')
     history = job_dir / 'delivery-attempts'
     history.mkdir(exist_ok=True)
+    if recovery:
+        # A durable result may precede an interrupted current-summary update.
+        # Acceptance in retained evidence is authoritative: never send again.
+        for prior in sorted(history.iterdir(), reverse=True):
+            if not prior.name.isdecimal():
+                continue
+            result_path = prior / 'result.json'
+            if result_path.exists():
+                retained = json.loads(result_path.read_text())
+                if retained['state'] == 'accepted_by_cli':
+                    save_json(delivery_path, retained)
+                    raise ValueError('Notification was accepted by codex queue; do not resend')
     # Preserve summaries produced by older helpers before replacing them.
     if existing:
         prior = history / f"{existing['attempts']:06d}"
