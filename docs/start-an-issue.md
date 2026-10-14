@@ -426,8 +426,9 @@ sweep to consolidate real failures and unknowns. Routine clarification, diagnosi
 and in-scope correction need no repeated human approval. The assigned implementor
 may diagnose and repair ordinary compile, lint and test failures throughout the
 accepted task scope and authorized edit boundaries without a new grant or handoff
-for each fix. Check fixture-dependent expectations against the actual setup before
-prescribing a correction. When a failure reveals a repeated assumption or
+for each fix. When failure contradicts the implementation sketch, reexamine the
+implementation, fixture and independently justified expectation, and execution
+setup before prescribing a correction; revise the approach when evidence warrants. When a failure reveals a repeated assumption or
 incomplete migration, search relevant source, tests and callers for affected
 occurrences, inspect matches in context, and repair related mistakes within
 authorized edits before restarting costly qualification. Preserve intentional
