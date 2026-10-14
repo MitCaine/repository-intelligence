@@ -193,7 +193,8 @@ PYTHONPATH=src .venv/bin/python -m repository_intelligence.worker_execution --re
 Version 1 request fields are `assignment`, unique `attempt`, absolute `workspace`
 and separate `protected_repository`, full `base`, `inputs` (absolute regular-file
 `path`/`sha256` bindings for the handoff, instructions and relevant consumer tools),
-exact relative `allowed_changes`, `capture_authority` (consumer grant reference),
+exact relative `allowed_changes`, optional `route` (`subprocess`, the compatible
+default, or explicitly selected `interactive`), `capture_authority` (consumer grant reference),
 selected child `environment`, optional `edit`, required `capture` and `runner`,
 `require_new_candidate` (explicit boolean), `check_request`, `runner_result` and
 `result_bindings`. Optional `timeout_seconds` is 1–3600 per operation. Each operation
@@ -209,8 +210,16 @@ identities, shared Git configuration identity and selected input/operation/reque
 reply. Reconcile retained partial evidence under the existing consumer recovery
 route; this helper does not resume interrupted operations. Edits occur only through
 the optional selected edit invocation, which may itself be a consumer launcher;
-manual source changes between prepare/run are refused. This is an optional selected
-operation path, not a replacement for interactive implementation tools.
+manual source changes are refused on that compatible subprocess route. On the
+explicit interactive route, prepare authenticates the clean original base before
+worker edits; run reauthenticates the original assignment, selected inputs and
+workspace/Git configuration, checks all committed and working changes against
+original allowed paths, and invokes the unchanged selected capture/runner.
+Authorized local descendant commits are supported without silently repreparing
+or changing the original base. Interactive requests cannot also select an edit
+launcher. A blocked or interrupted run still requires a new explicitly reconciled
+attempt, not rerunning its launch marker. This is an optional selected operation
+path, not filesystem isolation or an agent-launch service.
 
 Exact argv tokens `{workspace}`, `{attempt}` (private attempt directory),
 `{candidate}` and `{check_request}` resolve per invocation. Capture must leave a
@@ -244,3 +253,13 @@ result-report schema versions remain unchanged; this helper's packets use
 filesystem isolation, continuous observation, or protection against arbitrary
 outside writes. Consumer capture permissions and active instruction pins remain
 unchanged until separately adopted.
+
+Structured request/result parsing remains bounded to 1,000,000 bytes. Regular
+executable/input/output/evidence identity hashing streams 64 KiB chunks up to
+1,000,000,000 bytes, rejects nonregular/symlink endpoints and checks file identity,
+size and modification observations before/after reading. It does not omit large
+interpreters or logs merely because they exceed the JSON parsing limit. Every
+known result-binding key path is validated during preparation, before operations.
+These additive options retain helper schema version 1; existing subprocess
+bindings retain their selected behavior. Consumer adapters and actual host return
+consumption need their own bounded proof when selected, not routine live exercises.

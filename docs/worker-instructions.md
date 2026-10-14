@@ -132,7 +132,10 @@ Passing counts alone do not prove a required behavior.
 Follow the [command readiness and check-order rules](start-an-issue.md#command-readiness).
 Retain actual commands, source/environment identities and results/logs, including
 failures/skips, under [evidence eligibility](start-an-issue.md#evidence-eligibility-and-corrections).
-Report changed inputs or missing results; do not infer acceptance.
+Report changed inputs or missing results; do not infer acceptance. When the
+handoff selects an available adopted [consumer execution binding](workflow-tools.md#prepared-worker-execution-linkage),
+use its prepared edit/capture/check/return operations under the assigned authority;
+do not invoke unselected helpers. Other supported project routes remain valid.
 Preserve useful work for bounded corrections; confirm scope changes with the controller.
 
 Return the full change, criterion evidence and unresolved obligations for controller

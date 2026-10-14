@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import subprocess
 import sys
 
@@ -14,6 +15,7 @@ from .adoption import AdoptionError, _git, _root
 
 SCHEMA_VERSION = 1
 MAX_BYTES = 1_000_000
+MAX_IDENTITY_BYTES = 1_000_000_000
 
 
 class ExecutionError(ValueError):
@@ -30,7 +32,28 @@ def read(path: Path) -> bytes:
 
 
 def identity(path: Path) -> dict:
-    return dict(path=str(path), sha256=hashlib.sha256(read(path)).hexdigest())
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_IDENTITY_BYTES:
+            raise ExecutionError('Identity needs a regular file within the byte limit')
+        digest = hashlib.sha256()
+        count = 0
+        while chunk := os.read(fd, 65536):
+            count += len(chunk)
+            if count > MAX_IDENTITY_BYTES:
+                raise ExecutionError('Identity exceeds byte limit')
+            digest.update(chunk)
+        after = os.fstat(fd)
+        current = path.stat(follow_symlinks=False)
+        def observed(value):
+            return (value.st_dev, value.st_ino, value.st_mode, value.st_size,
+                    value.st_mtime_ns, value.st_ctime_ns)
+        if observed(before) != observed(after) or observed(after) != observed(current) or count != before.st_size:
+            raise ExecutionError('File changed while hashing')
+        return dict(path=str(path), sha256=digest.hexdigest())
+    finally:
+        os.close(fd)
 
 
 def absolute(value: str) -> Path:
@@ -51,6 +74,8 @@ def save(path: Path, value: dict) -> None:
 def frozen(root: Path, commit: str) -> None:
     if _git(root, 'rev-parse', 'HEAD').decode().strip() != commit:
         raise ExecutionError('Workspace HEAD mismatch')
+    if any(item and (item[:1].islower() or item[:1] == b'S') for item in _git(root, 'ls-files', '-v', '-z').split(b'\x00')):
+        raise ExecutionError('Hidden index flags are unsupported')
     if _git(root, 'status', '--porcelain', '--untracked-files=all').strip():
         raise ExecutionError('Candidate is not a clean frozen source')
 
@@ -104,12 +129,15 @@ def field(value: dict, path: list) -> object:
     return value
 
 
-def prepare(request: dict, evidence: Path) -> dict:
+def prepare(request: dict, evidence: Path, *, initial: bool = True) -> dict:
     required = {'assignment', 'attempt', 'workspace', 'protected_repository', 'base', 'inputs',
                 'allowed_changes', 'capture_authority', 'environment', 'capture', 'runner',
                 'runner_result', 'result_bindings', 'require_new_candidate', 'check_request'}
-    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'edit', 'timeout_seconds'}:
+    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'edit', 'timeout_seconds', 'route'}:
         raise ExecutionError('Invalid explicit execution binding fields')
+    route = request.get('route', 'subprocess')
+    if route not in ('subprocess', 'interactive') or (route == 'interactive' and request.get('edit') is not None):
+        raise ExecutionError('Interactive route uses worker edits, not an edit launcher')
     if not isinstance(request['assignment'], str) or not request['assignment'].strip():
         raise ExecutionError('Assignment identity required')
     if type(request['require_new_candidate']) is not bool:
@@ -121,6 +149,9 @@ def prepare(request: dict, evidence: Path) -> dict:
         raise ExecutionError('Runner result must name a distinct direct attempt file')
     if not isinstance(request['result_bindings'], dict) or set(request['result_bindings']) != {'candidate', 'workspace', 'attempt', 'ready', 'references', 'request_sha256'}:
         raise ExecutionError('Explicit consumer result bindings required')
+    for binding in request['result_bindings'].values():
+        if not isinstance(binding, list) or not binding or len(binding) > 32 or not all(isinstance(k, str) and k for k in binding):
+            raise ExecutionError('Every result binding needs a bounded nonempty object-key path')
     if not isinstance(request['check_request'], dict) or not request['check_request']:
         raise ExecutionError('Explicit consumer check request template required')
     if not isinstance(request['attempt'], str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', request['attempt']):
@@ -129,7 +160,10 @@ def prepare(request: dict, evidence: Path) -> dict:
     base = request['base']
     if not isinstance(base, str) or not re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', base):
         raise ExecutionError('Full base commit required')
-    frozen(root, base)
+    if initial or route == 'subprocess':
+        frozen(root, base)
+    else:
+        _git(root, 'merge-base', '--is-ancestor', base, 'HEAD')
     protected = _root(str(absolute(request['protected_repository'])))
     if root == protected or root in protected.parents or protected in root.parents:
         raise ExecutionError('Prepared workspace must be separate from protected repository')
@@ -157,7 +191,7 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
     if not evidence.is_dir():
         raise ExecutionError('Evidence parent must already exist')
     attempt = evidence / request['attempt']
-    prepared = prepare(request, evidence)
+    prepared = prepare(request, evidence, initial=mode == 'prepare')
     if mode == 'prepare':
         attempt.mkdir(exist_ok=False)
         save(attempt / 'PREPARED.json', prepared)
@@ -177,6 +211,8 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
     root = Path(request['workspace'])
     initial_binding = retained['workspace']
     def check_workspace(expected_head: str, clean: bool = False):
+        if any(item and (item[:1].islower() or item[:1] == b'S') for item in _git(root, 'ls-files', '-v', '-z').split(b'\x00')):
+            raise ExecutionError('Hidden index flags are unsupported before operations')
         if workspace_binding(_root(str(root))) != initial_binding:
             raise ExecutionError('Workspace identity substituted')
         if _git(root, 'rev-parse', 'HEAD').decode().strip() != expected_head:
@@ -209,10 +245,24 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
             raise ExecutionError(name + ' operation failed or incomplete')
         return row['status'] == 'passed'
     try:
+        capture_parent = request['base']
+        if request.get('route', 'subprocess') == 'interactive':
+            capture_parent = _git(root, 'rev-parse', 'HEAD').decode().strip()
+            check_workspace(capture_parent)
+            _git(root, 'merge-base', '--is-ancestor', request['base'], capture_parent)
+            changed = _git(root, 'diff', '--no-renames', '--name-only', '-z', request['base'], capture_parent).split(b'\x00')
+            changed += _git(root, 'diff', '--cached', '--no-renames', '--name-only', '-z', capture_parent).split(b'\x00')
+            changed += _git(root, 'diff', '--no-renames', '--name-only', '-z').split(b'\x00')
+            changed += _git(root, 'ls-files', '--others', '--exclude-standard', '-z').split(b'\x00')
+            if {path.decode() for path in changed if path} - set(request['allowed_changes']):
+                raise ExecutionError('Interactive edits exceed original authorized paths')
+            report['post_edit_head'] = capture_parent
+            report['post_edit_paths'] = sorted({path.decode() for path in changed if path})
+            save(result_path, report)
         if request.get('edit'):
             invoke('edit', request['base'])
-        check_workspace(request['base'])
-        invoke('capture', request['base'])
+        check_workspace(capture_parent)
+        invoke('capture', capture_parent)
         candidate = _git(root, 'rev-parse', 'HEAD').decode().strip()
         frozen(root, candidate)
         if request['require_new_candidate'] and candidate == request['base']:
