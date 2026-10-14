@@ -263,3 +263,49 @@ known result-binding key path is validated during preparation, before operations
 These additive options retain helper schema version 1; existing subprocess
 bindings retain their selected behavior. Consumer adapters and actual host return
 consumption need their own bounded proof when selected, not routine live exercises.
+
+### Operation finality and adapter conformance
+
+Local operation launch supports owned POSIX process groups. A timeout or interruption handled by the helper
+terminates the selected group and waits for completion before hashing final output;
+descendants that outlive their immediate parent make the operation incomplete.
+Unknown remaining activity retains output paths as not-final, never final hashes
+or review-ready status. Escaped process groups and external host jobs are outside
+this local ownership contract and must use a selected consumer completion route;
+immediate-child success alone cannot qualify them. Unsupported platforms refuse
+local operation ownership. Helper termination by an unhandled signal or host crash does not establish cleanup.
+This is not universal process supervision.
+
+Return writes use exclusive unpredictable temporary files and replacement; residue
+from an older write cannot block a normal new write. Uncertain launch markers and
+partial evidence still require reconciliation, not blind retry. Final capture scope
+always considers rename source deletion and destination addition independently of
+Git rename configuration. Known output filenames, argv and environment forms are
+validated during preparation; runtime capability failures remain honest failures.
+
+The optional `adapter_conformance.assess` accepts a consumer projection, not a
+replacement native result format: `source_stable`, `terminal_complete`, explicit
+`outcomes` with boolean `mandatory` and `status`, and named `request_digests`.
+Statuses are passed/failed/blocked/unlaunched/incomplete. Required outcomes must
+pass independently of source stability, command exit or an intermediate finalize;
+advisory failures remain observations. Empty/malformed or unknown observations
+cannot qualify. A selected `conformance` object-key path in the execution request
+applies this check to the actual mapped consumer result before review-ready status.
+Consumer adapters own authentic projection and required-outcome coverage; the helper
+cannot certify a deliberately false adapter.
+
+`raw_file_sha256` hashes actual CHECK_REQUEST bytes; `canonical_json_sha256` hashes
+parsed JSON serialized with sorted keys, compact separators and ASCII escaping.
+Verify each selected representation under its own name. Other native formats need
+an explicit supported mapping; never relabel canonical hashes as raw file hashes.
+Existing raw request/source/reference validation remains required. Consumers own
+actual adapter and selected-worker integration tests, including interrupted and
+failed native results; shared fixtures supply small reusable conformance controls.
+
+Optional `integration_base` is a full ancestor commit of the original recovery
+`base`. Return `integration_changed_paths` describes B→C2; `changed_paths` describes
+C1→C2 and `recovery_base` retains C1. This uses existing Git projection, not a new
+ledger or acceptance narrowing. Existing requests default integration base to base;
+all additions retain packet schema1. No consumer adoption or active pin changes
+follow automatically. See the [selected role entrypoint](worker-instructions.md#implementor)
+when an available binding is explicitly assigned; other project routes remain valid.

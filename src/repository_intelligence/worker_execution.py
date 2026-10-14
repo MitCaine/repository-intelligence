@@ -8,9 +8,13 @@ import os
 from pathlib import Path
 import re
 import stat
+import signal
+import tempfile
+import time
 import subprocess
 import sys
 
+from .adapter_conformance import assess, request_digests
 from .adoption import AdoptionError, _git, _root
 
 SCHEMA_VERSION = 1
@@ -64,11 +68,52 @@ def absolute(value: str) -> Path:
 
 
 def save(path: Path, value: dict) -> None:
-    temporary = path.with_suffix('.tmp')
-    with temporary.open('x') as stream:
-        json.dump(value, stream, sort_keys=True, indent=2)
-        stream.write('\n')
-    os.replace(temporary, path)
+    fd, name = tempfile.mkstemp(prefix=path.name + '.tmp-', dir=path.parent)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            json.dump(value, stream, sort_keys=True, indent=2)
+            stream.write('\n')
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(name, path)
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+
+
+def owned_run(argv, cwd, environment, stdout, stderr, timeout):
+    if os.name != 'posix':
+        raise ExecutionError('Local process ownership is unsupported on this platform')
+    process = subprocess.Popen(argv, cwd=cwd, env=environment, stdout=stdout,
+                               stderr=stderr, start_new_session=True)
+    interrupted = None
+    try:
+        code = process.wait(timeout=timeout)
+    except BaseException as error:
+        interrupted = error
+        code = None
+    # Normal immediate-child exit does not establish descendant completion.
+    survivors = False
+    try:
+        os.killpg(process.pid, 0)
+        survivors = True
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    process.wait(timeout=2)
+    outlived_parent = survivors
+    deadline = time.monotonic() + 2
+    while survivors and time.monotonic() < deadline:
+        try:
+            os.killpg(process.pid, 0)
+        except ProcessLookupError:
+            survivors = False
+            break
+        time.sleep(0.02)
+    if interrupted is not None or outlived_parent:
+        return dict(exit_code=code, status='incomplete', outputs_final=not survivors,
+                    error=str(interrupted) if interrupted else 'Descendant outlived immediate child; operation incomplete')
+    return dict(exit_code=code, status='passed' if code == 0 else 'failed', outputs_final=True)
 
 
 def frozen(root: Path, commit: str) -> None:
@@ -101,6 +146,13 @@ def selected_inputs(request: dict) -> list:
     return observed
 
 
+def native_string(value: str) -> None:
+    try:
+        os.fsencode(value)
+    except UnicodeError as error:
+        raise ExecutionError('Command input is not representable on this platform') from error
+
+
 def operation_inputs(request: dict) -> list:
     results = []
     for name in ('edit', 'capture', 'runner'):
@@ -110,8 +162,10 @@ def operation_inputs(request: dict) -> list:
         if not isinstance(operation, dict) or set(operation) != {'argv', 'executable_sha256'}:
             raise ExecutionError('Operations need argv and executable_sha256')
         argv = operation['argv']
-        if not isinstance(argv, list) or not argv or not all(isinstance(x, str) for x in argv):
+        if not isinstance(argv, list) or not argv or not all(isinstance(x, str) and '\x00' not in x for x in argv):
             raise ExecutionError('Invalid operation argv')
+        for value in argv:
+            native_string(value)
         actual = identity(absolute(argv[0]))
         if actual['sha256'] != operation['executable_sha256']:
             raise ExecutionError('Operation executable mismatch')
@@ -129,11 +183,16 @@ def field(value: dict, path: list) -> object:
     return value
 
 
+def helper_outputs():
+    return {'', '.', '..', 'RETURN.json', 'PREPARED.json', 'LAUNCHED', 'CHECK_REQUEST.json',
+            *(name + '.' + channel for name in ('edit', 'capture', 'runner') for channel in ('stdout', 'stderr'))}
+
+
 def prepare(request: dict, evidence: Path, *, initial: bool = True) -> dict:
     required = {'assignment', 'attempt', 'workspace', 'protected_repository', 'base', 'inputs',
                 'allowed_changes', 'capture_authority', 'environment', 'capture', 'runner',
                 'runner_result', 'result_bindings', 'require_new_candidate', 'check_request'}
-    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'edit', 'timeout_seconds', 'route'}:
+    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'edit', 'timeout_seconds', 'route', 'conformance', 'integration_base'}:
         raise ExecutionError('Invalid explicit execution binding fields')
     route = request.get('route', 'subprocess')
     if route not in ('subprocess', 'interactive') or (route == 'interactive' and request.get('edit') is not None):
@@ -145,13 +204,15 @@ def prepare(request: dict, evidence: Path, *, initial: bool = True) -> dict:
     timeout = request.get('timeout_seconds', 300)
     if type(timeout) is not int or not 1 <= timeout <= 3600:
         raise ExecutionError('Timeout must be between 1 and 3600 seconds')
-    if not isinstance(request['runner_result'], str) or Path(request['runner_result']).name != request['runner_result'] or request['runner_result'] in ('', '.', '..', 'RETURN.json', 'PREPARED.json', 'LAUNCHED'):
+    if not isinstance(request['runner_result'], str) or Path(request['runner_result']).name != request['runner_result'] or request['runner_result'] in helper_outputs() or request['runner_result'].startswith(tuple(name + '.tmp' for name in helper_outputs())):
         raise ExecutionError('Runner result must name a distinct direct attempt file')
     if not isinstance(request['result_bindings'], dict) or set(request['result_bindings']) != {'candidate', 'workspace', 'attempt', 'ready', 'references', 'request_sha256'}:
         raise ExecutionError('Explicit consumer result bindings required')
     for binding in request['result_bindings'].values():
         if not isinstance(binding, list) or not binding or len(binding) > 32 or not all(isinstance(k, str) and k for k in binding):
             raise ExecutionError('Every result binding needs a bounded nonempty object-key path')
+    if 'conformance' in request and (not isinstance(request['conformance'], list) or not request['conformance'] or not all(isinstance(k, str) and k for k in request['conformance'])):
+        raise ExecutionError('Conformance binding needs a nonempty object-key path')
     if not isinstance(request['check_request'], dict) or not request['check_request']:
         raise ExecutionError('Explicit consumer check request template required')
     if not isinstance(request['attempt'], str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', request['attempt']):
@@ -164,6 +225,10 @@ def prepare(request: dict, evidence: Path, *, initial: bool = True) -> dict:
         frozen(root, base)
     else:
         _git(root, 'merge-base', '--is-ancestor', base, 'HEAD')
+    integration_base = request.get('integration_base', base)
+    if not isinstance(integration_base, str) or not re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', integration_base):
+        raise ExecutionError('Full integration base required')
+    _git(root, 'merge-base', '--is-ancestor', integration_base, base)
     protected = _root(str(absolute(request['protected_repository'])))
     if root == protected or root in protected.parents or protected in root.parents:
         raise ExecutionError('Prepared workspace must be separate from protected repository')
@@ -175,8 +240,11 @@ def prepare(request: dict, evidence: Path, *, initial: bool = True) -> dict:
             raise ExecutionError('Unsafe allowed change path')
     if not isinstance(request['capture_authority'], str) or not request['capture_authority'].strip():
         raise ExecutionError('Explicit consumer capture authority reference required')
-    if not isinstance(request['environment'], dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in request['environment'].items()):
+    if not isinstance(request['environment'], dict) or not all(isinstance(k, str) and k and '=' not in k and '\x00' not in k and isinstance(v, str) and '\x00' not in v for k, v in request['environment'].items()):
         raise ExecutionError('Explicit child environment required')
+    for key, value in request['environment'].items():
+        native_string(key)
+        native_string(value)
     return dict(schema_version=SCHEMA_VERSION, assignment=request['assignment'], attempt=request['attempt'],
                 base=base, workspace=workspace_binding(root), selected_inputs=selected_inputs(request),
                 operations=operation_inputs(request), capture_authority=request['capture_authority'],
@@ -231,15 +299,13 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
         # Only invocation output is retained here; consumer runner owns gate logs.
         try:
             with (attempt / (name + '.stdout')).open('xb') as stdout, (attempt / (name + '.stderr')).open('xb') as stderr:
-                completed = subprocess.run(argv, cwd=root, env=request['environment'], stdout=stdout, stderr=stderr,
-                                           timeout=request.get('timeout_seconds', 300))
-            row.update(exit_code=completed.returncode, status='passed' if completed.returncode == 0 else 'failed')
+                row.update(owned_run(argv, root, request['environment'], stdout, stderr, request.get('timeout_seconds', 300)))
         except (OSError, subprocess.SubprocessError) as error:
-            row.update(status='incomplete', error=str(error))
+            row.update(status='incomplete', outputs_final=False, error=str(error))
         for channel in ('stdout', 'stderr'):
             path = attempt / (name + '.' + channel)
             if path.exists():
-                row[channel] = identity(path)
+                row[channel] = identity(path) if row.get('outputs_final') else dict(path=str(path), status='not-final')
         save(result_path, report)
         if row['status'] != 'passed' and name != 'runner':
             raise ExecutionError(name + ' operation failed or incomplete')
@@ -268,11 +334,14 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
         if request['require_new_candidate'] and candidate == request['base']:
             raise ExecutionError('Required frozen candidate was not captured')
         _git(root, 'merge-base', '--is-ancestor', request['base'], candidate)
-        changed = _git(root, 'diff', '--name-only', '-z', request['base'], candidate).decode().strip('\x00').split('\x00')
+        changed = _git(root, 'diff', '--no-renames', '--name-only', '-z', request['base'], candidate).decode().strip('\x00').split('\x00')
         changed = [path for path in changed if path]
         if set(changed) - set(request['allowed_changes']):
             raise ExecutionError('Capture contains unauthorized changed paths')
-        report.update(candidate=candidate, changed_paths=changed)
+        integration_base = request.get('integration_base', request['base'])
+        full_paths = _git(root, 'diff', '--no-renames', '--name-only', '-z', integration_base, candidate).decode().strip('\x00').split('\x00')
+        report.update(candidate=candidate, changed_paths=changed, integration_base=integration_base,
+                      integration_changed_paths=[path for path in full_paths if path], recovery_base=request['base'])
         bindings = request['result_bindings']
         runner_file = attempt / request['runner_result']
         if Path(request['runner_result']).name != request['runner_result'] or runner_file.exists():
@@ -289,6 +358,9 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
         report['check_request'] = identity(attempt / 'CHECK_REQUEST.json')
         runner_passed = invoke('runner', candidate)
         check_workspace(candidate, clean=True)
+        if report['operations'][-1].get('outputs_final') is not True:
+            report['runner_result'] = dict(path=str(runner_file), status='not-final')
+            raise ExecutionError('Runner activity is unresolved; output is not final')
         report['runner_result'] = identity(runner_file)
         result = json.loads(read(runner_file))
         if field(result, bindings['request_sha256']) != report['check_request']['sha256'] or identity(attempt / 'CHECK_REQUEST.json') != report['check_request']:
@@ -307,6 +379,10 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
                 raise ExecutionError('Stale evidence reference')
             verified.append(actual)
         report['references'] = verified
+        if 'conformance' in request:
+            report['conformance'] = assess(field(result, request['conformance']), request_digests(read(attempt / 'CHECK_REQUEST.json')))
+            if not report['conformance']['ready']:
+                raise ExecutionError('Consumer mapped facts fail adapter conformance')
         if not runner_passed or field(result, bindings['ready']) is not True:
             raise ExecutionError('Consumer runner reports failed/incomplete/ineligible evidence')
         report.update(status='complete', review_ready=True)

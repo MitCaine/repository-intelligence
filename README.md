@@ -17,7 +17,8 @@ selected runner; these helpers do not add acceptance gates.
 
 ## Start work with the kickoff skills
 
-The default RI workflow uses two chats for the same project: a **Work
+RI defines shared role and evidence protocols; the project selects their execution
+configuration under the documented default Work/Codex and model profile. The default RI workflow uses two chats for the same project: a **Work
 controller**, which manages the issue, planning and review; and a **Codex
 dispatcher**, which launches the implementation worker and returns its results.
 For delegated implementation, create and connect both chats. Permitted direct
@@ -187,7 +188,8 @@ skill templates. For eligible bounded upkeep, the optional
 planning with a brief controller handoff. The controller verifies the accepted
 capsule or maintenance handoff and exact published candidate before assigning independent review. Publication and
 integration remain subject to project authority. The accepted task record remains
-the execution authority.
+the accepted implementation specification; authenticated owner grants and project
+permissions separately govern execution authority.
 
 ## Develop and verify
 

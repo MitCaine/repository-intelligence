@@ -5,9 +5,12 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
+from unittest.mock import patch
 
-from repository_intelligence.worker_execution import execute, identity, read, ExecutionError
+from repository_intelligence.adapter_conformance import assess, request_digests
+from repository_intelligence.worker_execution import execute, identity, read, save, ExecutionError
 
 
 class WorkerExecutionTests(unittest.TestCase):
@@ -221,6 +224,128 @@ PYCODE
         code,result=self.cli('run');self.assertEqual(code,1)
         self.assertEqual(result['operations'],[])
         self.assertIn('Hidden index',result['error'])
+
+    def test_reserved_outputs_and_invalid_environment_are_preparation_refusals(self):
+        for name in ('capture.stdout','runner.stderr','CHECK_REQUEST.json','RETURN.json.tmp-old'):
+            self.request['runner_result']=name
+            self.assertEqual(self.cli('prepare')[0],1)
+            self.assertFalse((self.evidence/'attempt-1').exists())
+        self.request['runner_result']='consumer.json'
+        for key,value in [('BAD=KEY','v'),('GOOD','bad\x00value'),('','v')]:
+            self.request['environment']={key:value}
+            self.assertEqual(self.cli('prepare')[0],1)
+            self.assertFalse((self.evidence/'attempt-1').exists())
+        self.assertEqual((self.workspace/'source.txt').read_text(),'before\n')
+
+    def test_return_temporary_residue_does_not_prevent_valid_run(self):
+        self.assertEqual(self.cli('prepare')[0],0)
+        residue=self.evidence/'attempt-1'/'RETURN.tmp';residue.write_text('historical residue')
+        self.assertEqual(self.cli('run')[0],0)
+        self.assertEqual(residue.read_text(),'historical residue')
+
+    def test_final_rename_authorizes_both_endpoints(self):
+        self.request['allowed_changes']=['destination.txt']
+        self.request['edit']=self.op(self.script('rename','git mv source.txt destination.txt\n'))
+        self.request['capture']=self.op(self.script('rename-capture','git add .\ngit commit -qm rename\n'))
+        self.assertEqual(self.cli('prepare')[0],0)
+        code,r=self.cli('run');self.assertEqual(code,1)
+        self.assertFalse(any(x['operation']=='runner' for x in r['operations']))
+        self.git(self.workspace,'reset','--hard','-q',self.request['base'])
+        self.request['attempt']='rename-positive';self.request['allowed_changes']=['source.txt','destination.txt']
+        self.assertEqual(self.cli('prepare')[0],0)
+        code,r=self.cli('run');self.assertEqual(code,0,r)
+        self.assertEqual(set(r['changed_paths']),{'source.txt','destination.txt'})
+
+    @unittest.skipUnless(os.name=='posix','Owned POSIX process groups required')
+    def test_timeout_descendant_cannot_change_output_after_return(self):
+        self.request['timeout_seconds']=1
+        self.request['capture']=self.op(self.script('descendant', '(sleep 2; echo late) &\nwait\n'))
+        self.assertEqual(self.cli('prepare')[0],0)
+        code,r=self.cli('run');self.assertEqual(code,1)
+        log=self.evidence/'attempt-1'/'capture.stdout';before=log.read_bytes();time.sleep(1.2)
+        self.assertEqual(log.read_bytes(),before)
+        self.assertNotIn(b'late',before)
+        self.assertFalse(r['review_ready'])
+
+    def test_correction_frame_keeps_full_integration_and_recovery_delta(self):
+        original=self.request['base']
+        (self.workspace/'prior.txt').write_text('prior')
+        self.git(self.workspace,'add','.');self.git(self.workspace,'commit','-qm','C1')
+        self.request['base']=self.git(self.workspace,'rev-parse','HEAD').strip()
+        self.request['integration_base']=original
+        self.assertEqual(self.cli('prepare')[0],0)
+        code,r=self.cli('run');self.assertEqual(code,0,r)
+        self.assertEqual(r['changed_paths'],['source.txt'])
+        self.assertEqual(set(r['integration_changed_paths']),{'prior.txt','source.txt'})
+        self.assertEqual(r['recovery_base'],self.request['base'])
+        self.assertEqual(r['integration_base'],original)
+
+    def test_conformance_refuses_stable_failed_or_incomplete_facts(self):
+        hashes=request_digests(b'{"b":2, "a":1}\n')
+        self.assertNotEqual(hashes['raw_file_sha256'],hashes['canonical_json_sha256'])
+        facts=dict(request_digests=hashes,source_stable=True,terminal_complete=True,
+                   outcomes=[dict(mandatory=True,status='passed'),dict(mandatory=False,status='failed')])
+        self.assertTrue(assess(facts,hashes)['ready'])
+        facts['outcomes'][0]['status']='failed';self.assertFalse(assess(facts,hashes)['ready'])
+        facts['outcomes'][0]['status']='passed';facts['terminal_complete']=False
+        self.assertFalse(assess(facts,hashes)['ready'])
+        facts['terminal_complete']=True;facts['request_digests']={'unknown':'0'*64}
+        self.assertFalse(assess(facts,hashes)['ready'])
+
+    def test_selected_conformance_blocks_failed_mandatory_despite_exit_zero(self):
+        original=self.runner.read_text()
+        addition="""raw=(p/'CHECK_REQUEST.json').read_bytes()
+r['facts']={'source_stable':True,'terminal_complete':True,
+'outcomes':[{'mandatory':True,'status':'failed'}],
+'request_digests':{'raw_file_sha256':hashlib.sha256(raw).hexdigest(),
+'canonical_json_sha256':hashlib.sha256(json.dumps(json.loads(raw),sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()).hexdigest()}}
+"""
+        self.runner.write_text(original.replace("(p/'consumer.json').write_text",addition+"(p/'consumer.json').write_text"))
+        self.request['runner']=self.op(self.runner,'{attempt}','{candidate}')
+        self.request['conformance']=['facts']
+        self.assertEqual(self.cli('prepare')[0],0)
+        code,r=self.cli('run');self.assertEqual(code,1)
+        self.assertEqual(r['operations'][-1]['exit_code'],0)
+        self.assertFalse(r['review_ready']);self.assertFalse(r['conformance']['ready'])
+        self.assertEqual(r['conformance']['outcomes'][0]['status'],'failed')
+
+    def test_unrepresentable_native_inputs_refused_before_effects(self):
+        for location in ('argv', 'key', 'value'):
+            with self.subTest(location=location):
+                if location == 'argv':
+                    self.request['capture']['argv'].append('\ud800')
+                else:
+                    self.request['environment'] = {('\ud800' if location == 'key' else 'VALID'): '\ud800'}
+                code, result = self.cli('prepare')
+                self.assertEqual(code, 1, result)
+                self.assertEqual((self.workspace/'source.txt').read_text(), 'before\n')
+                self.assertFalse((self.evidence/'attempt-1').exists())
+                self.request['capture']['argv'] = [str(self.capture)]
+                self.request['environment'] = dict(PATH=os.environ['PATH'], HOME=str(self.root))
+
+    def test_unknown_runner_cleanup_never_authenticates_outputs(self):
+        from repository_intelligence import worker_execution
+        execute(self.request, self.evidence, 'prepare')
+        original = worker_execution.owned_run
+        def uncertain(*args, **kwargs):
+            result = original(*args, **kwargs)
+            if args[0][0] == str(self.runner):
+                raise PermissionError('injected cleanup uncertainty')
+            return result
+        with patch.object(worker_execution, 'owned_run', side_effect=uncertain):
+            result = execute(self.request, self.evidence, 'run')
+        self.assertFalse(result['review_ready'])
+        self.assertEqual(result['runner_result']['status'], 'not-final')
+        self.assertNotIn('sha256', result['runner_result'])
+        self.assertNotIn('references', result)
+
+    def test_atomic_save_failure_preserves_previous_return_and_cleans_temp(self):
+        target=self.evidence/'RETURN.json';save(target,{'status':'incomplete'})
+        before=target.read_bytes()
+        with patch('repository_intelligence.worker_execution.os.replace',side_effect=OSError('injected')):
+            with self.assertRaises(OSError):save(target,{'status':'complete'})
+        self.assertEqual(target.read_bytes(),before)
+        self.assertEqual(list(self.evidence.glob('RETURN.json.tmp-*')),[])
 
     def test_git_identity_change_and_out_of_scope_capture_refused(self):
         self.request['edit']=self.op(self.script('wrong-git','git remote add unexpected /not-a-project\n'))
