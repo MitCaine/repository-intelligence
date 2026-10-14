@@ -245,8 +245,12 @@ Use `docs/local_project_map.md` in every consumer project. Keep it short:
   grant, candidate capture/publication and integration/issue actions.
 - Supported completion route and existing active-task/checkpoint location.
 
-Reference project-owned requirements rather than copying their text. This map
-holds local bindings, not a second shared workflow. During migration, reconcile
+RI owns reusable workflow behavior; consumers own concrete configuration,
+commands, permissions, domain contracts and genuinely different acceptance
+requirements. Give each instruction one authoritative home. Consumer summaries
+link to selected RI sections rather than repeat their procedural prose; reference
+project-owned requirements at their local owners. This map holds local bindings,
+not a second shared workflow. During migration, reconcile
 an existing map into this file, repair incoming links, and leave old map locations
 as pointers where needed; do not keep two authoritative maps. Preserve active
 frozen task identities and historical records. Do not repin an active attempt
