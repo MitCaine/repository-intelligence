@@ -80,4 +80,7 @@ grammar. [`adoption.py`](../src/repository_intelligence/adoption.py) owns declar
 resource copies, counted literal relocations and destination conflict handling.
 These optional modules have separate result contracts; they do not change source
 classification, navigation or inventory versions. Command execution and source
-projection remain consumer-owned. See [bounded workflow tools](workflow-tools.md).
+projection remain consumer-owned. [`worker_execution.py`](../src/repository_intelligence/worker_execution.py)
+owns optional prepared-workspace/operation linkage and terminal-reference validation;
+it invokes explicitly selected consumer commands and does not implement their
+capture policy, gate execution or semantic acceptance. See [bounded workflow tools](workflow-tools.md).
