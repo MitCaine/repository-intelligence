@@ -53,6 +53,98 @@ class AdoptionTests(unittest.TestCase):
         self.assertEqual(self.cli('apply')[0], 1)
         self.assertEqual((self.destination / 'adopted.txt').read_bytes(), b'drift')
 
+    def metadata_request(self):
+        self.request['metadata_output'] = dict(destination='metadata.json', expected_destination_sha256=None)
+        self.request['resources'][0].update(
+            expected_source_sha256=hashlib.sha256(b'hello old\n').hexdigest(),
+            expected_output_sha256=hashlib.sha256(b'hello new\n').hexdigest())
+
+    def test_metadata_literal_cli_roundtrip_preserves_local_records(self):
+        self.metadata_request()
+        self.request['resources'][0]['replacements'][0].update(
+            runtime_pin='not-selected', machine_path='/private/local', local_prose='preserve separately')
+        original = (self.destination / 'existing.txt').read_bytes()
+        self.assertEqual(self.cli('preview')[0], 0)
+        self.assertFalse((self.destination / 'metadata.json').exists())
+        self.assertEqual(self.cli('verify')[0], 1)
+        self.assertEqual(self.cli('apply')[0], 0)
+        expected = {'metadata_schema_version': 1, 'revision': self.request['revision'], 'resources': [{
+            'source': 'source.txt', 'destination': 'adopted.txt',
+            'source_blob': self.git(self.source, 'rev-parse', 'HEAD:source.txt').strip(),
+            'source_sha256': hashlib.sha256(b'hello old\n').hexdigest(), 'source_bytes': 10,
+            'replacements': [{'old': 'old', 'new': 'new', 'expected_count': 1}],
+            'output_sha256': hashlib.sha256(b'hello new\n').hexdigest(), 'output_bytes': 10}]}
+        self.assertEqual(json.loads((self.destination / 'metadata.json').read_text()), expected)
+        before = (self.destination / 'metadata.json').read_bytes()
+        self.assertEqual(self.cli('apply')[1]['status'], 'unchanged')
+        self.assertEqual(self.cli('verify')[0], 0)
+        self.assertEqual((self.destination / 'metadata.json').read_bytes(), before)
+        self.assertEqual((self.destination / 'existing.txt').read_bytes(), original)
+        (self.destination / 'metadata.json').write_bytes(b'drift')
+        self.assertEqual(self.cli('apply')[0], 1)
+        self.assertEqual((self.destination / 'metadata.json').read_bytes(), b'drift')
+
+    def test_metadata_rejects_changed_source_transform_and_incomplete_inputs(self):
+        for field in ('expected_source_sha256', 'expected_output_sha256'):
+            self.metadata_request()
+            self.request['resources'][0].pop(field)
+            self.assertEqual(self.cli('apply')[0], 1)
+            self.assertFalse((self.destination / 'adopted.txt').exists())
+        self.metadata_request()
+        self.request['resources'][0]['replacements'][0]['new'] = 'other'
+        self.assertEqual(self.cli('apply')[0], 1)
+        self.request['resources'][0]['replacements'][0]['new'] = 'new'
+        (self.source / 'source.txt').write_text('new upstream')
+        self.git(self.source, 'add', '.')
+        self.git(self.source, 'commit', '-qm', 'upstream changed')
+        self.request['revision'] = self.git(self.source, 'rev-parse', 'HEAD').strip()
+        self.assertEqual(self.cli('apply')[0], 1)
+        self.assertFalse((self.destination / 'adopted.txt').exists())
+        self.assertFalse((self.destination / 'metadata.json').exists())
+
+    def test_metadata_is_order_independent_and_restores_existing_sidecar(self):
+        self.metadata_request()
+        second = dict(self.request['resources'][0], destination='second.txt')
+        self.request['resources'].append(second)
+        self.assertEqual(self.cli('apply')[0], 0)
+        original = (self.destination / 'metadata.json').read_bytes()
+        self.request['resources'].reverse()
+        self.assertEqual(self.cli('verify')[0], 0)
+        self.assertEqual(self.cli('apply')[1]['status'], 'unchanged')
+        self.assertEqual((self.destination / 'metadata.json').read_bytes(), original)
+        # Commit the first adoption so the next bounded plan has a clean base.
+        self.git(self.destination, 'add', '.')
+        self.git(self.destination, 'commit', '-qm', 'adopted')
+        self.request['resources'] = [dict(self.request['resources'][0], destination='third.txt')]
+        self.request['metadata_output']['expected_destination_sha256'] = hashlib.sha256(original).hexdigest()
+        real_atomic = adoption._atomic
+        def fail_replace(path, data, mode):
+            if path.name == 'metadata.json' and data != original:
+                raise OSError('replacement failure')
+            return real_atomic(path, data, mode)
+        with patch.object(adoption, '_atomic', fail_replace):
+            self.assertEqual(adoption.adopt(self.request, 'apply')['status'], 'rolled_back')
+        self.assertEqual((self.destination / 'metadata.json').read_bytes(), original)
+        self.assertFalse((self.destination / 'third.txt').exists())
+
+    def test_metadata_destination_collision_and_write_rollback(self):
+        self.metadata_request()
+        self.request['metadata_output']['destination'] = 'adopted.txt'
+        self.assertEqual(self.cli('apply')[0], 1)
+        self.assertFalse((self.destination / 'adopted.txt').exists())
+        self.request['metadata_output']['destination'] = 'metadata.json'
+        original = adoption._atomic
+        def fail_metadata(path, data, mode):
+            if path.name == 'metadata.json':
+                raise OSError('metadata write failure')
+            return original(path, data, mode)
+        with patch.object(adoption, '_atomic', fail_metadata):
+            report = adoption.adopt(self.request, 'apply')
+        self.assertEqual(report['status'], 'rolled_back')
+        self.assertEqual(report['resources'][0]['status'], 'rolled_back')
+        self.assertFalse((self.destination / 'adopted.txt').exists())
+        self.assertFalse((self.destination / 'metadata.json').exists())
+
     def test_dirty_staged_hidden_and_bad_revision(self):
         existing = self.destination / 'existing.txt'
         existing.write_text('dirty')

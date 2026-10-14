@@ -17,6 +17,7 @@ MAX_RESOURCE_BYTES = 8_000_000
 MAX_TOTAL_BYTES = 32_000_000
 MAX_RESOURCES = 128
 SCHEMA_VERSION = 1
+METADATA_SCHEMA_VERSION = 1
 
 
 class AdoptionError(ValueError):
@@ -169,6 +170,10 @@ def adopt(request: dict, mode: str) -> dict:
     resources = request.get('resources')
     if not isinstance(resources, list) or not 1 <= len(resources) <= MAX_RESOURCES:
         raise AdoptionError('Resources must be a bounded nonempty list')
+    metadata_output = request.get('metadata_output')
+    if metadata_output is not None and (not isinstance(metadata_output, dict) or
+            set(metadata_output) != {'destination', 'expected_destination_sha256'}):
+        raise AdoptionError('Metadata output needs only destination and expected_destination_sha256')
     plan, reports, seen = [], [], set()
     total = 0
     for resource in resources:
@@ -192,6 +197,12 @@ def adopt(request: dict, mode: str) -> dict:
         if size > MAX_RESOURCE_BYTES:
             raise AdoptionError('Source exceeds resource limit')
         raw = _git(source, 'cat-file', 'blob', blob.decode())
+        expected_source = resource.get('expected_source_sha256')
+        if metadata_output is not None and expected_source is None:
+            raise AdoptionError('Metadata generation requires every expected_source_sha256')
+        if expected_source is not None and (not isinstance(expected_source, str) or
+                not re.fullmatch('[0-9a-f]{64}', expected_source) or expected_source != _hash(raw)):
+            raise AdoptionError('Source identity mismatch: ' + src)
         output = raw
         replacements = resource.get('replacements', [])
         if not isinstance(replacements, list) or len(replacements) > 128:
@@ -208,6 +219,12 @@ def adopt(request: dict, mode: str) -> dict:
             if len(output) + count * (len(after) - len(before)) > MAX_RESOURCE_BYTES:
                 raise AdoptionError('Transformed resource exceeds limit')
             output = output.replace(before, after)
+        expected_output = resource.get('expected_output_sha256')
+        if metadata_output is not None and expected_output is None:
+            raise AdoptionError('Metadata generation requires every expected_output_sha256')
+        if expected_output is not None and (not isinstance(expected_output, str) or
+                not re.fullmatch('[0-9a-f]{64}', expected_output) or expected_output != _hash(output)):
+            raise AdoptionError('Transformed identity mismatch: ' + src)
         total += len(raw) + len(output)
         if total > MAX_TOTAL_BYTES:
             raise AdoptionError('Inventory exceeds total byte limit')
@@ -223,8 +240,40 @@ def adopt(request: dict, mode: str) -> dict:
         reports.append(dict(source=src, destination=dst, source_blob=blob.decode(), source_sha256=_hash(raw), source_bytes=len(raw), replacements=replacements, output_sha256=_hash(output), output_bytes=len(output), destination_sha256=None if current is None else _hash(current), conflict=conflict, status='unchanged' if matches else 'conflict' if conflict else 'different'))
         permissions_out = stat.S_IMODE(target.stat().st_mode) if current is not None else int(permissions, 8) & 0o777
         plan.append((target, current, output, permissions_out, dst))
+    metadata_report = None
+    if metadata_output is not None:
+        dst = _relative(metadata_output.get('destination'))
+        target = _target(destination, dst)
+        current = _read(target)
+        expected = metadata_output['expected_destination_sha256']
+        if expected is not None and (not isinstance(expected, str) or not re.fullmatch('[0-9a-f]{64}', expected)):
+            raise AdoptionError('Invalid metadata destination SHA256')
+        fields = ('source', 'destination', 'source_blob', 'source_sha256', 'source_bytes',
+                  'replacements', 'output_sha256', 'output_bytes')
+        entries = []
+        for item in sorted(reports, key=lambda item: item['destination']):
+            entry = {key: item[key] for key in fields}
+            entry['replacements'] = [{key: replacement[key] for key in ('old', 'new', 'expected_count')}
+                                     for replacement in item['replacements']]
+            entries.append(entry)
+        record = dict(metadata_schema_version=METADATA_SCHEMA_VERSION, revision=revision,
+                      resources=entries)
+        output = (json.dumps(record, sort_keys=True, indent=2, ensure_ascii=True) + '\n').encode('utf-8')
+        if len(output) > MAX_RESOURCE_BYTES or total + len(output) > MAX_TOTAL_BYTES:
+            raise AdoptionError('Generated metadata exceeds byte limit')
+        matches = current == output
+        metadata_report = dict(destination=dst, output_sha256=_hash(output), output_bytes=len(output),
+                               destination_sha256=None if current is None else _hash(current),
+                               conflict=not matches and (None if current is None else _hash(current)) != expected,
+                               status='unchanged' if matches else 'different')
+        reports.append(metadata_report)
+        permissions_out = stat.S_IMODE(target.stat().st_mode) if current is not None else 0o644
+        plan.append((target, current, output, permissions_out, dst))
     _validate_destination_pairs(destination, [p[4] for p in plan])
     report = dict(schema_version=SCHEMA_VERSION, mode=mode, source_repository=str(source), revision=revision, destination_repository=str(destination), resources=reports, status='verified' if all(p[1] == p[2] for p in plan) else 'differences')
+    if metadata_report is not None:
+        report['metadata_output'] = metadata_report
+        report['resources'] = reports[:-1]
     if mode != 'apply':
         return report
     if any(item['conflict'] for item in reports):
