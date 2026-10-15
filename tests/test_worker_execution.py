@@ -383,6 +383,102 @@ r['facts']={'source_stable':True,'terminal_complete':True,
         facts['outcomes'].append(dict(facts['outcomes'][0]))
         self.assertFalse(assess(facts, hashes, required)['ready'])
 
+    def generation_request(self):
+        package = self.root/'__init__.py'
+        package.write_text('# validator-owned package input\n')
+        inventory = self.root/'inventory.json'
+        inventory.write_text(json.dumps({'required': [identity(path) for path in (self.input, self.runner, package)]}))
+        request = dict(self.request)
+        del request['inputs']
+        request['input_inventory'] = dict(path=str(inventory), sha256=self.sha(inventory), keys=['required'])
+        for name in ('edit', 'capture', 'runner'):
+            request[name] = {'argv': self.request[name]['argv']}
+        return request, package
+
+    def test_generated_inventory_request_public_cli_and_manual_omission(self):
+        request, package = self.generation_request()
+        self.request = request
+        code, generated = self.cli('generate')
+        self.assertEqual(code, 0, generated)
+        self.assertFalse((self.evidence/'attempt-1').exists())
+        self.assertIn(identity(package), generated['inputs'])
+        self.request = generated
+        removed = self.request['inputs'].pop()
+        self.assertEqual(self.cli('prepare')[0], 1)
+        self.request['inputs'].append(removed)
+        self.assertEqual(self.cli('prepare')[0], 0)
+        self.assertEqual(self.cli('run')[0], 0)
+
+    def test_generation_source_and_authority_barriers(self):
+        request, package = self.generation_request()
+        self.request = request
+        self.request['capture_authority'] = ''
+        self.assertEqual(self.cli('generate')[0], 1)
+        self.request['capture_authority'] = 'accepted fixture grant'
+        package.write_text('changed selected source')
+        code, result = self.cli('generate')
+        self.assertEqual(code, 1)
+        self.assertIn('source mismatch', result['error'])
+        self.assertEqual((self.workspace/'source.txt').read_text(), 'before\n')
+        self.assertFalse((self.evidence/'attempt-1').exists())
+
+    def test_pinned_helper_provisioning_survives_upstream_head_movement(self):
+        from repository_intelligence.adoption import adopt
+        source, destination = self.root/'helpers', self.root/'pinned'
+        for root in (source, destination):
+            root.mkdir()
+            self.git(root, 'init', '-q')
+            self.git(root, 'config', 'user.email', 'fixture@example.invalid')
+            self.git(root, 'config', 'user.name', 'Fixture')
+        (source/'helper.py').write_text('original selected helper\n')
+        self.git(source, 'add', '.')
+        self.git(source, 'commit', '-qm', 'selected')
+        revision = self.git(source, 'rev-parse', 'HEAD').strip()
+        provision = dict(source_repository=str(source), destination_repository=str(destination),
+                         revision=revision, resources=[dict(source='helper.py', destination='helper.py',
+                         expected_destination_sha256=None, replacements=[])])
+        adopt(provision, 'apply')
+        request, package = self.generation_request()
+        inventory = Path(request['input_inventory']['path'])
+        contents = json.loads(inventory.read_text())
+        contents['required'].append(identity(destination/'helper.py'))
+        inventory.write_text(json.dumps(contents))
+        request['input_inventory']['sha256'] = self.sha(inventory)
+        self.request = request
+        code, before = self.cli('generate')
+        self.assertEqual(code, 0, before)
+        (source/'helper.py').write_text('new upstream helper\n')
+        self.git(source, 'add', '.')
+        self.git(source, 'commit', '-qm', 'unrelated advance')
+        self.assertEqual(adopt(provision, 'verify')['status'], 'verified')
+        self.assertEqual(self.cli('generate'), (0, before))
+        (destination/'helper.py').write_text('selected byte drift')
+        self.assertEqual(self.cli('generate')[0], 1)
+
+    def test_generation_collects_independent_errors_after_source_authentication(self):
+        self.request, _ = self.generation_request()
+        self.request['environment'] = {'BAD=KEY': 'value'}
+        self.request['capture']['argv'] = [str(self.root/'missing-capture')]
+        self.request['runner']['argv'] = [str(self.root/'missing-runner')]
+        code, result = self.cli('generate')
+        self.assertEqual(code, 1)
+        for message in ('Invalid child environment', 'capture:', 'runner:'):
+            self.assertIn(message, result['error'])
+        self.assertFalse((self.evidence/'attempt-1').exists())
+
+    def test_static_errors_are_collected_without_launch(self):
+        self.request['environment'] = {'BAD=KEY': 'value'}
+        self.request['capture']['argv'].append('\x00')
+        self.request['runner']['executable_sha256'] = '0'*64
+        code, result = self.cli('prepare')
+        self.assertEqual(code, 1)
+        for message in ('Invalid child environment', 'capture:', 'runner:'):
+            self.assertIn(message, result['error'])
+        self.assertFalse((self.evidence/'attempt-1').exists())
+        self.input.write_text('mismatched authority source')
+        code, result = self.cli('prepare')
+        self.assertNotIn('Static preflight', result['error'])
+
     def test_atomic_save_failure_preserves_previous_return_and_cleans_temp(self):
         target=self.evidence/'RETURN.json';save(target,{'status':'incomplete'})
         before=target.read_bytes()

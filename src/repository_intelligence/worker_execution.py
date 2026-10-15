@@ -146,6 +146,84 @@ def selected_inputs(request: dict) -> list:
     return observed
 
 
+def inventory_inputs(request: dict) -> list:
+    """Read the validator owner's authenticated JSON projection, never import code."""
+    binding = request.get('input_inventory')
+    if not isinstance(binding, dict) or set(binding) != {'path', 'sha256', 'keys'}:
+        raise ExecutionError('Inventory needs path, sha256 and object-key path')
+    path = absolute(binding['path'])
+    raw = read(path)
+    if hashlib.sha256(raw).hexdigest() != binding['sha256']:
+        raise ExecutionError('Input inventory identity mismatch')
+    keys = binding['keys']
+    if not isinstance(keys, list) or len(keys) > 32 or not all(isinstance(key, str) and key for key in keys):
+        raise ExecutionError('Inventory keys must be a bounded object-key path')
+    rows = field(json.loads(raw), keys) if keys else json.loads(raw)
+    if not isinstance(rows, list) or not 1 <= len(rows) <= 127:
+        raise ExecutionError('Inventory must supply bounded required input paths')
+    observed, paths = [], set()
+    for item in rows:
+        if not isinstance(item, dict) or set(item) != {'path', 'sha256'}:
+            raise ExecutionError('Inventory entries need path and expected sha256')
+        name = item['path']
+        if not isinstance(name, str) or name in paths or name == str(path):
+            raise ExecutionError('Inventory paths must be unique and exclude itself')
+        actual = identity(absolute(name))
+        if actual['sha256'] != item['sha256']:
+            raise ExecutionError('Owning inventory source mismatch: ' + name)
+        paths.add(name)
+        observed.append(actual)
+    return [dict(path=str(path), sha256=binding['sha256']), *observed]
+
+
+
+def generate(request: dict, evidence: Path) -> dict:
+    """Derive only mechanical bindings; explicit task selections remain required."""
+    if not isinstance(request, dict) or not isinstance(request.get('capture_authority'), str) or not request['capture_authority'].strip():
+        raise ExecutionError('Explicit consumer capture authority reference required')
+    evidence = absolute(str(evidence))
+    if not evidence.is_dir():
+        raise ExecutionError('Evidence parent must already exist')
+    if 'inputs' in request:
+        raise ExecutionError('Generation requires the owning inventory, not a competing input list')
+    result = dict(request)
+    result['inputs'] = inventory_inputs(request)
+    errors = environment_errors(request.get('environment'))
+    for name in ('edit', 'capture', 'runner'):
+        if name not in result:
+            continue
+        try:
+            operation = result[name]
+            if not isinstance(operation, dict) or set(operation) != {'argv'} or not isinstance(operation['argv'], list) or not operation['argv']:
+                raise ExecutionError('Generation operations need explicit argv only')
+            operation = dict(argv=operation['argv'], executable_sha256=identity(absolute(operation['argv'][0]))['sha256'])
+            operation_input(name, operation)
+            result[name] = operation
+        except (ExecutionError, OSError, TypeError, ValueError) as error:
+            errors.append(name + ': ' + str(error))
+    if errors:
+        raise ExecutionError('Static preflight errors: ' + '; '.join(errors))
+    prepare(result, evidence)
+    return result
+
+
+def environment_errors(environment) -> list:
+    errors = []
+    if not isinstance(environment, dict):
+        errors.append('Explicit child environment required')
+    else:
+        for key, value in environment.items():
+            if not isinstance(key, str) or not key or '=' in key or '\x00' in key or not isinstance(value, str) or '\x00' in value:
+                errors.append('Invalid child environment entry')
+                continue
+            try:
+                native_string(key)
+                native_string(value)
+            except ExecutionError as error:
+                errors.append(str(error))
+    return errors
+
+
 def native_string(value: str) -> None:
     try:
         os.fsencode(value)
@@ -153,24 +231,23 @@ def native_string(value: str) -> None:
         raise ExecutionError('Command input is not representable on this platform') from error
 
 
+def operation_input(name: str, operation: dict) -> dict:
+    if not isinstance(operation, dict) or set(operation) != {'argv', 'executable_sha256'}:
+        raise ExecutionError('Operations need argv and executable_sha256')
+    argv = operation['argv']
+    if not isinstance(argv, list) or not argv or not all(isinstance(value, str) and '\x00' not in value for value in argv):
+        raise ExecutionError('Invalid operation argv')
+    for value in argv:
+        native_string(value)
+    actual = identity(absolute(argv[0]))
+    if actual['sha256'] != operation['executable_sha256']:
+        raise ExecutionError('Operation executable mismatch')
+    return dict(operation=name, **actual)
+
+
 def operation_inputs(request: dict) -> list:
-    results = []
-    for name in ('edit', 'capture', 'runner'):
-        operation = request.get(name)
-        if operation is None and name == 'edit':
-            continue
-        if not isinstance(operation, dict) or set(operation) != {'argv', 'executable_sha256'}:
-            raise ExecutionError('Operations need argv and executable_sha256')
-        argv = operation['argv']
-        if not isinstance(argv, list) or not argv or not all(isinstance(x, str) and '\x00' not in x for x in argv):
-            raise ExecutionError('Invalid operation argv')
-        for value in argv:
-            native_string(value)
-        actual = identity(absolute(argv[0]))
-        if actual['sha256'] != operation['executable_sha256']:
-            raise ExecutionError('Operation executable mismatch')
-        results.append(dict(operation=name, **actual))
-    return results
+    return [operation_input(name, request.get(name)) for name in ('edit', 'capture', 'runner')
+            if name != 'edit' or request.get(name) is not None]
 
 
 def field(value: dict, path: list) -> object:
@@ -192,8 +269,25 @@ def prepare(request: dict, evidence: Path, *, initial: bool = True) -> dict:
     required = {'assignment', 'attempt', 'workspace', 'protected_repository', 'base', 'inputs',
                 'allowed_changes', 'capture_authority', 'environment', 'capture', 'runner',
                 'runner_result', 'result_bindings', 'require_new_candidate', 'check_request'}
-    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'edit', 'timeout_seconds', 'route', 'conformance', 'required_outcomes', 'integration_base'}:
+    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'edit', 'timeout_seconds', 'route', 'conformance', 'required_outcomes', 'integration_base', 'input_inventory'}:
         raise ExecutionError('Invalid explicit execution binding fields')
+    # Authority/source barriers precede optional independent static diagnostics.
+    if not isinstance(request['capture_authority'], str) or not request['capture_authority'].strip():
+        raise ExecutionError('Explicit consumer capture authority reference required')
+    source_inputs = selected_inputs(request)
+    if 'input_inventory' in request and source_inputs != inventory_inputs(request):
+        raise ExecutionError('Selected inputs differ from owning inventory')
+    errors = environment_errors(request['environment'])
+    for name in ('edit', 'capture', 'runner'):
+        operation = request.get(name)
+        if operation is None and name == 'edit':
+            continue
+        try:
+            operation_input(name, operation)
+        except (ExecutionError, OSError, TypeError) as error:
+            errors.append(name + ': ' + str(error))
+    if errors:
+        raise ExecutionError('Static preflight errors: ' + '; '.join(errors))
     route = request.get('route', 'subprocess')
     if route not in ('subprocess', 'interactive') or (route == 'interactive' and request.get('edit') is not None):
         raise ExecutionError('Interactive route uses worker edits, not an edit launcher')
@@ -242,13 +336,6 @@ def prepare(request: dict, evidence: Path, *, initial: bool = True) -> dict:
     for path in paths:
         if not isinstance(path, str) or Path(path).is_absolute() or any(x in ('', '.', '..', '.git') for x in path.split('/')):
             raise ExecutionError('Unsafe allowed change path')
-    if not isinstance(request['capture_authority'], str) or not request['capture_authority'].strip():
-        raise ExecutionError('Explicit consumer capture authority reference required')
-    if not isinstance(request['environment'], dict) or not all(isinstance(k, str) and k and '=' not in k and '\x00' not in k and isinstance(v, str) and '\x00' not in v for k, v in request['environment'].items()):
-        raise ExecutionError('Explicit child environment required')
-    for key, value in request['environment'].items():
-        native_string(key)
-        native_string(value)
     return dict(schema_version=SCHEMA_VERSION, assignment=request['assignment'], attempt=request['attempt'],
                 base=base, workspace=workspace_binding(root), selected_inputs=selected_inputs(request),
                 operations=operation_inputs(request), capture_authority=request['capture_authority'],
@@ -401,13 +488,13 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--request', required=True, type=Path)
     parser.add_argument('--evidence', required=True, type=Path)
-    parser.add_argument('--mode', choices=('prepare', 'run'), required=True)
+    parser.add_argument('--mode', choices=('prepare', 'run', 'generate'), required=True)
     args = parser.parse_args(argv)
     try:
         request = json.loads(read(args.request))
-        result = execute(request, args.evidence, args.mode)
+        result = generate(request, args.evidence) if args.mode == 'generate' else execute(request, args.evidence, args.mode)
         print(json.dumps(result, sort_keys=True))
-        return 0 if args.mode == 'prepare' or result['review_ready'] else 1
+        return 0 if args.mode in ('prepare', 'generate') or result['review_ready'] else 1
     except (ExecutionError, AdoptionError, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
         print(json.dumps(dict(schema_version=SCHEMA_VERSION, status='blocked', error=str(error))))
         return 1
