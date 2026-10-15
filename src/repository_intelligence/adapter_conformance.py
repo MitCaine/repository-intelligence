@@ -11,7 +11,7 @@ def request_digests(raw: bytes) -> dict[str, str]:
             'canonical_json_sha256': hashlib.sha256(canonical).hexdigest()}
 
 
-def assess(facts: dict, expected_digests: dict) -> dict:
+def assess(facts: dict, expected_digests: dict, required_outcomes: dict | None = None) -> dict:
     """Consumer adapter maps native fields; never treat stability as gate success."""
     if not isinstance(facts, dict):
         return {'ready': False, 'errors': ['Consumer facts must be an object'], 'outcomes': None}
@@ -28,8 +28,24 @@ def assess(facts: dict, expected_digests: dict) -> dict:
         errors.append('Explicit outcomes required')
     else:
         for row in outcomes:
-            if not isinstance(row, dict) or type(row.get('mandatory')) is not bool or row.get('status') not in ('passed', 'failed', 'blocked', 'unlaunched', 'incomplete'):
+            if not isinstance(row, dict) or type(row.get('mandatory')) is not bool or row.get('status') not in ('passed', 'failed', 'blocked', 'unlaunched', 'incomplete', 'pending'):
                 errors.append('Outcome mapping invalid')
             elif row['mandatory'] and row['status'] != 'passed':
                 errors.append('Mandatory outcome did not pass')
+    if required_outcomes is not None:
+        if not isinstance(required_outcomes, dict) or not required_outcomes or not all(isinstance(key, str) and key and type(due) is bool for key, due in required_outcomes.items()):
+            errors.append('Accepted obligation set invalid')
+        else:
+            mapped = {}
+            for row in outcomes if isinstance(outcomes, list) else []:
+                if not isinstance(row, dict) or not isinstance(row.get('id'), str) or not row['id'] or row['id'] in mapped:
+                    errors.append('Outcome identities missing or duplicated')
+                else:
+                    mapped[row['id']] = row
+            for key, due in required_outcomes.items():
+                row = mapped.get(key)
+                if row is None:
+                    errors.append('Accepted obligation omitted: ' + key)
+                elif due and row.get('status') != 'passed':
+                    errors.append('Due obligation did not pass: ' + key)
     return {'ready': not errors, 'errors': errors, 'outcomes': outcomes}

@@ -286,7 +286,7 @@ validated during preparation; runtime capability failures remain honest failures
 The optional `adapter_conformance.assess` accepts a consumer projection, not a
 replacement native result format: `source_stable`, `terminal_complete`, explicit
 `outcomes` with boolean `mandatory` and `status`, and named `request_digests`.
-Statuses are passed/failed/blocked/unlaunched/incomplete. Required outcomes must
+Statuses are passed/failed/blocked/unlaunched/incomplete/pending. Due required outcomes must
 pass independently of source stability, command exit or an intermediate finalize;
 advisory failures remain observations. Empty/malformed or unknown observations
 cannot qualify. A selected `conformance` object-key path in the execution request
@@ -309,3 +309,36 @@ ledger or acceptance narrowing. Existing requests default integration base to ba
 all additions retain packet schema1. No consumer adoption or active pin changes
 follow automatically. See the [selected role entrypoint](worker-instructions.md#implementor)
 when an available binding is explicitly assigned; other project routes remain valid.
+
+### Consequential dispositions
+
+Keep distinct meanings in existing handoffs and records; consumers may retain native
+statuses with explicit translation. **Execution outcome** describes what actually ran
+and its tool-reported exits/results, including partial work before a block.
+**Evidence eligibility** describes whether source, inputs and provenance permit using
+those results: successful execution can still supply ineligible evidence.
+**Review** judges the candidate against due criteria; **approval** is the authorized
+controller decision; **integration** is the verified repository transition. Review PASS
+creates neither approval nor integration. **Sent** records attempted transmission,
+**delivered** records destination availability, and **consumed** records receiver use;
+each requires observable supporting facts. Unknown stays unknown, without a new
+acknowledgment ritual.
+
+Each consequential disposition cites its supporting evidence and accounts for all
+applicable unresolved obligations against the accepted required set, not just the
+returned subset. Evaluate obligations when due: installed checks remain explicitly
+pending before integration, rather than premature review blockers. An unresolved due
+finding prevents correction-complete. Give judgment a brief checkable basis in existing
+notes/results, not private reasoning or a new document. Preserve mechanical tool reasons,
+exits and logs; explain meaningful changes through newly resolving evidence while
+retaining prior failures. Dispatcher relay preserves unchanged authoritative references
+rather than reconstructing acceptance matrices or evidence.
+
+For selected adapter coverage, optional `required_outcomes` in the prepared request maps
+accepted obligation IDs to boolean due flags. It requires `conformance`; mapped outcomes
+carry unique `id` values. Every accepted obligation must appear; due obligations must
+pass even if the adapter marks them advisory. Not-yet-due obligations may be `pending`
+with `mandatory: false`, retaining visibility without premature gating. Without this
+binding, adapters retain responsibility for independently proving required-set coverage.
+This additive mapping does not certify semantic judgment, consumer adoption or honesty
+of the accepted obligation inventory. Actual consumer adapters require their own tests.

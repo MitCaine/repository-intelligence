@@ -192,7 +192,7 @@ def prepare(request: dict, evidence: Path, *, initial: bool = True) -> dict:
     required = {'assignment', 'attempt', 'workspace', 'protected_repository', 'base', 'inputs',
                 'allowed_changes', 'capture_authority', 'environment', 'capture', 'runner',
                 'runner_result', 'result_bindings', 'require_new_candidate', 'check_request'}
-    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'edit', 'timeout_seconds', 'route', 'conformance', 'integration_base'}:
+    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'edit', 'timeout_seconds', 'route', 'conformance', 'required_outcomes', 'integration_base'}:
         raise ExecutionError('Invalid explicit execution binding fields')
     route = request.get('route', 'subprocess')
     if route not in ('subprocess', 'interactive') or (route == 'interactive' and request.get('edit') is not None):
@@ -211,6 +211,10 @@ def prepare(request: dict, evidence: Path, *, initial: bool = True) -> dict:
     for binding in request['result_bindings'].values():
         if not isinstance(binding, list) or not binding or len(binding) > 32 or not all(isinstance(k, str) and k for k in binding):
             raise ExecutionError('Every result binding needs a bounded nonempty object-key path')
+    if 'required_outcomes' in request:
+        obligations = request['required_outcomes']
+        if 'conformance' not in request or not isinstance(obligations, dict) or not obligations or not all(isinstance(key, str) and key and type(due) is bool for key, due in obligations.items()):
+            raise ExecutionError('Accepted obligation set requires conformance and named due flags')
     if 'conformance' in request and (not isinstance(request['conformance'], list) or not request['conformance'] or not all(isinstance(k, str) and k for k in request['conformance'])):
         raise ExecutionError('Conformance binding needs a nonempty object-key path')
     if not isinstance(request['check_request'], dict) or not request['check_request']:
@@ -380,7 +384,7 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
             verified.append(actual)
         report['references'] = verified
         if 'conformance' in request:
-            report['conformance'] = assess(field(result, request['conformance']), request_digests(read(attempt / 'CHECK_REQUEST.json')))
+            report['conformance'] = assess(field(result, request['conformance']), request_digests(read(attempt / 'CHECK_REQUEST.json')), request.get('required_outcomes'))
             if not report['conformance']['ready']:
                 raise ExecutionError('Consumer mapped facts fail adapter conformance')
         if not runner_passed or field(result, bindings['ready']) is not True:

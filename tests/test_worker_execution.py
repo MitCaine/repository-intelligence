@@ -303,6 +303,7 @@ r['facts']={'source_stable':True,'terminal_complete':True,
         self.runner.write_text(original.replace("(p/'consumer.json').write_text",addition+"(p/'consumer.json').write_text"))
         self.request['runner']=self.op(self.runner,'{attempt}','{candidate}')
         self.request['conformance']=['facts']
+        self.request['required_outcomes']={'omitted': True}
         self.assertEqual(self.cli('prepare')[0],0)
         code,r=self.cli('run');self.assertEqual(code,1)
         self.assertEqual(r['operations'][-1]['exit_code'],0)
@@ -338,6 +339,49 @@ r['facts']={'source_stable':True,'terminal_complete':True,
         self.assertEqual(result['runner_result']['status'], 'not-final')
         self.assertNotIn('sha256', result['runner_result'])
         self.assertNotIn('references', result)
+
+    def test_public_runner_omission_and_future_obligation_control(self):
+        original = self.runner.read_text()
+        addition = """r['facts']={'source_stable':True,'terminal_complete':True,
+'outcomes':[{'id':'check','mandatory':True,'status':'passed'},
+{'id':'installed','mandatory':False,'status':'pending'}],
+'request_digests':{'raw_file_sha256':r['request_sha256']}}
+"""
+        self.runner.write_text(original.replace("(p/'consumer.json').write_text", addition+"(p/'consumer.json').write_text"))
+        self.request['runner'] = self.op(self.runner, '{attempt}', '{candidate}')
+        self.request['conformance'] = ['facts']
+        self.request['required_outcomes'] = {'check': True, 'installed': False, 'missing': True}
+        self.assertEqual(self.cli('prepare')[0], 0)
+        code, result = self.cli('run')
+        self.assertEqual(code, 1)
+        self.assertIn('Accepted obligation omitted: missing', result['conformance']['errors'])
+        self.assertEqual(result['operations'][-1]['exit_code'], 0)
+        self.git(self.workspace, 'reset', '--hard', self.request['base'])
+        self.request['attempt'] = 'complete-obligations'
+        del self.request['required_outcomes']['missing']
+        self.assertEqual(self.cli('prepare')[0], 0)
+        code, result = self.cli('run')
+        self.assertEqual(code, 0, result)
+        self.assertTrue(result['review_ready'])
+
+    def test_accepted_obligation_coverage_and_due_stage(self):
+        hashes = request_digests(b'{}')
+        facts = dict(request_digests=hashes, source_stable=True, terminal_complete=True,
+                     outcomes=[dict(id='check', mandatory=True, status='passed'),
+                               dict(id='installed', mandatory=False, status='pending')])
+        required = {'check': True, 'installed': False}
+        self.assertTrue(assess(facts, hashes, required)['ready'])
+        required['missing'] = True
+        self.assertIn('Accepted obligation omitted: missing', assess(facts, hashes, required)['errors'])
+        del required['missing']
+        facts['outcomes'][0].update(mandatory=False, status='failed')
+        self.assertFalse(assess(facts, hashes, required)['ready'])
+        facts['outcomes'][0]['status'] = 'passed'
+        required['installed'] = True
+        self.assertFalse(assess(facts, hashes, required)['ready'])
+        required['installed'] = False
+        facts['outcomes'].append(dict(facts['outcomes'][0]))
+        self.assertFalse(assess(facts, hashes, required)['ready'])
 
     def test_atomic_save_failure_preserves_previous_return_and_cleans_temp(self):
         target=self.evidence/'RETURN.json';save(target,{'status':'incomplete'})
