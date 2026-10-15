@@ -305,6 +305,13 @@ immediate-child success alone cannot qualify them. Unsupported platforms refuse
 local operation ownership. Helper termination by an unhandled signal or host crash does not establish cleanup.
 This is not universal process supervision.
 
+Static operation preflight also checks POSIX executable permission for selected
+argv[0] before dependent work, including generation and run reauthentication.
+It never chmods files. This check is not proof of interpreter/dependency availability,
+mount/ACL behavior or freedom from permission changes after inspection; actual
+launch failures still retain their failed/partial results. Other platforms report
+unsupported static executable readiness rather than asserting POSIX support.
+
 Return writes use exclusive unpredictable temporary files and replacement; residue
 from an older write cannot block a normal new write. Uncertain launch markers and
 partial evidence still require reconciliation, not blind retry. Final capture scope

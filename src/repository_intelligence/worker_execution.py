@@ -242,6 +242,12 @@ def operation_input(name: str, operation: dict) -> dict:
     actual = identity(absolute(argv[0]))
     if actual['sha256'] != operation['executable_sha256']:
         raise ExecutionError('Operation executable mismatch')
+    executable = Path(actual['path'])
+    if os.name != 'posix':
+        raise ExecutionError('Static executable readiness is unsupported on this platform')
+    access_options = {'effective_ids': True} if os.access in os.supports_effective_ids else {}
+    if not executable.stat().st_mode & 0o111 or not os.access(executable, os.X_OK, **access_options):
+        raise ExecutionError('Operation is not executable: ' + str(executable))
     return dict(operation=name, **actual)
 
 

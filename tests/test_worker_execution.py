@@ -479,6 +479,37 @@ r['facts']={'source_stable':True,'terminal_complete':True,
         code, result = self.cli('prepare')
         self.assertNotIn('Static preflight', result['error'])
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX executable permission required')
+    def test_nonexecutable_selected_operations_refuse_before_edits(self):
+        for name in ('capture', 'runner'):
+            with self.subTest(operation=name):
+                script = getattr(self, name)
+                script.chmod(0o644)
+                code, result = self.cli('prepare')
+                self.assertEqual(code, 1)
+                self.assertIn(str(script), result['error'])
+                self.assertIn('not executable', result['error'])
+                request, _ = self.generation_request()
+                original = self.request
+                self.request = request
+                self.assertEqual(self.cli('generate')[0], 1)
+                self.request = original
+                self.assertFalse((self.evidence/'attempt-1').exists())
+                self.assertEqual((self.workspace/'source.txt').read_text(), 'before\n')
+                script.chmod(0o755)
+        self.assertEqual(self.cli('prepare')[0], 0)
+        self.assertEqual(self.cli('run')[0], 0)
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX executable permission required')
+    def test_permission_change_after_prepare_refuses_before_edit(self):
+        self.assertEqual(self.cli('prepare')[0], 0)
+        self.capture.chmod(0o644)
+        code, result = self.cli('run')
+        self.assertEqual(code, 1)
+        self.assertIn('not executable', result['error'])
+        self.assertEqual((self.workspace/'source.txt').read_text(), 'before\n')
+        self.assertFalse((self.evidence/'attempt-1'/'LAUNCHED').exists())
+
     def test_atomic_save_failure_preserves_previous_return_and_cleans_temp(self):
         target=self.evidence/'RETURN.json';save(target,{'status':'incomplete'})
         before=target.read_bytes()

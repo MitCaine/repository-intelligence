@@ -12,7 +12,8 @@ RI needs no service, database, or maintained symbol index. Task scope, capsule
 execution, and acceptance stay with the consumer project.
 
 [Bounded workflow helpers](docs/workflow-tools.md) support explicit section reading
-and declared-resource adoption. Consumer check execution stays in the project's
+and declared-resource adoption, plus optional
+[prepared execution and inventory-driven request generation](docs/workflow-tools.md#prepared-worker-execution-linkage). Consumer check execution stays in the project's
 selected runner; these helpers do not add acceptance gates.
 
 ## Start work with the kickoff skills
