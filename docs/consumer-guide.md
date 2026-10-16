@@ -89,6 +89,12 @@ result = query_path(root, 'pause resume clock', limit=8)
 
 Do not use the bounded `structural.declarations` array as a full inventory. Directory query JSON also contains per-file evidence for the scan, so a small match limit does not impose a small total JSON size. The [navigation reference](navigation.md) explains these shapes.
 
+For a normal capsule task, carry the relevant generated matches, exact source
+identity, and parser/coverage status into **Source and scope**, then inspect those
+locations and related callers/interfaces/tests directly. Link each implementation
+step to its proof entry under **Checks**. The [daily source-preparation contract](start-an-issue.md#task-directed-source-preparation)
+defines the required invocation, retained output, reuse and exception handling.
+
 ## Choose headers and exclusions deliberately
 
 A direct header query accepts `--language c` or `--language cpp`. A directory scan accepts exact relative header paths instead:

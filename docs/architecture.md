@@ -12,11 +12,17 @@ available parser cannot answer a question.
 ```text
 task + consumer-owned authority
   -> selected source -> Tree-sitter + language adapter
-  -> inspect source -> directed work packet -> implementation/tests
+  -> bounded task-directed pointers -> inspect source
+  -> creator-reviewed work packet -> implementation/tests
   -> stable planning/candidate comparison + full diff -> consumer review
 ```
 
 The consumer chooses scope, contextual contracts, evidence, and acceptance.
+For normal capsule preparation, a consumer-selected query can supply exact source
+identities, declaration locations, parser/coverage status, and lexical hints for
+the creator to inspect and carry into a bounded handoff. The packet is selected
+source context reviewed by its creator, not an automatically complete graph;
+lexical candidates do not establish caller relationships.
 For questions requiring more precision, use [explicit native analysis](native-analysis.md)
 and retain separate observations. RI currently resolves one Rust reference;
 it does not promise callers, overrides, or semantic providers for every language.
