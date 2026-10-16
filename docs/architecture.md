@@ -91,6 +91,16 @@ owns optional prepared-workspace/operation linkage and terminal-reference valida
 it invokes explicitly selected consumer commands and does not implement their
 capture policy, gate execution or semantic acceptance. See [bounded workflow tools](workflow-tools.md).
 
+[`output_cleanup.py`](../src/repository_intelligence/output_cleanup.py) provides
+optional exclusive output-creation receipts and per-item retention/disposal
+assessment at that same seam. It reuses worker path/file identity primitives;
+consumer creation definitions, live-use/source-retention observations, protected
+paths, disposal mechanics and authority remain consumer-owned. It creates no
+inventory store, recursive deletion engine or automatic cleanup stage. The
+[completion lifecycle](start-an-issue.md#retain-evidence-and-dispose-of-owned-outputs)
+is the single policy owner. Navigation, inventory and worker-request versions are
+unchanged; the optional output receipt is version 1.
+
 [`dispatch_guard.py`](../src/repository_intelligence/dispatch_guard.py) owns a small
 optional read-only decision over explicit consumer-mapped native dispatch facts.
 Host authentication, launch/resumption, state persistence and wait execution remain
