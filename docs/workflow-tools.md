@@ -481,3 +481,107 @@ with `mandatory: false`, retaining visibility without premature gating. Without 
 binding, adapters retain responsibility for independently proving required-set coverage.
 This additive mapping does not certify semantic judgment, consumer adoption or honesty
 of the accepted obligation inventory. Actual consumer adapters require their own tests.
+
+### Final completeness reconciliation
+
+The [controller/implementor rule](start-an-issue.md#execute-serially) owns final
+accounting; it is part of existing checks/return and intake, not a new stage or
+report. Optional `accepted_capsule` selects the mechanical extension with exactly
+`path`, original raw `sha256`, `phase` and `route`. The task must be an authenticated
+regular-file input in the same owning execution inventory. Original IDs, steps and
+prescribed cases come from that accepted source, not a worker-authored replacement.
+Six capsule headings remain unchanged. Other existing routes perform this accounting
+in their existing records; this optional interface does not impose a universal JSON
+capsule or imply that legacy helpers now enforce it.
+
+For this selected interface, put the accepted proof entries' machine metadata in
+one `ri-obligations` JSON fence inside **Checks**, alongside or linked to the
+original Acceptance and Source/scope descriptions. This is the authoritative
+phase/route/case metadata for those entries, not a second hand-maintained inventory.
+Creator/controller must compare every original outcome, step and prescribed case
+against it before acceptance. Metadata cannot prove arbitrary prose was covered.
+For example, these entries reference original `A5` and source step `S1`:
+
+```json
+{
+  "phases": ["implementor", "qualification", "installed"],
+  "routes": ["normal"],
+  "entries": [
+    {"id":"A5","kind":"outcome","outcome":"A5","due":"implementor","owner":"implementor","routes":["normal"]},
+    {"id":"S1","kind":"step","outcome":"A5","due":"implementor","owner":"implementor","routes":["normal"]},
+    {"id":"A5.failure","kind":"proof","outcome":"A5","due":"implementor","owner":"implementor","routes":["normal"],
+     "native_id":"test_failed_write_preserves_original","success":0,"artifacts":["stdout","fixture"],"measurements":["unchanged_bytes"]},
+    {"id":"A5.installed","kind":"proof","outcome":"A5","due":"installed","owner":"controller","routes":["normal"],
+     "native_id":"test_installed","success":"passed","artifacts":[],"measurements":[]}
+  ]
+}
+```
+
+Names are original task identities, not reserved labels to copy blindly. `phases`
+orders this task's due points; it imposes no universal execution/history order.
+Each entry's `due` and routes must be accepted names; its outcome must reference an
+original outcome entry. IDs are globally unique. Source is bounded by the existing
+1 MB worker input limit; at most 128 entries. Listed/quoted/fenced examples outside
+the actual Checks metadata do not become obligations. Unknown fields and duplicate
+JSON keys refuse rather than silently dropping proof. Never silently retrofit a
+frozen active task with these fields; adopting consumers select them for new or
+explicitly amended attempts.
+
+Generation derives `required_outcomes`; preparation rederives and refuses a supplied
+competing set. `PREPARED`, the generated `CHECK_REQUEST.accepted_obligations`, and
+`RETURN` retain the same source, inventory and per-entry definition identities.
+Route exclusions remain explicit. A route/source/phase change changes the binding;
+it does not silently transfer earlier proof. Consumers retain original execution
+identities and apply their existing evidence-reuse policy, not relabel old records
+to satisfy the new request. This interface validates the selected native frame;
+cross-frame equivalence is not inferred here.
+
+The existing conformance facts carry `inventory_sha256` and one outcome row for
+**each** selected entry, retaining its `id`, `definition_sha256`, status and mandatory
+mapping. A future `pending` row has the accepted `next_owner`; it does not need
+unavailable future artifacts. Already-due proof cannot be relabeled pending.
+Passed outcome/step rows supply concise `basis` and nonempty retained
+`evidence` path/raw-hash bindings; their adequacy is a review responsibility.
+Passed proof rows supply only `native: {"record": {"path": "...", "sha256": "..."}}`.
+Native selectors are **not worker-supplied**. Required `proof_mapping` in the selected
+request is an object-key path such as `["native_proof"]` in the SAME authenticated
+`input_inventory` JSON projection. Its owner exports actual native result selectors
+from its runner definition alongside its required inputs, not a handwritten second
+inventory. The projection maps accepted native case names to:
+
+- `fields`: native key paths for `case`, `status`, `candidate`, `attempt` and
+  `request_sha256`. Actual case and success scalar must equal the accepted entry;
+  native source/attempt/request must match this actual execution frame;
+- `artifacts`: accepted artifact names mapped to native paths containing retained
+  files' `path`/raw `sha256` bindings;
+- `measurements`: accepted metric names mapped to native numeric values' paths.
+  Tools read finite numbers directly; missing, unknown or Boolean values do not
+  establish required measurements. The worker does not transcribe counts.
+
+For example, an owner's `native_proof.test_failed_write_preserves_original` can
+map `fields.status` to `["exit_code"]`, `fields.case` to `["test_id"]`, and
+`measurements.unchanged_bytes` to `["metrics", "unchanged_bytes"]`, with all five
+identity fields and the accepted artifact names also present. The tooling binds
+this owner projection and its identity into the same derived inventory. A returned
+alias pointing success at an unrelated zero-valued metric is refused. Missing due
+native case mappings fail preparation; unavailable future mappings do not force
+execution before their accepted phase.
+
+Native key paths are lists of object keys or nonnegative list indexes, at most 32 elements.
+Native records retain the existing 1 MB read limit; file identities use the existing
+1 GB streaming limit. Complete logs/fixtures must survive teardown at their bound
+locations. Missing, changed or unreadable records/artifacts, missing measurements,
+duplicate/renamed/substituted IDs or stale bindings block readiness. Identity and
+coverage do not prove actual assertions discriminate the required behavior; native
+adapter authenticity and substantive independent review remain necessary.
+
+`worker_execution --mode run` records `completeness` in its existing RETURN before
+ready. Controller `--mode intake` uses the same request/evidence location, verifies
+the prepared/terminal/source/native/result/log/artifact identities, recomputes the
+same reconciliation and refuses changed results without rewriting the original
+RETURN. No rerun or dispatch occurs. Standalone consumer-native handoffs can call
+`derive`/`bind_native_mapping`/`reconcile` at their existing return/intake seam instead: future controller
+capture/qualification stays pending when that route permits uncaptured source.
+Selecting this API grants no worker Git authority and does not remove the separate
+prepared helper's existing capture/clean-source requirements. Shared fixtures cover
+the public selected path; consumer ordinary wiring still requires its own integration.

@@ -16,6 +16,7 @@ import sys
 
 from .adapter_conformance import assess, request_digests
 from .adoption import AdoptionError, _git, _root
+from .obligation_reconciliation import bind_native_mapping, derive, reconcile, unique_object
 
 SCHEMA_VERSION = 1
 MAX_BYTES = 1_000_000
@@ -176,6 +177,52 @@ def inventory_inputs(request: dict) -> list:
     return [dict(path=str(path), sha256=binding['sha256']), *observed]
 
 
+def accepted_inventory(request: dict) -> dict | None:
+    binding = request.get('accepted_capsule')
+    if 'accepted_capsule' not in request:
+        if 'proof_mapping' in request:
+            raise ExecutionError('Native proof mapping requires accepted capsule selection')
+        return None
+    if not isinstance(binding, dict) or set(binding) != {'path', 'sha256', 'phase', 'route'}:
+        raise ExecutionError('Accepted capsule needs path, sha256, phase and route')
+    capsule = absolute(binding['path'])
+    selected = dict(path=str(capsule), sha256=binding['sha256'])
+    if selected not in selected_inputs(request):
+        raise ExecutionError('Accepted capsule missing from selected owning input inventory')
+    inventory = derive(read(capsule), binding)
+    owner = request.get('input_inventory')
+    keys = request.get('proof_mapping')
+    if not isinstance(owner, dict) or not isinstance(keys, list) or not keys:
+        raise ExecutionError('Accepted capsule requires native proof mapping from the owning inventory')
+    owner_binding = dict(path=owner['path'], sha256=owner['sha256'])
+    mapping = field(load_record(owner_binding), keys)
+    inventory = bind_native_mapping(inventory, mapping, dict(owner_binding, keys=keys))
+    if 'conformance' not in request:
+        raise ExecutionError('Accepted capsule requires consumer conformance mapping')
+    if 'required_outcomes' in request and request['required_outcomes'] != inventory['required_outcomes']:
+        raise ExecutionError('Supplied obligation set differs from accepted capsule derivation')
+    if 'accepted_obligations' in request.get('check_request', {}):
+        raise ExecutionError('Accepted obligation projection is derived, not supplied in check request')
+    return inventory
+
+
+def verify_reference(binding: dict) -> dict:
+    if not isinstance(binding, dict) or set(binding) != {'path', 'sha256'}:
+        raise ExecutionError('Evidence needs path and expected raw sha256')
+    observed = identity(absolute(binding['path']))
+    if observed != binding:
+        raise ExecutionError('Stale retained evidence reference')
+    return observed
+
+
+def load_record(binding: dict) -> dict:
+    verify_reference(binding)
+    raw = read(absolute(binding['path']))
+    if hashlib.sha256(raw).hexdigest() != binding['sha256']:
+        raise ExecutionError('Native record changed while reading')
+    return json.loads(raw, object_pairs_hook=unique_object)
+
+
 
 def generate(request: dict, evidence: Path) -> dict:
     """Derive only mechanical bindings; explicit task selections remain required."""
@@ -188,6 +235,9 @@ def generate(request: dict, evidence: Path) -> dict:
         raise ExecutionError('Generation requires the owning inventory, not a competing input list')
     result = dict(request)
     result['inputs'] = inventory_inputs(request)
+    inventory = accepted_inventory(result)
+    if inventory is not None:
+        result['required_outcomes'] = inventory['required_outcomes']
     errors = environment_errors(request.get('environment'))
     for name in ('edit', 'capture', 'runner'):
         if name not in result:
@@ -275,12 +325,13 @@ def prepare(request: dict, evidence: Path, *, initial: bool = True) -> dict:
     required = {'assignment', 'attempt', 'workspace', 'protected_repository', 'base', 'inputs',
                 'allowed_changes', 'capture_authority', 'environment', 'capture', 'runner',
                 'runner_result', 'result_bindings', 'require_new_candidate', 'check_request'}
-    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'edit', 'timeout_seconds', 'route', 'conformance', 'required_outcomes', 'integration_base', 'input_inventory'}:
+    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'edit', 'timeout_seconds', 'route', 'conformance', 'required_outcomes', 'integration_base', 'input_inventory', 'accepted_capsule', 'proof_mapping'}:
         raise ExecutionError('Invalid explicit execution binding fields')
     # Authority/source barriers precede optional independent static diagnostics.
     if not isinstance(request['capture_authority'], str) or not request['capture_authority'].strip():
         raise ExecutionError('Explicit consumer capture authority reference required')
     source_inputs = selected_inputs(request)
+    inventory = accepted_inventory(request)
     if 'input_inventory' in request and source_inputs != inventory_inputs(request):
         raise ExecutionError('Selected inputs differ from owning inventory')
     errors = environment_errors(request['environment'])
@@ -342,11 +393,14 @@ def prepare(request: dict, evidence: Path, *, initial: bool = True) -> dict:
     for path in paths:
         if not isinstance(path, str) or Path(path).is_absolute() or any(x in ('', '.', '..', '.git') for x in path.split('/')):
             raise ExecutionError('Unsafe allowed change path')
-    return dict(schema_version=SCHEMA_VERSION, assignment=request['assignment'], attempt=request['attempt'],
+    result = dict(schema_version=SCHEMA_VERSION, assignment=request['assignment'], attempt=request['attempt'],
                 base=base, workspace=workspace_binding(root), selected_inputs=selected_inputs(request),
                 operations=operation_inputs(request), capture_authority=request['capture_authority'],
                 request_sha256=hashlib.sha256(json.dumps(request, sort_keys=True).encode()).hexdigest(),
                 environment_sha256=hashlib.sha256(json.dumps(request['environment'], sort_keys=True).encode()).hexdigest())
+    if inventory is not None:
+        result['accepted_inventory'] = inventory
+    return result
 
 
 def execute(request: dict, evidence: Path, mode: str) -> dict:
@@ -371,6 +425,8 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
                   base=request['base'], prepared=identity(attempt / 'PREPARED.json'), status='incomplete',
                   operations=[], review_ready=False,
                   limits='Mechanical linkage only; no filesystem isolation, semantic acceptance, or authority authentication.')
+    if 'accepted_inventory' in prepared:
+        report['accepted_inventory'] = prepared['accepted_inventory']
     result_path = attempt / 'RETURN.json'
     save(result_path, report)
     root = Path(request['workspace'])
@@ -451,7 +507,11 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
             if isinstance(value, dict):
                 return {key: bind(item) for key, item in value.items()}
             return value
-        save(attempt / 'CHECK_REQUEST.json', bind(request['check_request']))
+        check_request = bind(request['check_request'])
+        inventory = prepared.get('accepted_inventory')
+        if inventory is not None:
+            check_request['accepted_obligations'] = inventory
+        save(attempt / 'CHECK_REQUEST.json', check_request)
         report['check_request'] = identity(attempt / 'CHECK_REQUEST.json')
         runner_passed = invoke('runner', candidate)
         check_workspace(candidate, clean=True)
@@ -459,7 +519,7 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
             report['runner_result'] = dict(path=str(runner_file), status='not-final')
             raise ExecutionError('Runner activity is unresolved; output is not final')
         report['runner_result'] = identity(runner_file)
-        result = json.loads(read(runner_file))
+        result = json.loads(read(runner_file), object_pairs_hook=unique_object if inventory is not None else dict)
         if field(result, bindings['request_sha256']) != report['check_request']['sha256'] or identity(attempt / 'CHECK_REQUEST.json') != report['check_request']:
             raise ExecutionError('Consumer check request binding mismatch')
         if field(result, bindings['candidate']) != candidate or field(result, bindings['workspace']) != str(root):
@@ -477,7 +537,14 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
             verified.append(actual)
         report['references'] = verified
         if 'conformance' in request:
-            report['conformance'] = assess(field(result, request['conformance']), request_digests(read(attempt / 'CHECK_REQUEST.json')), request.get('required_outcomes'))
+            facts = field(result, request['conformance'])
+            report['conformance'] = assess(facts, request_digests(read(attempt / 'CHECK_REQUEST.json')),
+                                          inventory['required_outcomes'] if inventory is not None else request.get('required_outcomes'))
+            if inventory is not None:
+                expected = dict(candidate=candidate, attempt=request['attempt'], request_sha256=report['check_request']['sha256'])
+                report['completeness'] = reconcile(inventory, facts, expected, load_record=load_record, verify_reference=verify_reference)
+                if not report['completeness']['ready']:
+                    raise ExecutionError('Final completeness reconciliation failed')
             if not report['conformance']['ready']:
                 raise ExecutionError('Consumer mapped facts fail adapter conformance')
         if not runner_passed or field(result, bindings['ready']) is not True:
@@ -490,15 +557,75 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
     return report
 
 
+def intake(request: dict, evidence: Path) -> dict:
+    """Read-only controller consumption of the same retained terminal reconciliation."""
+    if 'accepted_capsule' not in request:
+        raise ExecutionError('Intake requires the selected accepted-capsule reconciliation binding')
+    attempt = absolute(str(evidence)) / request['attempt']
+    report = json.loads(read(attempt / 'RETURN.json'), object_pairs_hook=unique_object)
+    prepared = json.loads(read(attempt / 'PREPARED.json'), object_pairs_hook=unique_object)
+    if hashlib.sha256(json.dumps(request, sort_keys=True).encode()).hexdigest() != prepared['request_sha256']:
+        raise ExecutionError('Intake request differs from prepared assignment')
+    if (report.get('status') != 'complete' or report.get('review_ready') is not True
+            or report.get('assignment') != request['assignment'] or report.get('attempt') != request['attempt']
+            or report.get('prepared') != identity(attempt / 'PREPARED.json')):
+        raise ExecutionError('Terminal result is incomplete, stale or substituted')
+    if selected_inputs(request) != prepared['selected_inputs'] or operation_inputs(request) != prepared['operations']:
+        raise ExecutionError('Intake selected inputs changed')
+    root = _root(str(absolute(request['workspace'])))
+    if workspace_binding(root) != prepared['workspace']:
+        raise ExecutionError('Intake workspace substituted')
+    frozen(root, report['candidate'])
+    verify_reference(report['runner_result'])
+    verify_reference(report['check_request'])
+    for reference in report['references']:
+        verify_reference(reference)
+    expected_operations = (['edit'] if request.get('edit') is not None else []) + ['capture', 'runner']
+    if [item['operation'] for item in report['operations']] != expected_operations:
+        raise ExecutionError('Intake operation coverage mismatch')
+    for operation in report['operations']:
+        if operation.get('outputs_final') is not True or operation.get('status') != 'passed' or operation.get('exit_code') != 0:
+            raise ExecutionError('Intake operation has unresolved output activity')
+        for channel in ('stdout', 'stderr'):
+            verify_reference(operation[channel])
+    inventory = accepted_inventory(request)
+    if inventory is not None:
+        if inventory != report.get('accepted_inventory') or inventory != prepared.get('accepted_inventory'):
+            raise ExecutionError('Intake accepted inventory changed')
+        result = load_record(report['runner_result'])
+        bindings = request['result_bindings']
+        if (field(result, bindings['candidate']) != report['candidate']
+                or field(result, bindings['workspace']) != str(root)
+                or field(result, bindings['attempt']) != request['attempt']
+                or field(result, bindings['request_sha256']) != report['check_request']['sha256']
+                or field(result, bindings['ready']) is not True):
+            raise ExecutionError('Intake consumer result binding mismatch')
+        facts = field(result, request['conformance'])
+        conformance = assess(facts, request_digests(read(attempt / 'CHECK_REQUEST.json')), inventory['required_outcomes'])
+        if not conformance['ready'] or conformance != report.get('conformance'):
+            raise ExecutionError('Intake conformance is stale or substituted')
+        expected = dict(candidate=report['candidate'], attempt=request['attempt'], request_sha256=report['check_request']['sha256'])
+        actual = reconcile(inventory, facts, expected, load_record=load_record, verify_reference=verify_reference)
+        if not actual['ready'] or actual != report.get('completeness'):
+            raise ExecutionError('Intake completeness is stale or no longer supported')
+    return dict(schema_version=SCHEMA_VERSION, status='complete', review_ready=True,
+                terminal=identity(attempt / 'RETURN.json'), candidate=report['candidate'],
+                completeness=report.get('completeness'), limits='Authentication/coverage only, not substantive review or approval.')
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--request', required=True, type=Path)
     parser.add_argument('--evidence', required=True, type=Path)
-    parser.add_argument('--mode', choices=('prepare', 'run', 'generate'), required=True)
+    parser.add_argument('--mode', choices=('prepare', 'run', 'generate', 'intake'), required=True)
     args = parser.parse_args(argv)
     try:
-        request = json.loads(read(args.request))
-        result = generate(request, args.evidence) if args.mode == 'generate' else execute(request, args.evidence, args.mode)
+        raw_request = read(args.request)
+        request = json.loads(raw_request)
+        if isinstance(request, dict) and 'accepted_capsule' in request:
+            request = json.loads(raw_request, object_pairs_hook=unique_object)
+        result = (generate(request, args.evidence) if args.mode == 'generate' else
+                  intake(request, args.evidence) if args.mode == 'intake' else execute(request, args.evidence, args.mode))
         print(json.dumps(result, sort_keys=True))
         return 0 if args.mode in ('prepare', 'generate') or result['review_ready'] else 1
     except (ExecutionError, AdoptionError, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:

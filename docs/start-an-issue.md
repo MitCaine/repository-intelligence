@@ -118,7 +118,10 @@ Markdown task file with these headings:
   its implementation steps. State setup/preconditions, action or fault, the
   independently expected observation, a plausible defect/control that the case
   distinguishes, the due stage, literal commands and intended environment, and
-  results to retain.
+  results to retain. Give individually prescribed cases stable identities and name
+  required measurements/artifacts, applicable routes and the next owner for future
+  proof. Creator and controller establish completeness against original requirements;
+  do not leave the implementor to reconstruct or rename the inventory.
 - **Prerequisites:** known dependencies, unresolved decisions, and any genuinely
   post-installation obligation with its satisfaction method.
 - **Handoff and closeout:** authorized actor/actions, exact returned source/results,
@@ -357,11 +360,21 @@ Steps 1–2 apply to the normal route.
    separate independent reviewer cannot be replaced by the controller. Follow the additional
    assignment rule above; a scope challenge is not a routine fourth role.
 3. **Implementor:** make only authorized changes, including affected docs, and run
-   relevant checks. Return source/branch identity, changes, results/skips and gaps.
+   relevant checks. Before the ready handoff, reconcile the original accepted
+   outcomes, implementation steps and individually prescribed proof cases against
+   actual execution, case results, required measurements and retained readable
+   hash-matching artifacts. Already-due missing/unsupported proof blocks readiness;
+   legitimate later controller-owned actions stay pending with their accepted owner.
+   Use the [existing reconciliation binding](workflow-tools.md#final-completeness-reconciliation)
+   where selected, not a replacement checklist or another report/stage. Candidate or
+   evidence changes require affected reconciliation. Return source/branch identity,
+   changes, results/skips and gaps.
    Commit/push only when the map grants that action. Keep useful work for corrections.
    Follow the worker instructions for alternate execution paths and their tests.
 4. **Controller:** authenticate the exact published candidate, authorized scope,
    required check completion/results, evidence identity and unresolved blockers.
+   Authenticate and consume the same final completeness result, rather than
+   rebuilding its accepted inventory or inferring success from a passing aggregate.
    Capture/publish when assigned and verify the remote ref. This is readiness for
    independent review, not a second substantive review of implementation
    correctness or test adequacy; those belong to the reviewer. Act on any concrete

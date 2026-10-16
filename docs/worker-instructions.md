@@ -182,6 +182,8 @@ use its prepared edit/capture/check/return operations under the assigned authori
 do not invoke unselected helpers. Other supported project routes remain valid.
 Preserve useful work for bounded corrections; confirm scope changes with the controller.
 
+After checks, perform the controller's [final completeness reconciliation](start-an-issue.md#execute-serially)
+using the selected binding and existing return record before claiming readiness.
 Return the full change, criterion evidence and unresolved obligations under the
 [shared disposition contract](workflow-tools.md#consequential-dispositions) for controller
 verification and independent review. Commit/push only under an explicit grant.

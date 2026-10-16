@@ -91,6 +91,14 @@ owns optional prepared-workspace/operation linkage and terminal-reference valida
 it invokes explicitly selected consumer commands and does not implement their
 capture policy, gate execution or semantic acceptance. See [bounded workflow tools](workflow-tools.md).
 
+[`obligation_reconciliation.py`](../src/repository_intelligence/obligation_reconciliation.py)
+derives a selected original obligation/proof inventory from the accepted task's
+Checks entries and reconciles explicit consumer-native evidence at that seam.
+Worker return and read-only intake use the same identities/result. Preparation
+owners establish inventory completeness; independent review judges assertions.
+It does not infer arbitrary missing prose or execute checks. Existing navigation,
+inventory and legacy worker result versions are unchanged; selection is explicit.
+
 [`output_cleanup.py`](../src/repository_intelligence/output_cleanup.py) provides
 optional exclusive output-creation receipts and per-item retention/disposal
 assessment at that same seam. It reuses worker path/file identity primitives;
