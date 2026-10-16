@@ -160,5 +160,5 @@ def dispose_output(receipt: dict, observation: dict, *, protected: list[str], re
             return dict(result, status='quarantined', quarantine=str(quarantine), reclaimed_bytes=0,
                         reason='Recoverable disposal; retained bytes remain on disk')
         raise CleanupError('Unknown adapter result; reconcile actual state')
-    except (ValueError, OSError, TypeError) as error:
+    except Exception as error:
         return dict(result, status='incomplete', removed_bytes=None, reason=str(error))

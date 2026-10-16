@@ -271,11 +271,14 @@ inputs before invoking the selected consumer's safe adapter. The authorization
 boolean records an existing grant, never manufactures one. A callback returns
 `{"kind": "deleted"}` or `{"kind": "quarantined", "path": "/exact/destination"}`.
 The latter must preserve the original directory identity and logical size. An
-exception, unknown response or remaining original path yields `incomplete`; reconcile
+ordinary callback exception, unknown response or remaining original path yields `incomplete`; reconcile
 actual partial state before retry. This is a synchronous per-item call, not a new
 executor, registry, arbitrary-directory discovery or recursive deletion command. Consumers must
 exclude concurrent mutation, implement safe native disposal, and retain the returned
 facts in existing closeout records; filesystem checks are not an atomic transaction.
+Record the pending operation in that existing record before invocation. Process death
+or interruption cannot guarantee a returned result; reconcile actual state before retry,
+never infer successful disposal from a lost reply.
 
 Results distinguish logical `bytes`, verified adapter-reported `removed_bytes`, and
 physical `reclaimed_bytes` (unknown unless measured outside this helper; quarantine

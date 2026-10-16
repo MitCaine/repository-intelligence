@@ -206,6 +206,22 @@ class OutputCleanupTests(unittest.TestCase):
         self.receipt = old
         self.assertEqual(self.dispose()['status'], 'deleted')
 
+    def test_ordinary_callback_exceptions_after_partial_removal_are_incomplete(self):
+        class AdapterFailure(Exception):
+            pass
+        for failure in (RuntimeError, AdapterFailure):
+            with self.subTest(failure=failure.__name__):
+                (self.output / 'build.o').write_bytes(b'compiled fixture\n')
+                def partial(path):
+                    (path / 'build.o').unlink()
+                    raise failure('adapter stopped after removing one output')
+                result = self.dispose(dispose=partial)
+                self.assertEqual(result['status'], 'incomplete')
+                self.assertIsNone(result['removed_bytes'])
+                self.assertIsNone(result['reclaimed_bytes'])
+                self.assertTrue(self.original_log.exists())
+                self.assertIn('adapter stopped', result['reason'])
+
     def test_wrong_attempt_and_unknown_quarantine_outcome_do_not_pass(self):
         self.observation['attempt'] = 'other'
         self.assertEqual(self.dispose()['status'], 'retained')
