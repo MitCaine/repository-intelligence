@@ -12,7 +12,7 @@ versions are tracked inside the references rather than in parallel filenames.
 | Interpret file/directory JSON, statuses, identity, limits, or older versions | [Navigation reference](navigation.md) |
 | Compare planning and candidate source; interpret compact deltas and exits | [Inventory reference](inventory.md) |
 | Keep complete review evidence without repeating records | [Review evidence transport](review-evidence.md) |
-| Read selected instructions, maintain resource copies, or use a selected prepared-execution/consumer-runner binding | [Bounded workflow tools](workflow-tools.md) |
+| Read selected instructions, maintain resource copies, or use selected dispatch/worker-execution bindings | [Bounded workflow tools](workflow-tools.md) |
 | Know exactly which callables each language maps | [Language support](language-support.md) |
 | Hand off to Python AST, native Rust syntax, or Rust definition lookup | [Native analysis](native-analysis.md) |
 | Orient a controller, draft checkable capsule requirements, and run a low-interruption handoff | [Capsule controller workflow](capsule-controller-workflow.md) and [optional skill templates](skill-templates/README.md) |

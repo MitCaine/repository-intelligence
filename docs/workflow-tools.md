@@ -34,6 +34,49 @@ command must not mask an earlier failure. An interrupted attempt is incomplete,
 not a pass. Successful exits establish neither semantic acceptance nor evidence
 equivalence. Apply the selected [evidence rules](start-an-issue.md#evidence-eligibility-and-corrections).
 
+## Accepted dispatch decisions
+
+The optional [`dispatch_guard.py`](../src/repository_intelligence/dispatch_guard.py)
+helper evaluates a consumer's authenticated projection of existing native launch,
+resumption and job-state records. It neither launches agents nor creates a job
+registry. The dispatcher/host adapter still owns authentic observation, freshness,
+checkpoint updates and actual wait calls. A handoff document or send acceptance
+alone cannot establish a running worker.
+
+```sh
+PYTHONPATH=src .venv/bin/python -m repository_intelligence.dispatch_guard --request dispatch.json
+```
+
+The request has `expected` and `observed` objects; `observed` may be null when a
+reply is missing. Each identifies the existing `assignment`, unique `attempt` and
+`operation` (`launch` or `resume`). Resumption selection also names the existing
+`worker`. The mapped observation carries `state`, and consequential states require
+an `evidence` reference to existing native records. Accepted/active/terminal jobs
+also require `accepted: true` and their actual `worker` identity. An accepted spawn
+response or a resumed worker's authoritative activity must be tied to THIS attempt;
+an old completed actor, an unrelated running actor or a planned correction is not
+that evidence. Turn IDs are not required when the host does not expose them;
+retain the supported action identity plus the actual observation and its limits.
+These are small explicit projections, not replacement native records or new grants.
+
+`planned`, `delivered`, `unknown` or missing observations return `reconcile`:
+never running/wait and never permission to redispatch. Matching accepted jobs permit
+blocking wait; only an active observation permits marking running. Matching terminal
+jobs select consumption of existing results. Authoritatively established absence or
+rejection returns `controller_decision`, not automatic retry authority. A missing
+checkpoint, unavailable telemetry or incomplete job inventory does not establish
+absence. Stale assignment/attempt/operation/worker identities refuse. The CLI returns
+exit 1 for invalid mappings; exit 0 means the decision was evaluated, including a
+`reconcile` decision, not that a worker launched. Consumers must inspect the action.
+
+Use the decision at the existing active-job/wait transition when this helper is
+selected; do not record running first and validate afterward. Lost reply recovery
+uses bounded authoritative state reconciliation, not unfinished-work inspection or
+a polling loop. Original records remain unchanged. This predicate cannot certify a
+false consumer projection or make the native host enforce its use. Shared synthetic
+transition tests prove only decision logic; consumer selection/integration and actual
+host delivery/wake remain separate. No consumer adoption follows automatically.
+
 ## Section reader
 
 The optional `repository_intelligence.section_reader` module reads explicitly

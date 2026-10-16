@@ -84,3 +84,8 @@ projection remain consumer-owned. [`worker_execution.py`](../src/repository_inte
 owns optional prepared-workspace/operation linkage and terminal-reference validation;
 it invokes explicitly selected consumer commands and does not implement their
 capture policy, gate execution or semantic acceptance. See [bounded workflow tools](workflow-tools.md).
+
+[`dispatch_guard.py`](../src/repository_intelligence/dispatch_guard.py) owns a small
+optional read-only decision over explicit consumer-mapped native dispatch facts.
+Host authentication, launch/resumption, state persistence and wait execution remain
+with the dispatcher/consumer. It is not a second agent launcher or job registry.
