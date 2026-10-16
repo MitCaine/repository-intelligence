@@ -223,6 +223,19 @@ def load_record(binding: dict) -> dict:
     return json.loads(raw, object_pairs_hook=unique_object)
 
 
+def runner_references(references) -> list:
+    """Canonicalize/authenticate the runner's original list on return AND intake."""
+    if not isinstance(references, list) or not references or len(references) > 128:
+        raise ExecutionError('Bounded nonempty evidence references required')
+    verified = []
+    for item in references:
+        actual = identity(absolute(item['path']))
+        if actual['sha256'] != item['sha256']:
+            raise ExecutionError('Stale evidence reference')
+        verified.append(actual)
+    return verified
+
+
 
 def generate(request: dict, evidence: Path) -> dict:
     """Derive only mechanical bindings; explicit task selections remain required."""
@@ -526,16 +539,7 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
             raise ExecutionError('Runner source binding mismatch')
         if field(result, bindings['attempt']) != request['attempt']:
             raise ExecutionError('Runner attempt mismatch')
-        references = field(result, bindings['references'])
-        if not isinstance(references, list) or not references or len(references) > 128:
-            raise ExecutionError('Bounded nonempty evidence references required')
-        verified = []
-        for item in references:
-            actual = identity(absolute(item['path']))
-            if actual['sha256'] != item['sha256']:
-                raise ExecutionError('Stale evidence reference')
-            verified.append(actual)
-        report['references'] = verified
+        report['references'] = runner_references(field(result, bindings['references']))
         if 'conformance' in request:
             facts = field(result, request['conformance'])
             report['conformance'] = assess(facts, request_digests(read(attempt / 'CHECK_REQUEST.json')),
@@ -578,8 +582,6 @@ def intake(request: dict, evidence: Path) -> dict:
     frozen(root, report['candidate'])
     verify_reference(report['runner_result'])
     verify_reference(report['check_request'])
-    for reference in report['references']:
-        verify_reference(reference)
     expected_operations = (['edit'] if request.get('edit') is not None else []) + ['capture', 'runner']
     if [item['operation'] for item in report['operations']] != expected_operations:
         raise ExecutionError('Intake operation coverage mismatch')
@@ -594,6 +596,8 @@ def intake(request: dict, evidence: Path) -> dict:
             raise ExecutionError('Intake accepted inventory changed')
         result = load_record(report['runner_result'])
         bindings = request['result_bindings']
+        if runner_references(field(result, bindings['references'])) != report.get('references'):
+            raise ExecutionError('Intake original runner references differ from terminal result')
         if (field(result, bindings['candidate']) != report['candidate']
                 or field(result, bindings['workspace']) != str(root)
                 or field(result, bindings['attempt']) != request['attempt']

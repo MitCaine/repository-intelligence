@@ -53,6 +53,8 @@ if fault=='inventory': facts['inventory_sha256']='0'*64
 if fault=='definition': rows[0]['definition_sha256']='0'*64
 r={'commit':candidate,'repository':str(pathlib.Path.cwd()),'attempt':p.name,'eligible':True,
    'request_sha256':request_sha,'refs':[ref(log)],'facts':facts}
+detail=p/'runner-detail.log'; detail.write_text('Extra retained native runner detail\n')
+r['refs'].append(ref(detail))
 (p/'consumer.json').write_text(json.dumps(r))
 '''
 
@@ -269,6 +271,34 @@ class FinalReconciliationTests(unittest.TestCase):
         result=json.loads(path.read_text()); result['operations']=[]
         path.write_text(json.dumps(result))
         self.assertEqual(self.b.cli('intake')[0], 1)
+
+    def test_dropped_return_reference_cannot_hide_missing_native_log(self):
+        self.assertEqual(self.run_case()[0],0)
+        attempt=self.b.evidence/'attempt-1'
+        returned=attempt/'RETURN.json'; result=json.loads(returned.read_text())
+        detail=attempt/'runner-detail.log'
+        result['references']=[ref for ref in result['references'] if ref['path']!=str(detail)]
+        returned.write_text(json.dumps(result)); detail.unlink()
+        code,consumed=self.b.cli('intake')
+        self.assertEqual(code,1,consumed)
+
+    def test_empty_or_tampered_terminal_reference_view_is_not_consumed(self):
+        self.assertEqual(self.run_case()[0],0)
+        attempt=self.b.evidence/'attempt-1'
+        returned=attempt/'RETURN.json'; original=returned.read_bytes()
+        detail=attempt/'runner-detail.log'; detail_bytes=detail.read_bytes()
+        for fault in ('empty','drop','tamper'):
+            with self.subTest(fault=fault):
+                result=json.loads(original)
+                detail.write_bytes(detail_bytes)
+                if fault=='empty':
+                    result['references']=[]
+                else:
+                    result['references']=[ref for ref in result['references'] if ref['path']!=str(detail)]
+                    if fault=='tamper':
+                        detail.write_bytes(b'changed native runner detail')
+                returned.write_text(json.dumps(result))
+                self.assertEqual(self.b.cli('intake')[0],1)
 
     def test_native_pre_capture_handoff_does_not_force_a_worker_commit(self):
         head = self.b.git(self.b.workspace, 'rev-parse', 'HEAD')

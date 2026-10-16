@@ -579,7 +579,12 @@ adapter authenticity and substantive independent review remain necessary.
 ready. Controller `--mode intake` uses the same request/evidence location, verifies
 the prepared/terminal/source/native/result/log/artifact identities, recomputes the
 same reconciliation and refuses changed results without rewriting the original
-RETURN. No rerun or dispatch occurs. Standalone consumer-native handoffs can call
+RETURN. The complete original runner-reference list is authenticated from the
+runner's bound result and must equal RETURN's derived list; omitting a reference
+cannot hide missing or altered evidence. No rerun or dispatch occurs. The prepared
+helper's exclusive launch/finality remains intact: preserve a blocked return and
+use the existing authorized correction/evidence-reuse route, not another run of
+that launched attempt. Standalone consumer-native handoffs can call
 `derive`/`bind_native_mapping`/`reconcile` at their existing return/intake seam instead: future controller
 capture/qualification stays pending when that route permits uncaptured source.
 Selecting this API grants no worker Git authority and does not remove the separate
