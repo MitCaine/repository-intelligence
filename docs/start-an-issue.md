@@ -235,26 +235,14 @@ bookkeeping and closeout do not justify another assignment.
 
 Retain and authenticate each completed agent's terminal handoff before closing
 it through the host's supported operation to free capacity. Do not close running
-agents. Give each worker its selected [worker instructions](worker-instructions.md#role-index), bounded
-task inputs appropriate to its role, applicable standards, initial source-reading
-locations, explicit access restrictions, commands, edit limits and actual evidence.
-Implementors may follow relevant source under their governing role rule; the
-initial reading list is not an exhaustive file allowlist. Original issues and required
-decision history go to the builder and reviewer; the implementor receives a
-complete accepted capsule or maintenance handoff and bounded implementation inputs, and the dispatcher
-only authenticates and relays the handoff. Follow the role-specific reading rules. Supply the relevant
-project-map requirements and their original locations; workers do not repeat
-controller intake or workflow selection. Do not supply the whole controller
-procedure as mandatory worker reading. Authenticate role resources from the same
-adopted RI revision; record their locations in the existing handoff.
-
-For example: “Your role is Implementor. At the selected RI revision, read
-`docs/worker-instructions.md` sections Shared worker rules and Implementor in full.
-Then read the accepted capsule or maintenance handoff, authorized implementation source and
-applicable implementation standards linked in this handoff. Do not retrieve the
-original issue or decision history.” Name stable headings, not line numbers;
-use a section-bounded read where supported, since an anchor alone does not limit
-loaded context.
+agents. Supply role-specific inputs under the selected
+[ownership and handoff contract](new-project-setup.md#instruction-ownership-and-handoffs):
+selected worker sections, applicable local requirements/standards, complete task
+inputs, authoritative source/evidence references, read/edit limits and return route.
+Original requirements go to builder/reviewer; the implementor receives the accepted
+self-contained task and relevant source, and the dispatcher authenticates/relays.
+Do not make workers repeat controller intake. Name stable unique headings and use
+section-bounded reads where supported; an anchor alone does not limit loaded context.
 
 Before builder dispatch, supply original required orientation sources with selected
 identities/locations, confirmed requirements and unresolved questions. A summary

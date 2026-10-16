@@ -15,8 +15,8 @@ python3.14 -m venv .venv-ri
 .venv-ri/bin/python -m repository_intelligence.locator . --query 'calculate total'
 ```
 
-The pinned Tree-sitter runtime and nine grammar distributions are normal
-installation dependencies. Native analyzers are optional. Keep one RI checkout
+The Tree-sitter runtime and grammar distributions pinned in `pyproject.toml` are
+normal installation dependencies. Native analyzers are optional. Keep one RI checkout
 and install it into each consumer environment instead of copying source modules.
 A non-editable install must be reinstalled after changing that checkout. Record
 the selected RI revision; keep it fixed during a planning/candidate comparison.

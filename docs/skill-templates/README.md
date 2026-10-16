@@ -33,7 +33,7 @@ roles separate; no subagent publishes directly to main.
 | --- | --- | --- |
 | [ri-work-kickoff](ri-work-kickoff/SKILL.md) | Owner-selected Work controller | Explicit owner kickoff for an issue or bounded queue through adopted project instructions. |
 | [ri-codex-dispatcher-kickoff](ri-codex-dispatcher-kickoff/SKILL.md) | Owner-designated Codex dispatcher | Bounded orientation and waiting for a controller implementation handoff. |
-| [capsule-preflight](capsule-preflight/SKILL.md) | Controller, planner, or implementor | The project has an active capsule workflow with exact base/scope checks. |
+| [capsule-preflight](capsule-preflight/SKILL.md) | Controller, capsule builder, or implementor | The project has an active capsule workflow with exact base/scope checks. |
 | [capsule-scope-review](capsule-scope-review/SKILL.md) | Fresh read-only scope challenger | The impact inventory needs independent challenge before implementation authorization. |
 | [ri-evidence-handoff](ri-evidence-handoff/SKILL.md) | Controller, implementor, or reviewer | RI locations or comparisons will enter a handoff. |
 | [capsule-independent-review](capsule-independent-review/SKILL.md) | Fresh inspection-only reviewer | The selected candidate-bound review route permits inspection-only review using controller-supplied evidence; this skill does not execute tests. |
@@ -61,7 +61,7 @@ workspace, verify that a fresh agent discovers the intended instructions and
 selects the intended skill for a representative request.
 
 ChatGPT Work has a separate skill lifecycle; copying files into a Mac checkout
-does not make them available in a Work chat. Give the conditional scope challenger, controller, planner,
+does not make them available in a Work chat. Give the conditional scope challenger, controller, capsule builder,
 implementor, and reviewer their applicable instructions through the supported
 workspace route, then verify availability. Native subagents return to their parent; mixed Work/Codex routing uses the
 [selected dispatcher handoff](../start-an-issue.md#work-to-codex-implementation-handoff). Use the queue template for a long external gate that

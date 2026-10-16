@@ -18,8 +18,8 @@ selected runner; these helpers do not add acceptance gates.
 
 ## Start work with the kickoff skills
 
-RI defines shared role and evidence protocols; the project selects their execution
-configuration under the documented default Work/Codex and model profile. The default RI workflow uses two chats for the same project: a **Work
+Start from the project map and selected
+[ownership and role-input contract](docs/new-project-setup.md#instruction-ownership-and-handoffs). The default RI workflow uses two chats for the same project: a **Work
 controller**, which manages the issue, planning and review; and a **Codex
 dispatcher**, which launches the implementation worker and returns its results.
 For delegated implementation, create and connect both chats. Permitted direct
@@ -241,7 +241,7 @@ RI originated in [Poker App](https://github.com/MitCaine/poker-app).
 RI has no project license file yet; distribution notes are in maintenance.
 
 The default [controller workflow](docs/capsule-controller-workflow.md) uses a
-bounded task, serial planner/implementor/reviewer roles, relevant tests and full
+bounded task, serial capsule-builder/implementor/reviewer roles, relevant tests and full
 diff review. Independent scope challenge and evidence helpers are optional unless
 needed by a separately adopted project requirement.
 
