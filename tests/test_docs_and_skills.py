@@ -27,7 +27,8 @@ class DocsCheckerTests(unittest.TestCase):
             self.assertEqual({skill.parent.name for skill in skills}, {
                 'capsule-preflight', 'capsule-scope-review', 'capsule-independent-review',
                 'capsule-queue', 'ri-evidence-handoff', 'ri-work-kickoff',
-                'ri-codex-dispatcher-kickoff'})
+                'ri-codex-dispatcher-kickoff', 'ri-capsule-creator', 'ri-implementor',
+                'ri-independent-reviewer', 'ri-dispatcher'})
             for skill in skills:
                 self.assertEqual(checker.scalar_manifest(skill.read_text())['name'],
                                  skill.parent.name)

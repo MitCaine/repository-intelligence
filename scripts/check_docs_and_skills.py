@@ -123,7 +123,8 @@ def check(root=ROOT):
             errors.append(f'{path.relative_to(root)}: {error}')
     expected = {'capsule-preflight', 'capsule-scope-review', 'capsule-independent-review',
                 'capsule-queue', 'ri-evidence-handoff', 'ri-work-kickoff',
-                'ri-codex-dispatcher-kickoff'}
+                'ri-codex-dispatcher-kickoff', 'ri-capsule-creator', 'ri-implementor',
+                'ri-independent-reviewer', 'ri-dispatcher'}
     if {p.parent.name for p in skills.glob('*/SKILL.md')} != expected:
         errors.append('docs/skill-templates: unexpected or missing skill manifests')
     return errors
@@ -133,4 +134,4 @@ if __name__ == '__main__':
     failures = check()
     if failures:
         raise SystemExit('\n'.join(failures))
-    print('Documentation links and seven skill manifests: OK')
+    print('Documentation links and eleven skill manifests: OK')

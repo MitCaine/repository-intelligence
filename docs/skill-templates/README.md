@@ -1,22 +1,24 @@
-# Optional capsule workflow skill templates
+# Workflow role skills and optional helpers
 
 Controllers use [Start an issue](../start-an-issue.md); workers use their
 [selected worker instructions](../worker-instructions.md#role-index).
-These current skill templates are optional resources, not mandatory installations
-or a reason to add packet/export/protected-launcher gates. Adopt only instructions
-needed by the selected consumer route; an ordinary role handoff can carry the
-lightweight instructions directly.
+The four role skills below are authoritative worker procedures at the selected
+RI revision. Installation is optional: a supported handoff can supply their exact
+resources directly. Read the complete assigned skill, its locator and the bounded
+Shared worker rules; do not also load obsolete role procedures. Other skills are
+optional helpers, not new packet/export/protected-launcher gates.
 
 Kickoff fields and queue/configuration rules have one owner in
 [new-project setup](../new-project-setup.md#kickoff-inputs-and-selected-configuration).
 The kickoff skills are locators, not copies of the controller/dispatcher workflow.
 
-These templates help a consumer project implement the
-[controller workflow](../capsule-controller-workflow.md). They are examples for
-agents, not RI package behavior or permission policy. Read each `SKILL.md` and
-adapt repository-specific commands, accepted review lanes, supported hosts, and
-approval boundaries against the consumer's current capsule contract before
-installing it. Use the project map to distinguish shared RI instructions from independently required local controls. Resolve contradictions before dispatch; do not silently select a conflicting procedure.
+These resources support the [controller workflow](../capsule-controller-workflow.md).
+Selected role skills own shared role duties; the project map supplies commands,
+accepted review lanes, supported hosts and authority. Optional helper templates
+remain examples to select against that contract, not RI package behavior or new
+permission policy. Read each selected `SKILL.md`, resolve contradictions before
+dispatch, and distinguish shared instructions from independently required local
+controls rather than silently selecting a conflicting procedure.
 Start with the [new-project setup checklist](../new-project-setup.md) when
 adopting the workflow in a consumer repository.
 Follow the [daily publication sequence](../start-an-issue.md#execute-serially):
@@ -31,6 +33,10 @@ roles separate; no subagent publishes directly to main.
 
 | Template | Role | Copy when |
 | --- | --- | --- |
+| [ri-capsule-creator](ri-capsule-creator/SKILL.md) | Capsule creator | Normal planning: complete original inputs and source evidence. |
+| [ri-implementor](ri-implementor/SKILL.md) | Implementation actor | Accepted capsule or selected maintenance handoff. |
+| [ri-independent-reviewer](ri-independent-reviewer/SKILL.md) | Fresh independent reviewer | Exact candidate, originals and actual proof; only assigned checks may execute. |
+| [ri-dispatcher](ri-dispatcher/SKILL.md) | Codex relay | One controller-authorized implementation assignment. |
 | [ri-work-kickoff](ri-work-kickoff/SKILL.md) | Owner-selected Work controller | Explicit owner kickoff for an issue or bounded queue through adopted project instructions. |
 | [ri-codex-dispatcher-kickoff](ri-codex-dispatcher-kickoff/SKILL.md) | Owner-designated Codex dispatcher | Bounded orientation and waiting for a controller implementation handoff. |
 | [capsule-preflight](capsule-preflight/SKILL.md) | Controller, capsule builder, or implementor | The project has an active capsule workflow with exact base/scope checks. |
@@ -46,8 +52,8 @@ caller’s selected role instructions through its handoff and the project map. T
 also includes its required helper script. For personal local Codex use, install under the local Codex skills
 directory instead. After copying, check every relative resource link in the installed folder, then
 from the consuming workspace resolve the selected role resource through the
-existing handoff/map and verify its recorded identity. Workers read only their
-role/task inputs and relevant shared rules; the controller reads the full procedure. Template-tree validation alone does not prove
+existing handoff/map and verify its recorded identity. Workers read the whole selected role skill, its locator, bounded Shared worker
+rules and role/task inputs; the controller reads the full procedure. Template-tree validation alone does not prove
 installed-layout validity. Validate each copied folder with the available skill
 validator and try one realistic, non-destructive invocation before relying on
 it. Do not replace an existing project skill without comparing its instructions.
@@ -74,6 +80,16 @@ cover consumer-exported history metadata and required installed-workflow probes.
 Copy its supporting resources with the skill and connect it to the consumer's
 trusted records before treating it as a blocking gate. The scope-review skill
 handles purpose and missing dependencies that deterministic checks cannot infer.
+
+Measure complete required reading per role, including always-loaded skill text,
+the locator, Shared worker rules, project constraints and unconditional references.
+Conditional references count when applicable. A smaller entry file alone proves
+no reduction or reliability gain. Compare unchanged tasks, source, tools, settings
+and authority; report observed omissions/proof preconditions/artifact survival,
+premature readiness, corrections, usage/context and unmeasured data separately.
+Start with a bounded creator presentation pilot before actual remaining-role
+handoffs, distinguish format effects from grouping effects, and label held-out or
+compaction exercises by what actually ran. Do not restart active experiments.
 
 Keep the templates narrow. A project need not install every template, and no skill
 creates capsule authority, review independence, or a successful qualification

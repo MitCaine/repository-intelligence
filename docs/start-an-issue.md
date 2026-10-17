@@ -7,8 +7,8 @@ or missing inputs before dependent decisions, edits or dispatch; summaries do
 not replace unread requirements. Read in bounded sections and recover truncated
 portions before reliance. Select the checkpoint's active object, not its history.
 
-This is the controller’s complete daily entrypoint. Workers use their own
-[worker instructions](worker-instructions.md#role-index), not this whole procedure. Read
+This is the controller’s complete daily entrypoint. Workers use their selected authoritative
+[role skills](worker-instructions.md#role-index), not this whole procedure. Read
 relevant source/standards as needed; RI architecture, setup and adoption history
 are conditional. The project README/AGENTS points to the exact map above. If it
 is missing, report and resolve that adoption input rather than substitute another
@@ -206,7 +206,7 @@ Supply the [dispatcher](worker-instructions.md#codex-dispatcher) with the exact
 task/attempt, accepted task location, branch/SHA, selected role instructions,
 implementation inputs, read/edit scopes, checks, evidence locations, Git ownership
 and return destination. It launches under the selected
-[context/fallback rules](worker-instructions.md#read-and-dispatch) and relays the
+[dispatcher skill](skill-templates/ri-dispatcher/SKILL.md) and relays the
 terminal result; it does not reorient as controller, replan, review or integrate.
 Only the assigned actor edits/publishes; prevent simultaneous edits. Work
 authenticates the result before independent review. Unavailable routing requires
@@ -240,7 +240,7 @@ Retain and authenticate each completed agent's terminal handoff before closing
 it through the host's supported operation to free capacity. Do not close running
 agents. Supply role-specific inputs under the selected
 [ownership and handoff contract](new-project-setup.md#instruction-ownership-and-handoffs):
-selected worker sections, applicable local requirements/standards, complete task
+selected role skills and common contract, applicable local requirements/standards, complete task
 inputs, authoritative source/evidence references, read/edit limits and return route.
 Original requirements go to builder/reviewer; the implementor receives the accepted
 self-contained task and relevant source, and the dispatcher authenticates/relays.
@@ -345,7 +345,8 @@ Steps 1–2 apply to the normal route.
    and relevant source, including fidelity, completeness, scope, criteria, affected
    documentation, substantive engineering and proof sufficiency. Check that source
    steps and independently discriminating proof entries preserve the original
-   outcomes and their dependencies, then establish that the selected implementation
+   outcomes and relationships sharing interfaces, transitions, dependencies or
+   fixtures, then establish that the selected implementation
    route, prerequisites, sequence and evidence obligations are jointly executable
    from the starting source or through explicitly authorized setup that does not
    depend circularly on the capability being built. Confirm applicable source
@@ -360,7 +361,11 @@ Steps 1–2 apply to the normal route.
    separate independent reviewer cannot be replaced by the controller. Follow the additional
    assignment rule above; a scope challenge is not a routine fourth role.
 3. **Implementor:** make only authorized changes, including affected docs, and run
-   relevant checks. Before the ready handoff, reconcile the original accepted
+   relevant checks. Read the whole accepted task, then choose/adjust coherent groups
+   of related implementation/proof items. Reconcile the same original obligation
+   record after each group, retaining unresolved work and distinguishing code from
+   satisfied proof; no mandatory second plan or elaborate pseudocode. Before the
+   ready handoff, reconcile the original accepted
    outcomes, implementation steps and individually prescribed proof cases against
    actual execution, case results, required measurements and retained readable
    hash-matching artifacts. Already-due missing/unsupported proof blocks readiness;
@@ -370,7 +375,7 @@ Steps 1–2 apply to the normal route.
    evidence changes require affected reconciliation. Return source/branch identity,
    changes, results/skips and gaps.
    Commit/push only when the map grants that action. Keep useful work for corrections.
-   Follow the worker instructions for alternate execution paths and their tests.
+   Follow the selected implementor skill for alternate paths and discriminating proof.
 4. **Controller:** authenticate the exact published candidate, authorized scope,
    required check completion/results, evidence identity and unresolved blockers.
    Authenticate and consume the same final completeness result, rather than
@@ -533,7 +538,7 @@ set. Establish the observed failure and causal evidence; reexamine implementatio
 fixture, independently justified expectations and execution setup when they conflict.
 Inspect relevant source, tests and callers for related uses sharing the assumption,
 including incomplete migrations, and choose a distinguishing check. Revise only
-affected implementation-sketch portions before building on changed assumptions.
+affected working references to original obligations before building on changed assumptions.
 Incomplete evidence permits bounded probes and explicit uncertainty, not a confident
 diagnosis. Scale obvious compile/format fixes proportionately; no new planning stage,
 whole-file mandate or grant is required. Repair related mistakes within authorized

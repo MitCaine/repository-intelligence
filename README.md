@@ -120,7 +120,7 @@ host selector (`@` in Work, `$` in Codex); pasted text alone does not prove disc
 Without installed skills, send the same fields and actual product selection
 through [direct document-based kickoff](docs/new-project-setup.md#brief-invocation-examples).
 The controller follows its map's selected [Start an issue](docs/start-an-issue.md),
-and the dispatcher its selected [worker section](docs/worker-instructions.md#codex-dispatcher).
+and the dispatcher its selected [role skill](docs/worker-instructions.md#codex-dispatcher).
 No additional orientation stage is needed.
 
 ## Choose a route

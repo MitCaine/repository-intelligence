@@ -7,7 +7,7 @@ versions are tracked inside the references rather than in parallel filenames.
 | Need | Read |
 | --- | --- |
 | Controller: execute an issue in an established project | [Start an issue](start-an-issue.md), `docs/local_project_map.md` and live issue |
-| Assigned builder, implementor or reviewer | [Worker instructions](worker-instructions.md#role-index) and supplied task inputs |
+| Assigned builder, implementor, reviewer or dispatcher | [Selected role skill and common contract](worker-instructions.md#role-index) and role-permitted task inputs |
 | Install, navigate, compare, troubleshoot | [Consumer guide](consumer-guide.md) |
 | Interpret file/directory JSON, statuses, identity, limits, or older versions | [Navigation reference](navigation.md) |
 | Compare planning and candidate source; interpret compact deltas and exits | [Inventory reference](inventory.md) |
@@ -30,8 +30,8 @@ Do not use archived workflow instructions or previous plans for new execution.
 
 - **Daily execution procedure:** start-an-issue; controller workflow explains
   project adoption and broader context, and new-project setup is used at adoption.
-- **Current role instructions:** the [worker instructions](worker-instructions.md#role-index); optional
-  skill templates route to the selected role and targeted helpers.
+- **Current role instructions:** [revision-pinned role skills and the common contract](worker-instructions.md#role-index);
+  optional helpers and kickoff locators do not duplicate those procedures.
 - **Runtime contracts:** navigation/inventory references and executable package code.
 - **Optional extended helpers:** preflight evidence checker, queue watcher and review
   bundles are separate executable surfaces. Making them optional does not fix or
