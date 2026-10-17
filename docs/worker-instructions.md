@@ -31,6 +31,16 @@ Only the controller selects workflow stages; a dispatcher has only its explicit
 implementor-launch exception. Preserve unrelated work, historical evidence, active
 instruction/runtime selections and explicit task/attempt stops or owner pauses.
 
+Use available selected authoritative tooling for dependency/resource inventories,
+source/instruction identities, original obligation IDs, execution/case outcomes,
+artifact survival and measurements. Consume its bound results by reference rather
+than reconstructing, retyping or inferring those facts. Agents judge requirement
+meaning, engineering choices and proof adequacy; tools verify mechanical facts.
+If required automation is not wired into the selected route, identify the missing
+operation and its owning component to the controller. Use only the project's
+authorized disposition, and do not call manual checking or an unwired helper
+automated. This requires no additional report, inventory or approval stage.
+
 Before changing inputs to a downstream gate, check its applicable source, history,
 authorization and configuration constraints; resolve conflicts without premature
 qualification. History/base rules belong to the project, not a universal RI policy.

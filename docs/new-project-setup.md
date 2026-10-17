@@ -66,12 +66,10 @@ to load every linked document. This setup reference is not additional worker int
 
 The controller's handoff identifies the role/assignment, selected instructions and
 applicable local sections, accepted route and consequential settled decisions.
-Reference authoritative selected tool outputs for mechanically known inputs,
-source identities and evidence locations rather than manually retelling inventories.
-Authenticate those results against the selected source/route; tools cannot decide
-product intent, applicability or acceptance. If the selected tool cannot supply a
-required fact, expose that gap through existing scope/readiness rules rather than
-invent a value or imply an unselected integration works. No new packet is required.
+Apply the [shared tool-ownership rule](worker-instructions.md#shared-worker-rules)
+to mechanically known inputs and bound results. Configure the actual commands
+and consumer wiring that supply them; a link to an unintegrated helper is not
+automation. Product intent, applicability and acceptance remain agent judgments.
 Receiver duties live in [Shared worker rules](worker-instructions.md#shared-worker-rules):
 identity alone is not comprehension. Use existing assignment notes, working reference or terminal
 handoff, not an extra acknowledgment/approval round.
