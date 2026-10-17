@@ -300,7 +300,17 @@ exact relative `allowed_changes`, optional `route` (`subprocess`, the compatible
 default, or explicitly selected `interactive`), `capture_authority` (consumer grant reference),
 selected child `environment`, optional `edit`, required `capture` and `runner`,
 `require_new_candidate` (explicit boolean), `check_request`, `runner_result` and
-`result_bindings`. Optional `timeout_seconds` is 1–3600 per operation. Each operation
+`result_bindings`. Optional `timeout_seconds` is 1–3600 per operation. RETURN's
+operation rows record measured monotonic `duration_seconds` for launch through
+owned-process completion/cleanup, including failure and timeout. Their existing
+PREPARED reference binds selected source/tool inputs, command definitions and the
+environment hash. This is a conservative operation binding, not proof that every
+transitive input was declared or that individual nested gates have timings. The
+consumer runner owns per-gate timing, input coverage and configured investigation
+budgets under [check selection](start-an-issue.md#select-checks-and-control-runtime).
+Timeout remains incomplete; timing never grants evidence reuse or a missing pass.
+The additive observation does not change legacy packet version or acceptance.
+Each operation
 contains only `argv` and the selected executable's `executable_sha256`; use its
 absolute resolved non-symlink path. Bind interpreted scripts and relevant toolchain
 inputs in `inputs`, not merely the interpreter. Authority references record a

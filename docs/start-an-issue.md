@@ -122,6 +122,8 @@ Markdown task file with these headings:
   required measurements/artifacts, applicable routes and the next owner for future
   proof. Creator and controller establish completeness against original requirements;
   do not leave the implementor to reconstruct or rename the inventory.
+  Select implementation, correction and acceptance checks with their scope/risk,
+  input bindings and expensive-suite budgets under [check selection](#select-checks-and-control-runtime).
 - **Prerequisites:** known dependencies, unresolved decisions, and any genuinely
   post-installation obligation with its satisfaction method.
 - **Handoff and closeout:** authorized actor/actions, exact returned source/results,
@@ -297,6 +299,35 @@ lint checks before
 costly qualification. On failure, report before further expensive checks unless
 the assignment requires collecting independent results. This grants no frozen
 candidate edits or omission of required checks.
+
+### Select checks and control runtime
+
+Select required checks in the accepted capsule or maintenance handoff before
+implementation, with literal commands, intended phase, affected scope, relevant
+transitive inputs/environment and the reason for broader coverage. During
+implementation test changed behavior and affected callers. After correction rerun
+failed cases and checks affected by the correction; the controller updates the
+selection when scope changes. Before acceptance run broader checks required by
+the actual change risk and project gates. A full suite needs a project requirement
+or a concrete cross-cutting risk, such as shared execution, authentication or
+serialization. Do not repeat it automatically after every correction; an ordinary
+documentation pin change does not itself justify expensive integration fixtures.
+Workers follow this selection rather than guessing which required checks to skip.
+
+Use owning runner records for individual durations, command/source identity and
+relevant dependency/tool/configuration bindings. Reuse unaffected evidence only
+under [input equivalence](#evidence-eligibility-and-corrections), preserving its
+original execution identity. A wrapper's total time is not each nested gate's time;
+missing input coverage or runtime data remains unknown, never inferred.
+
+Give expensive suites project-defined runtime investigation budgets in their
+existing check definitions, informed by retained measurements where available.
+Tooling signals exceedance for bounded investigation before further expensive
+work; an actual completed pass and an exceeded budget are separate observations.
+A budget does not waive required proof or convert a timeout, omitted test or
+unfinished result into PASS. Preserve those as incomplete and reconcile the active
+operation before retry. Missing budget controls are an owning-runner integration
+gap, not permission to invent a pass or another monitoring framework.
 
 ### Task-directed source preparation
 
@@ -588,7 +619,8 @@ does not establish that every required gate passed. A source or relevant-input
 change during a check makes its result ineligible. Evaluate each gate's actual exit/result,
 including failures/skips; resolve failed required gates before acceptance.
 
-After correction, the controller selects reruns from changed inputs and the
+After correction, the controller applies [check selection](#select-checks-and-control-runtime)
+and selects reruns from changed inputs and the
 project's accepted evidence-equivalence policy. Preserve eligible results under
 their original source/command/environment identities; never label them newly
 executed. Run full qualification when required, or record why reuse is insufficient.

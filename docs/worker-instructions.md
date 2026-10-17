@@ -50,6 +50,9 @@ product-suite rehearsal. Reuse readiness only with unchanged relevant inputs.
 After failed setup, run only checks with satisfied prerequisites; other results
 are diagnostic. Where gate order permits, cheap validity checks precede expensive
 qualification. Follow assigned checks; no worker waives required checks.
+Use the controller's recorded implementation/correction/acceptance selection;
+do not automatically repeat every broader suite after a fix. Report missing
+selection or budget controls to the controller rather than guessing omissions.
 
 Keep tested source stable and identifiable. Retain commands, environment, raw
 results/logs, failures/skips and original source identities. Evaluate individual

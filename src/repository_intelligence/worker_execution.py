@@ -463,11 +463,14 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
         report['operations'].append(row)
         save(result_path, report)
         # Only invocation output is retained here; consumer runner owns gate logs.
+        started = time.monotonic()
         try:
             with (attempt / (name + '.stdout')).open('xb') as stdout, (attempt / (name + '.stderr')).open('xb') as stderr:
                 row.update(owned_run(argv, root, request['environment'], stdout, stderr, request.get('timeout_seconds', 300)))
         except (OSError, subprocess.SubprocessError) as error:
             row.update(status='incomplete', outputs_final=False, error=str(error))
+        finally:
+            row['duration_seconds'] = time.monotonic() - started
         for channel in ('stdout', 'stderr'):
             path = attempt / (name + '.' + channel)
             if path.exists():

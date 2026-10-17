@@ -30,6 +30,8 @@ original criterion/ID once. Checks links each original outcome and step to indiv
 identified proof cases: preconditions/setup, action/fault, independently expected
 observation, plausible wrong behavior/control, literal commands/environment,
 required artifacts/measurements, applicable routes, due phase and future owner.
+Select targeted development/correction checks and risk-justified acceptance gates
+up front, including relevant input bindings and expensive-suite runtime budgets.
 Prerequisites names unresolved decisions/dependencies and genuine installed proof.
 Handoff names actors/actions, return route and closeout obligations under project
 controls. Correct affected current docs/examples/links or explain why unaffected.

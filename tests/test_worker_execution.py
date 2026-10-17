@@ -1,5 +1,6 @@
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -72,6 +73,11 @@ PYCODE
         self.assertEqual(self.cli('prepare')[0],0)
         code,result=self.cli('run');self.assertEqual(code,0,result)
         self.assertTrue(result['review_ready'])
+        self.assertEqual([row['operation'] for row in result['operations']], ['edit', 'capture', 'runner'])
+        for row in result['operations']:
+            self.assertGreaterEqual(row['duration_seconds'], 0)
+            self.assertTrue(math.isfinite(row['duration_seconds']))
+        self.assertEqual(result['prepared']['sha256'], self.sha(self.evidence/'attempt-1'/'PREPARED.json'))
         self.assertEqual(result['changed_paths'],['source.txt'])
         self.assertNotEqual(result['candidate'],self.request['base'])
         self.assertEqual((self.protected/'source.txt').read_text(),'before\n')
@@ -126,6 +132,7 @@ PYCODE
         code,result=self.cli('run');self.assertEqual(code,1)
         self.assertFalse(result['review_ready'])
         self.assertEqual(result['operations'][-1]['exit_code'],7)
+        self.assertGreaterEqual(result['operations'][-1]['duration_seconds'], 0)
         self.assertEqual(result['runner_result']['sha256'],self.sha(self.evidence/'attempt-1'/'consumer.json'))
         self.assertEqual(result['references'][0]['sha256'],self.sha(self.evidence/'attempt-1'/'consumer.log'))
 
@@ -136,6 +143,8 @@ PYCODE
         code,result=self.cli('run');self.assertEqual(code,1)
         row=result['operations'][-1]
         self.assertEqual(row['status'],'incomplete')
+        self.assertGreaterEqual(row['duration_seconds'], 0.9)
+        self.assertTrue(math.isfinite(row['duration_seconds']))
         self.assertIsNone(row['exit_code'])
         self.assertEqual(row['stdout']['sha256'],hashlib.sha256(b'partial\n').hexdigest())
         self.assertFalse(result['review_ready'])
