@@ -9,9 +9,6 @@ import hashlib
 import json
 import math
 
-from .section_reader import _sections
-from .structural import ScanSetup, scan
-
 
 def _digest(value) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':'),
@@ -41,6 +38,14 @@ def derive(source: bytes, binding: dict) -> dict:
         raise ValueError('Accepted capsule needs path, sha256, phase and route')
     if hashlib.sha256(source).hexdigest() != binding['sha256']:
         raise ValueError('Accepted capsule identity mismatch')
+    # Legacy helpers use the reconciliation record primitives without parsing.
+    # Load the full declared parser stack only for explicitly selected derivation.
+    try:
+        from .section_reader import _sections
+        from .structural import ScanSetup, scan
+    except ImportError as error:
+        raise ValueError('Accepted capsule derivation requires the selected RI parser dependencies '
+                         'from pyproject.toml in an authenticated helper environment') from error
     setup = ScanSetup()
     sections = [item for item in _sections(source, setup) if item['level'] == 2 and item['heading'] == 'Checks']
     if len(sections) != 1:

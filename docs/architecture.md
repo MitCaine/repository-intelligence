@@ -98,6 +98,10 @@ Worker return and read-only intake use the same identities/result. Preparation
 owners establish inventory completeness; independent review judges assertions.
 It does not infer arbitrary missing prose or execute checks. Existing navigation,
 inventory and legacy worker result versions are unchanged; selection is explicit.
+Parser imports occur only inside selected accepted-task derivation. Legacy worker,
+cleanup and dispatch imports remain usable without Tree-sitter; selected derivation
+requires the declared parser stack in the consumer's authenticated helper runtime
+and reports missing dependencies without falling back to weaker parsing.
 
 [`output_cleanup.py`](../src/repository_intelligence/output_cleanup.py) provides
 optional exclusive output-creation receipts and per-item retention/disposal

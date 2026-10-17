@@ -527,6 +527,18 @@ JSON keys refuse rather than silently dropping proof. Never silently retrofit a
 frozen active task with these fields; adopting consumers select them for new or
 explicitly amended attempts.
 
+The selected derivation operation requires RI's parser dependencies declared in
+`pyproject.toml`, including its Markdown grammar, in the consumer's authenticated
+helper execution environment. A source-file copy is not dependency provisioning;
+an older navigation runtime without that grammar does not satisfy this binding.
+Provision and verify that environment reproducibly through the consumer's own
+setup route, then bind its interpreter and dependency identities into the actual
+helper subprocess. Do not silently use RI's development environment or change an
+active attempt's runtime. Ordinary legacy helper imports and unselected operations
+do not load parsers; missing dependencies on selected derivation are a blocking
+error, never a switch to weaker Markdown parsing. This import boundary does not
+establish consumer provisioning or end-to-end adoption.
+
 Generation derives `required_outcomes`; preparation rederives and refuses a supplied
 competing set. `PREPARED`, the generated `CHECK_REQUEST.accepted_obligations`, and
 `RETURN` retain the same source, inventory and per-entry definition identities.
