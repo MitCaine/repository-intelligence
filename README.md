@@ -102,6 +102,13 @@ also requires the map's permission and retains fresh independent review. It need
 no Codex dispatcher; when implementation is delegated, the dispatcher kickoff
 stays the same.
 
+An explicitly adopted [experimental engineering route](docs/start-an-issue.md#experimental-engineering-route)
+can instead select `Requested route: engineering`. The controller authors the
+engineering specification, obtains independent planning review and assigns bounded
+implementation portions before full integrated review. It is a pilot option, not a
+silent replacement for capsules or maintenance; consumer validator/authority support
+and explicit selection are required. The same kickoff/dispatcher resources apply.
+
 ### 3. Codex dispatcher: send this prompt
 
 ```text
@@ -187,7 +194,9 @@ handoff, native subagent completion, recovery decisions, and optional project
 skill templates. For eligible bounded upkeep, the optional
 [maintenance route](docs/start-an-issue.md#optional-maintenance-route) replaces
 planning with a brief controller handoff. The controller verifies the accepted
-capsule or maintenance handoff and exact published candidate before assigning independent review. Publication and
+capsule, maintenance handoff or selected engineering specification and exact published
+candidate before implementation review; experimental planning review has its own
+earlier boundary. Publication and
 integration remain subject to project authority. The accepted task record remains
 the accepted implementation specification; authenticated owner grants and project
 permissions separately govern execution authority.

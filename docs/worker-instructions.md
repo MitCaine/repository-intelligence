@@ -8,7 +8,7 @@ contract and compatibility navigator, not another set of role procedures.
 
 - [Capsule builder](#capsule-builder): `ri-capsule-creator`
 - [Implementor](#implementor): `ri-implementor`
-- [Independent reviewer](#independent-reviewer): `ri-independent-reviewer`
+- [Independent reviewer](#independent-reviewer): `ri-independent-reviewer` (assigned plan, intermediate or final review mode)
 - [Codex dispatcher](#codex-dispatcher): `ri-dispatcher`
 
 The handoff/map authenticates the actual skill folder, common contract and local

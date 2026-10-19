@@ -42,7 +42,8 @@ and `docs/local_project_map.md`. Do not repeat adoption or installation for each
 
 ## Instruction ownership and handoffs
 
-RI owns the shared controller/worker duties, six-heading capsule, source discovery,
+RI owns shared controller/worker duties, the normal six-heading capsule and
+[opt-in experimental engineering route](start-an-issue.md#experimental-engineering-route), source discovery,
 correction, evidence and independent-review rules. A consumer map binds the selected
 revisions and usable runtime/tools, settings, permissions, storage and applicable
 local requirements. Keep genuine domain contracts and project qualification local;
@@ -60,8 +61,8 @@ to load every linked document. This setup reference is not additional worker int
 | --- | --- | --- |
 | Controller | Project map, complete controller procedure, live issue and required decisions/instructions | Domain, command and recovery sections needed for the selected task/route |
 | Capsule builder | Selected ri-capsule-creator skill/locator and Shared worker rules, original requirements/decisions and supplied source | Applicable domain contracts, callers/tests and proof prerequisites |
-| Implementor | Selected ri-implementor skill/locator and Shared worker rules, complete accepted capsule or maintenance handoff, supplied source pointers/standards | Relevant source/callers/tests/contracts and affected recovery sections; not issue-history reconstruction |
-| Independent reviewer | Selected ri-independent-reviewer skill/locator and Shared worker rules, original requirements, exact task/candidate/full diff and real evidence | Applicable domain standards, due-stage obligations and affected callers |
+| Implementor | Selected ri-implementor skill/locator and Shared worker rules, complete accepted capsule/maintenance handoff or engineering specification with selected assignment, supplied source pointers/standards | Relevant source/callers/tests/contracts and affected recovery sections; not issue-history reconstruction |
+| Independent reviewer | Selected ri-independent-reviewer skill/locator and Shared worker rules, original requirements and proposed plan/source/tests for planning review, or accepted task/candidate/full diff and real evidence for implementation review | Applicable domain standards, due-stage obligations and affected callers |
 | Dispatcher | Its kickoff locator when used, selected ri-dispatcher skill/locator and Shared worker rules and complete authorized handoff | Map selection and setup fields needed to authenticate its own source, route and authority; not controller intake |
 
 The controller's handoff identifies the role/assignment, selected instructions and
@@ -104,8 +105,9 @@ an inclusive numerical range. Optional fields are **Capsule builder**,
 (owner-confirmed existing selection), **Codex dispatcher**, task-specific
 **Authority** (owner-supplied grant or selection of an applicable recorded grant),
 **Constraints**, **Stopping conditions** and **Requested route**
-(normal or maintenance), plus **Implementation execution** (`direct Work controller`
-when permitted by the map). A maintenance request follows the controller
+(normal, maintenance, or explicitly adopted experimental engineering), plus **Implementation execution** (`direct Work controller`
+when permitted by the map). Experimental selection follows the [engineering-route prerequisites](start-an-issue.md#experimental-engineering-route);
+it cannot bypass a capsule-only validator or required project controls. A maintenance request follows the controller
 [eligibility decision](start-an-issue.md#optional-maintenance-route), not an automatic
 waiver of project controls. Dependency/runtime or instruction changes alone do
 not require a capsule; use the linked eligibility rule. Resolve concrete chat IDs

@@ -23,10 +23,13 @@ Start with the [new-project setup checklist](../new-project-setup.md) when
 adopting the workflow in a consumer repository.
 Follow the [daily publication sequence](../start-an-issue.md#execute-serially):
 the controller creates and publishes the task branch; the authorized actor publishes
-the planning capsule before implementation on the normal route and the exact
+the planning capsule before implementation on the normal capsule route and the exact
 candidate before review. The adopted [maintenance route](../start-an-issue.md#optional-maintenance-route)
 instead uses a brief controller handoff without planning-only publication.
-The project map assigns actors, tracked capsule storage and commands; implementor
+The [experimental route](../start-an-issue.md#experimental-engineering-route) instead
+uses controller engineering, independent planning review and selected assignments
+where explicitly adopted; the same reviewer skill has separate review modes.
+The project map assigns actors, tracked task storage and commands; implementor
 commit/push requires an explicit grant. Keep private operational records out of
 publication unless authorized. Keep planning, implementation and fresh review
 roles separate; no subagent publishes directly to main.
@@ -34,8 +37,8 @@ roles separate; no subagent publishes directly to main.
 | Template | Role | Copy when |
 | --- | --- | --- |
 | [ri-capsule-creator](ri-capsule-creator/SKILL.md) | Capsule creator | Normal planning: complete original inputs and source evidence. |
-| [ri-implementor](ri-implementor/SKILL.md) | Implementation actor | Accepted capsule or selected maintenance handoff. |
-| [ri-independent-reviewer](ri-independent-reviewer/SKILL.md) | Fresh independent reviewer | Exact candidate, originals and actual proof; only assigned checks may execute. |
+| [ri-implementor](ri-implementor/SKILL.md) | Implementation actor | Accepted capsule, selected maintenance handoff or approved engineering assignment. |
+| [ri-independent-reviewer](ri-independent-reviewer/SKILL.md) | Fresh independent reviewer | Assigned plan or implementation review mode, originals and actual proof; only assigned checks may execute. |
 | [ri-dispatcher](ri-dispatcher/SKILL.md) | Codex relay | One controller-authorized implementation assignment. |
 | [ri-work-kickoff](ri-work-kickoff/SKILL.md) | Owner-selected Work controller | Explicit owner kickoff for an issue or bounded queue through adopted project instructions. |
 | [ri-codex-dispatcher-kickoff](ri-codex-dispatcher-kickoff/SKILL.md) | Owner-designated Codex dispatcher | Bounded orientation and waiting for a controller implementation handoff. |

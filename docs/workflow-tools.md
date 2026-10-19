@@ -612,3 +612,67 @@ capture/qualification stays pending when that route permits uncaptured source.
 Selecting this API grants no worker Git authority and does not remove the separate
 prepared helper's existing capture/clean-source requirements. Shared fixtures cover
 the public selected path; consumer ordinary wiring still requires its own integration.
+
+### Approved engineering selection
+
+The [experimental route](start-an-issue.md#experimental-engineering-route) may select
+`accepted_engineering` **instead of** `accepted_capsule`. Both at once, null selection
+or a missing approval refuse. This is an additive, explicitly selected interface,
+`engineering-selection-v1`; worker request/RETURN version 1 and existing capsule
+digests remain unchanged. Older helpers reject the new field; consumers must adopt
+and wire it explicitly rather than infer compatibility from the version number.
+Navigation, classification, inventory-comparison and dispatch contracts do not change.
+
+The engineering specification is ordinary prose with uniquely named real Markdown
+sections for its outcomes. It needs neither the six capsule headings nor an
+`ri-obligations` fence. The **same authoritative runner/controller definition** that
+exports required inputs and native proof selectors exports `phases`, `routes`,
+`entries` (the existing metadata described above) and `anchors`, keyed by every
+original outcome ID. Do not handwrite a competing inventory or duplicate requirement
+descriptions. Each anchor selects a specification `section` and an `original`
+`{path, sha256, section}` in the authenticated original requirements. Steps/proofs
+retain their IDs and parent outcomes; they inherit that outcome's original anchor.
+Tools bind the selected source sections, original file identities and selection
+metadata; reviewers still establish semantic coverage and engineering adequacy.
+An unintegrated owner export is a consumer gap, not automatic derivation from prose.
+
+For example, the owning projection's engineering selection can extend its existing
+entry metadata with:
+
+```json
+{"anchors":{"A5":{"section":"A5","original":{"path":"/project/requirements.md","sha256":"<raw hash>","section":"A5"}}}}
+```
+
+This is an illustrative fragment, not another required execution document.
+`derive_engineering(source_bytes, binding, selection, load_source=...)` takes the
+usual `{path, sha256, phase, route}` binding, uses the selected Markdown parser and
+returns the derived inventory plus `selection_sha256` and original-section bindings.
+The caller authenticates/bounds regular source reads; the prepared adapter does this
+against the same owning input inventory. Fenced examples and ambiguous sections
+cannot substitute for the selected section. All outcome anchors, including those
+outside the selected route, are checked before dispatch.
+
+The controller records the authenticated independent planning decision using existing
+task evidence, with exactly `decision: "approved"`, `specification: {path, sha256}`,
+the tool-derived `selection_sha256`, a nonempty `reviewer` identity and
+`reviewer_report: {path, sha256}`. The consumer authenticates actor independence and
+authority; a locally authored JSON assertion or a report hash alone is not approval.
+`bind_engineering_review` binds that exact decision to the inventory; native mapping
+then uses the existing `bind_native_mapping` API. There is no signature service or
+new review stage beyond the selected route's planning review.
+
+The prepared request selects:
+
+```json
+{"accepted_engineering":{"path":"/project/engineering.md","sha256":"<raw hash>","phase":"implementor","route":"normal","selection":["engineering"],"approval":{"path":"/evidence/planning-decision.json","sha256":"<raw hash>"}}}
+```
+
+`selection` is a nonempty object-key path in the SAME authenticated `input_inventory`
+projection; `proof_mapping` still selects that owner's native case mappings. The
+specification, original files, decision and reviewer report must all be selected
+owning inputs. Generation derives required outcomes; prepare/run/intake reauthenticate
+the same selection, approval and sources. Changed plans, entries, original bindings,
+approval/report or native proof cannot inherit old approval/results. All existing
+1 MB reads, 128-entry limits, duplicate/unknown-field refusals and candidate/attempt/
+request-specific reconciliation remain. This is no cross-branch evidence equivalence
+engine: preserve original results and use final affected reruns when needed.

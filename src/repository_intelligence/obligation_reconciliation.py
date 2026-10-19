@@ -67,6 +67,11 @@ def derive(source: bytes, binding: dict) -> dict:
     if len(blocks) != 1:
         raise ValueError('Checks needs one authoritative ri-obligations block')
     value = json.loads(blocks[0], object_pairs_hook=unique_object)
+    return _derive_entries(value, binding)
+
+
+def _derive_entries(value: dict, binding: dict) -> dict:
+    """Shared metadata validation; capsule byte/definition identities stay unchanged."""
     if not isinstance(value, dict) or set(value) != {'phases', 'routes', 'entries'}:
         raise ValueError('Accepted entries need phases, routes and entries')
     phases, routes = _names(value['phases'], 'Phases'), _names(value['routes'], 'Routes')
@@ -114,6 +119,82 @@ def derive(source: bytes, binding: dict) -> dict:
                   phase=binding['phase'], route=binding['route'], entries=selected, excluded=excluded)
     result['required_outcomes'] = {entry['id']: entry['due_now'] for entry in selected}
     result['inventory_sha256'] = _digest(result)
+    return result
+
+
+def _engineering_section(source: bytes, heading: str) -> str:
+    """Bind one real Markdown section, excluding quoted/fenced heading examples."""
+    try:
+        from .section_reader import _sections
+        from .structural import ScanSetup
+    except ImportError as error:
+        raise ValueError('Engineering selection requires the selected RI parser dependencies '
+                         'from pyproject.toml in an authenticated helper environment') from error
+    if not isinstance(heading, str) or not heading.strip():
+        raise ValueError('Engineering requirement needs an explicit section heading')
+    matches = [section for section in _sections(source, ScanSetup())
+               if section['heading'] == heading]
+    if len(matches) != 1:
+        raise ValueError('Engineering requirement needs one unambiguous section: ' + heading)
+    section = matches[0]
+    return hashlib.sha256(source[section['start']:section['end']]).hexdigest()
+
+
+def derive_engineering(source: bytes, binding: dict, selection: dict, *, load_source) -> dict:
+    """Project owning-definition metadata onto approved prose; no capsule fence required.
+
+    The caller authenticates source references and inventory ownership. Human review
+    still establishes that this selection covers the issue and engineers it correctly.
+    """
+    if (not isinstance(binding, dict) or set(binding) != {'path', 'sha256', 'phase', 'route'}
+            or hashlib.sha256(source).hexdigest() != binding['sha256']):
+        raise ValueError('Engineering specification identity mismatch')
+    if (not isinstance(selection, dict)
+            or set(selection) != {'phases', 'routes', 'entries', 'anchors'}):
+        raise ValueError('Engineering selection needs owning entries and original anchors')
+    inventory = _derive_entries({key: selection[key] for key in ('phases', 'routes', 'entries')}, binding)
+    anchors = selection['anchors']
+    outcomes = {entry['id'] for entry in selection['entries'] if entry['kind'] == 'outcome'}
+    if not isinstance(anchors, dict) or set(anchors) != outcomes:
+        raise ValueError('Engineering original outcome anchor coverage mismatch')
+    originals = {}
+    for outcome, anchor in anchors.items():
+        if (not isinstance(anchor, dict) or set(anchor) != {'section', 'original'}
+                or not isinstance(anchor['original'], dict)
+                or set(anchor['original']) != {'path', 'sha256', 'section'}):
+            raise ValueError('Engineering anchors need specification and original sections')
+        original = anchor['original']
+        raw = load_source({key: original[key] for key in ('path', 'sha256')})
+        if hashlib.sha256(raw).hexdigest() != original['sha256']:
+            raise ValueError('Original requirement identity mismatch')
+        originals[outcome] = dict(
+            specification_section_sha256=_engineering_section(source, anchor['section']),
+            original=original,
+            original_section_sha256=_engineering_section(raw, original['section']))
+    inventory.update(format='engineering-selection-v1', selection_sha256=_digest(selection),
+                     original_requirements=originals)
+    for entry in inventory['entries']:
+        entry['definition_sha256'] = _digest(dict(
+            definition=entry['definition_sha256'], original=originals[entry['outcome']],
+            selection_sha256=inventory['selection_sha256']))
+    inventory['inventory_sha256'] = _digest({key: value for key, value in inventory.items()
+                                           if key != 'inventory_sha256'})
+    return inventory
+
+
+def bind_engineering_review(inventory: dict, approval: dict, reference: dict) -> dict:
+    """Check the exact recorded planning decision, not reviewer authority or adequacy."""
+    if (not isinstance(approval, dict)
+            or set(approval) != {'decision', 'specification', 'selection_sha256',
+                                 'reviewer', 'reviewer_report'}
+            or approval['decision'] != 'approved'
+            or approval['specification'] != inventory['source']
+            or approval['selection_sha256'] != inventory['selection_sha256']
+            or not isinstance(approval['reviewer'], str) or not approval['reviewer'].strip()):
+        raise ValueError('Engineering planning review does not approve this specification/selection')
+    result = dict(inventory, planning_review=dict(reference=reference, decision=approval))
+    result['inventory_sha256'] = _digest({key: value for key, value in result.items()
+                                        if key != 'inventory_sha256'})
     return result
 
 

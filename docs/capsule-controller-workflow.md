@@ -1,5 +1,12 @@
 # Lightweight controller workflow with RI
 
+The ordinary capsule route remains supported. An explicitly adopted
+[experimental engineering route](start-an-issue.md#experimental-engineering-route)
+uses controller engineering and separate planning review before bounded assignments;
+its governing rule owns that exception. It changes neither active attempt selections
+nor project integration authority. Consumer pilots establish results separately.
+
+
 **Read the complete directed orientation material before acting.** Read the
 selected execution instructions, local map, complete issue and required linked
 specifications/decisions before task decisions, edits or dispatch. Resolve

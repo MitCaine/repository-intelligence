@@ -6,7 +6,7 @@ versions are tracked inside the references rather than in parallel filenames.
 
 | Need | Read |
 | --- | --- |
-| Controller: execute an issue in an established project | [Start an issue](start-an-issue.md), `docs/local_project_map.md` and live issue |
+| Controller: execute an issue in an established project (normal, maintenance or opted-in experiment) | [Start an issue](start-an-issue.md), `docs/local_project_map.md` and live issue |
 | Assigned builder, implementor, reviewer or dispatcher | [Selected role skill and common contract](worker-instructions.md#role-index) and role-permitted task inputs |
 | Install, navigate, compare, troubleshoot | [Consumer guide](consumer-guide.md) |
 | Interpret file/directory JSON, statuses, identity, limits, or older versions | [Navigation reference](navigation.md) |

@@ -16,7 +16,8 @@ import sys
 
 from .adapter_conformance import assess, request_digests
 from .adoption import AdoptionError, _git, _root
-from .obligation_reconciliation import bind_native_mapping, derive, reconcile, unique_object
+from .obligation_reconciliation import (bind_engineering_review, bind_native_mapping, derive,
+                                        derive_engineering, reconcile, unique_object)
 
 SCHEMA_VERSION = 1
 MAX_BYTES = 1_000_000
@@ -178,29 +179,57 @@ def inventory_inputs(request: dict) -> list:
 
 
 def accepted_inventory(request: dict) -> dict | None:
-    binding = request.get('accepted_capsule')
-    if 'accepted_capsule' not in request:
+    engineering = 'accepted_engineering' in request
+    if engineering and 'accepted_capsule' in request:
+        raise ExecutionError('Select one accepted task representation')
+    if not engineering and 'accepted_capsule' not in request:
         if 'proof_mapping' in request:
-            raise ExecutionError('Native proof mapping requires accepted capsule selection')
+            raise ExecutionError('Native proof mapping requires accepted task selection')
         return None
-    if not isinstance(binding, dict) or set(binding) != {'path', 'sha256', 'phase', 'route'}:
-        raise ExecutionError('Accepted capsule needs path, sha256, phase and route')
-    capsule = absolute(binding['path'])
-    selected = dict(path=str(capsule), sha256=binding['sha256'])
-    if selected not in selected_inputs(request):
-        raise ExecutionError('Accepted capsule missing from selected owning input inventory')
-    inventory = derive(read(capsule), binding)
+    binding = request['accepted_engineering' if engineering else 'accepted_capsule']
+    fields = {'path', 'sha256', 'phase', 'route'}
+    if not isinstance(binding, dict) or set(binding) != fields | ({'selection', 'approval'} if engineering else set()):
+        raise ExecutionError('Invalid accepted task binding fields')
+    inputs = selected_inputs(request)
+
+    def selected_source(reference):
+        verify_reference(reference)
+        if reference not in inputs:
+            raise ExecutionError('Accepted task source missing from selected owning input inventory')
+        raw = read(absolute(reference['path']))
+        if hashlib.sha256(raw).hexdigest() != reference['sha256']:
+            raise ExecutionError('Accepted task source changed while reading')
+        return raw
+
+    task_binding = {key: binding[key] for key in fields}
+    source = selected_source({key: binding[key] for key in ('path', 'sha256')})
     owner = request.get('input_inventory')
+    if engineering:
+        keys = binding['selection']
+        if (not isinstance(keys, list) or not 1 <= len(keys) <= 32
+                or not all(isinstance(key, str) and key for key in keys)
+                or not isinstance(owner, dict)):
+            raise ExecutionError('Engineering selection requires an owning inventory key path')
+        owner_binding = {key: owner[key] for key in ('path', 'sha256')}
+        selection = field(load_record(owner_binding), keys)
+        inventory = derive_engineering(source, task_binding, selection, load_source=selected_source)
+        approval = json.loads(selected_source(binding['approval']), object_pairs_hook=unique_object)
+        if not isinstance(approval, dict) or 'reviewer_report' not in approval:
+            raise ExecutionError('Engineering planning review report unavailable')
+        selected_source(approval['reviewer_report'])
+        inventory = bind_engineering_review(inventory, approval, binding['approval'])
+    else:
+        inventory = derive(source, task_binding)
     keys = request.get('proof_mapping')
     if not isinstance(owner, dict) or not isinstance(keys, list) or not keys:
-        raise ExecutionError('Accepted capsule requires native proof mapping from the owning inventory')
+        raise ExecutionError('Accepted task requires native proof mapping from the owning inventory')
     owner_binding = dict(path=owner['path'], sha256=owner['sha256'])
     mapping = field(load_record(owner_binding), keys)
     inventory = bind_native_mapping(inventory, mapping, dict(owner_binding, keys=keys))
     if 'conformance' not in request:
-        raise ExecutionError('Accepted capsule requires consumer conformance mapping')
+        raise ExecutionError('Accepted task requires consumer conformance mapping')
     if 'required_outcomes' in request and request['required_outcomes'] != inventory['required_outcomes']:
-        raise ExecutionError('Supplied obligation set differs from accepted capsule derivation')
+        raise ExecutionError('Supplied obligation set differs from accepted task derivation')
     if 'accepted_obligations' in request.get('check_request', {}):
         raise ExecutionError('Accepted obligation projection is derived, not supplied in check request')
     return inventory
@@ -338,7 +367,7 @@ def prepare(request: dict, evidence: Path, *, initial: bool = True) -> dict:
     required = {'assignment', 'attempt', 'workspace', 'protected_repository', 'base', 'inputs',
                 'allowed_changes', 'capture_authority', 'environment', 'capture', 'runner',
                 'runner_result', 'result_bindings', 'require_new_candidate', 'check_request'}
-    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'edit', 'timeout_seconds', 'route', 'conformance', 'required_outcomes', 'integration_base', 'input_inventory', 'accepted_capsule', 'proof_mapping'}:
+    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'edit', 'timeout_seconds', 'route', 'conformance', 'required_outcomes', 'integration_base', 'input_inventory', 'accepted_capsule', 'accepted_engineering', 'proof_mapping'}:
         raise ExecutionError('Invalid explicit execution binding fields')
     # Authority/source barriers precede optional independent static diagnostics.
     if not isinstance(request['capture_authority'], str) or not request['capture_authority'].strip():
@@ -566,8 +595,8 @@ def execute(request: dict, evidence: Path, mode: str) -> dict:
 
 def intake(request: dict, evidence: Path) -> dict:
     """Read-only controller consumption of the same retained terminal reconciliation."""
-    if 'accepted_capsule' not in request:
-        raise ExecutionError('Intake requires the selected accepted-capsule reconciliation binding')
+    if not any(key in request for key in ('accepted_capsule', 'accepted_engineering')):
+        raise ExecutionError('Intake requires the selected accepted-capsule or accepted-engineering reconciliation binding')
     attempt = absolute(str(evidence)) / request['attempt']
     report = json.loads(read(attempt / 'RETURN.json'), object_pairs_hook=unique_object)
     prepared = json.loads(read(attempt / 'PREPARED.json'), object_pairs_hook=unique_object)
@@ -629,7 +658,7 @@ def main(argv=None) -> int:
     try:
         raw_request = read(args.request)
         request = json.loads(raw_request)
-        if isinstance(request, dict) and 'accepted_capsule' in request:
+        if isinstance(request, dict) and any(key in request for key in ('accepted_capsule', 'accepted_engineering')):
             request = json.loads(raw_request, object_pairs_hook=unique_object)
         result = (generate(request, args.evidence) if args.mode == 'generate' else
                   intake(request, args.evidence) if args.mode == 'intake' else execute(request, args.evidence, args.mode))

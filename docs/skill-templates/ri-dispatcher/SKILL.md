@@ -7,12 +7,15 @@ description: Launch or resume only the Work controller-authorized implementor an
 
 Read the [selected common contract](references/project-procedure.md) and complete
 authenticated controller handoff: project/return destination, task/attempt, accepted
-capsule or maintenance handoff, branch/exact source, selected implementor resources,
+capsule, maintenance handoff, or accepted engineering specification/selected assignment,
+branch/exact source, selected implementor resources,
 read/edit authority, checks, evidence locations and Git owner. Authenticate your own
 checkout and supplied bindings separately; preserve parked work. Do not retrieve
 original issues/decision history, inspect product code to reassess requirements or
 repeat planning. Provenance links do not grant original-history reading authority.
 
+For planned sequential work authenticate each new controller handoff; do not infer
+next-dispatch authority from the prior worker's PASS or launch-guard result.
 Launch only the controller's one explicitly authorized implementor, requesting its
 resolved model/effort and using the project's accepted confirmation route. Fresh
 implementor context is default. Only the controller may authorize last-resort idle-

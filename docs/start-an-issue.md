@@ -98,9 +98,91 @@ selecting maintenance; this route does not bypass project controls. A kickoff ma
 request maintenance, but the controller confirms eligibility before implementation
 or dispatch.
 
+## Experimental engineering route
+
+This is an opt-in experiment, not a replacement for capsule or maintenance work.
+Select it only through explicit owner/project authority after the consumer map,
+record validator and execution/evidence bindings support it. Adoption selects an
+exact published revision; existing attempts keep their selected instructions.
+A missing local interface is a concrete adoption gap, not permission to bypass it.
+
+The sequence is controller engineering -> independent planning review -> controller
+acceptance -> bounded implementation assignment(s) and intermediate review -> full
+integrated implementation review -> project qualification, approval, integration and
+verified closeout. Project-required gate order still applies. Planning and final
+implementation reviews ordinarily use distinct fresh nonauthor instances. The
+controller cannot self-review its engineering specification or implementation.
+The selected [reviewer skill](skill-templates/ri-independent-reviewer/SKILL.md)
+provides both review modes; they are different assignments, not transferred verdicts.
+
+The controller performs the builder's actual engineering work on this route. Use
+[task-directed source preparation](#task-directed-source-preparation), inspect owning
+code, callers, contracts and tests, resolve product/design decisions, and write one
+concise engineering specification in the existing tracked task location. Record
+original requirements and observable outcomes, consequential interface/architecture
+choices, source/edit boundaries, dependencies and discriminating proof/check selection.
+No six-heading capsule or embedded machine JSON is required for this route. Do not
+copy project-wide rules, raw tool dumps or mechanical identities already available
+through authenticated results. Explicit engineering judgments cannot be replaced
+by pointers. Unresolved decisions return to the owner before dependent work.
+
+Publish the engineering specification under project authority. Give the planning
+reviewer the exact specification, original issue/accepted decisions, relevant actual
+source and intended tests. It must reject incomplete or incorrectly engineered work.
+The controller authenticates the review and records accepted specification/review
+identities in existing task state before implementation. Changed requirements,
+engineering decisions or selection invalidate affected planning approval; obtain
+fresh affected review rather than transferring approval to changed instructions.
+Planning approval grants no file, Git, settings or qualification authority.
+
+Select each implementation assignment from that same accepted specification, naming
+its original requirement IDs, expected outcome, exact starting source, predecessor,
+allowed changes, due checks and return route. Do not have another role rewrite the
+engineering problem. One accepted specification may support several planned
+assignments: planned advancement is distinct from correction of rejected work.
+Prefer simple sequential stacked branches for the initial pilot; independent branches
+need justified composition and review. The controller owns project Git under existing
+authority. Retain the original issue integration baseline separately from each
+assignment base; optional helper `integration_base` is a source identity, not approval.
+
+Before each next dispatch authenticate the unchanged accepted plan and previous
+result's exact commit, independent review, due evidence and unresolved findings.
+A rejected/interrupted result, moved predecessor or missing review is not an accepted
+base. Record relationships in existing task state, not a new branch manager. The
+native dispatch guard continues to authenticate launches, not plan/predecessor approval.
+Intermediate acceptance covers only the assigned portion, not issue completion or
+main integration. Do not route planned advancement through a rejected-work transition.
+Recover uncertain publication by observing exact refs before retry; do not duplicate
+mutations or work. Correct in-scope findings under existing correction rules.
+
+Final review compares the full combined candidate against the ORIGINAL integration
+baseline, accepted specification and original issue, including interactions between
+individually accepted portions. Accumulated intermediate PASSes cannot replace it.
+Preserve old checks under original source/attempt/request identities. Select final
+checks through [evidence eligibility](#evidence-eligibility-and-corrections); use
+conservative affected reruns when transitive equivalence is unknown and all required
+qualification. The optional [engineering selection binding](workflow-tools.md#approved-engineering-selection)
+retains candidate-specific reconciliation; no cross-branch proof relabeling is allowed.
+Follow existing final approval, guarded integration and closeout for one complete
+candidate. Keep intermediate refs protected until final integration, ancestry and
+required evidence retention are verified; deletion still needs exact-ref authority.
+
+Evaluate the experiment through separately authorized consumer pilots, not another
+routine stage. Retain full lifecycle preparation, planning review, implementation,
+corrections, intermediate/final review, qualification and closeout costs in existing
+records. Distinguish measured elapsed/usage from unknown telemetry and compare like
+scope/conditions; shorter implementor reading alone is not a net improvement. Exercise
+incomplete/altered plans, unauthorized next dispatch, moved/rejected predecessors,
+out-of-scope renames, missing/stale proof, failing integrated interactions, uncertain
+publication and protected unmerged refs with bounded fixtures where suitable. These
+scenarios and documentation checks do not prove live host behavior. Return pilot
+findings for a keep/revise/retire decision before broader replacement. Definition of
+this route does not itself establish pilot success or satisfy the separate RI #135
+normal-route experiment.
+
 ## Capsule format
 
-RI owns this shared capsule format for every adopting project. Use one ordinary
+For the normal capsule route, RI owns this shared capsule format. Use one ordinary
 Markdown task file with these headings:
 
 - **Objective:** live issue and original required specifications/decisions.
@@ -155,7 +237,9 @@ Controller -> capsule builder -> controller checks plan
 ### Assign roles and supply inputs
 
 The controller assigns roles serially with fresh worker contexts by default:
-one builder, one implementor and one independent reviewer. Maintenance omits the
+one builder, one implementor and one independent reviewer on the normal capsule route.
+The experimental route uses its independent planning review and explicitly planned
+implementation assignments under the [governing rule](#experimental-engineering-route). Maintenance omits the
 builder and, where permitted, uses direct controller implementation. No-change
 work follows its disposition below. Workers cannot recruit other workers except
 for the expressly delegated Codex implementor launch.
@@ -230,6 +314,7 @@ An additional substantive assignment requires one of these reasons:
 - An authorized scope change.
 - A confirmed inability of the assignee or host to proceed.
 - An independent scope challenge permitted in step 2.
+- A planned assignment or review selected under the [experimental engineering route](#experimental-engineering-route).
 
 Before dispatch, record the reason and bounded objective in the existing
 checkpoint. Existing availability and recovery limits still apply. Clarification
@@ -259,11 +344,12 @@ inaccessible material is a gap, not permission to guess.
 Except for [permitted no-change review](#planning-only-and-no-change-outcomes),
 before worker dispatch the controller creates and publishes the dedicated
 non-main task branch on GitHub from the authenticated base. For direct-controller
-maintenance, do this before implementation rather than worker dispatch. On the normal route,
+maintenance, do this before implementation rather than worker dispatch. On the normal capsule route,
 the builder returns the capsule; the map assigns its capsule-only commit/push to
 the builder or controller. Publish that planning commit before implementor dispatch.
 Maintenance instead uses the accepted brief handoff in the existing task record,
-without a planning-only commit/publication. Implementation uses the task branch;
+without a planning-only commit/publication. The experimental route publishes its
+engineering specification and assignment refs under its governing rule. Implementation uses the selected task branch;
 its assigned actor publishes the exact candidate before independent review. The
 controller publishes for roles without Git authority.
 Use clear commit messages describing the changes. Verify remote refs at each
@@ -302,7 +388,8 @@ candidate edits or omission of required checks.
 
 ### Select checks and control runtime
 
-Select required checks in the accepted capsule or maintenance handoff before
+Select required checks in the accepted capsule, engineering specification/assignment
+or maintenance handoff before
 implementation, with literal commands, intended phase, affected scope, relevant
 transitive inputs/environment and the reason for broader coverage. During
 implementation test changed behavior and affected callers. After correction rerun
@@ -331,6 +418,8 @@ gap, not permission to invent a pass or another monitoring framework.
 
 ### Task-directed source preparation
 
+The experimental engineering controller assumes the following preparation duties;
+the output informs its specification rather than a six-heading capsule.
 For the normal capsule route, the capsule builder or assigned task author uses
 the consumer-selected compatible Tree-sitter route on applicable supported
 source before returning the plan. Start with bounded task terms and relevant
@@ -365,7 +454,9 @@ diff, and log evidence remains useful for checking the map and proving outcomes.
 For maintenance, the controller verifies the brief handoff against intake and
 project controls, including the route-feasibility rule in step 2, then follows steps 3–6; under the permitted direct-controller
 exception it performs step 3 itself and still obtains fresh review in step 5.
-Steps 1–2 apply to the normal route.
+Steps 1–2 apply to the normal capsule route. The experimental route uses its
+[engineering and planning-review boundary](#experimental-engineering-route) before
+implementation and intermediate reviews; steps 4–6 still govern its FINAL candidate.
 
 1. **Capsule builder:** use the supplied branch and [shared format](#capsule-format).
    Require affected stale docs/examples/maps/links to be corrected, or justify why

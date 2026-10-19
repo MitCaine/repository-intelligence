@@ -28,6 +28,9 @@ apply here. The current user request defines the task scope.
   capsule planning, resolves any required scope challenge, and verifies the
   accepted capsule before implementation. For eligible maintenance, the controller
   verifies the brief accepted handoff under the selected maintenance rules instead.
+  An explicitly adopted experimental engineering route uses controller-authored
+  specification, independent planning review and bounded assignments under its
+  selected rules; this does not repin active attempts or grant consumer authority.
   The consumer execution map assigns candidate capture
   and publication to an authorized actor and stage. Implementor commit/push is
   allowed only when explicitly granted there. No subagent pushes directly to

@@ -92,8 +92,11 @@ it invokes explicitly selected consumer commands and does not implement their
 capture policy, gate execution or semantic acceptance. See [bounded workflow tools](workflow-tools.md).
 
 [`obligation_reconciliation.py`](../src/repository_intelligence/obligation_reconciliation.py)
-derives a selected original obligation/proof inventory from the accepted task's
-Checks entries and reconciles explicit consumer-native evidence at that seam.
+derives a selected original obligation/proof inventory from accepted capsule Checks
+entries or the explicitly selected engineering-specification/owning-definition
+binding, and reconciles consumer-native evidence at that seam. Engineering approval
+and original section identities are retained; controller/reviewer authority and
+semantic completeness remain consumer decisions.
 Worker return and read-only intake use the same identities/result. Preparation
 owners establish inventory completeness; independent review judges assertions.
 It does not infer arbitrary missing prose or execute checks. Existing navigation,

@@ -1,12 +1,13 @@
 ---
 name: ri-implementor
-description: Implement an accepted capsule or maintenance handoff within assigned authority and reconcile original obligations with actual proof; not issue planning or self-review.
+description: Implement an accepted capsule, engineering assignment or maintenance handoff within assigned authority and reconcile original obligations with actual proof; not issue planning or self-review.
 ---
 
 # Implementor
 
 Read the [selected common contract](references/project-procedure.md), then the whole
-accepted capsule or controller-approved maintenance handoff, supplied source/runtime
+accepted capsule, controller-approved maintenance handoff, or accepted engineering
+specification with its selected bounded assignment, supplied source/runtime
 bindings and applicable implementation standards before substantive edits. The
 accepted task carries all product decisions. Do not retrieve original issue/decision
 history or repeat intake. Follow relevant source, callers, tests and contracts beyond
@@ -15,7 +16,7 @@ edit authorization. Missing/contradictory consequential decisions go to the cont
 before dependent work, not reconstruction, guessed parameters or weaker proof.
 
 Choose and adjust coherent groups of related implementation/proof items using the
-capsule's dependencies and relationships. Local coding details, resequencing and
+accepted task's dependencies and relationships. Local coding details, resequencing and
 in-scope repair are yours, without changing accepted architecture or criteria.
 Keep a short working reference to original IDs, relevant code and unresolved points
 in existing notes; no second plan, elaborate pseudocode, new report or approval is
@@ -49,7 +50,10 @@ affected evidence/reconciliation after correction.
 
 Before claiming ready, reconcile all original accepted outcomes, steps and individually
 prescribed proof cases against actual cases, numeric measurements and readable
-hash-matching artifacts surviving teardown. Use #137's final reconciliation through
+hash-matching artifacts surviving teardown. For an engineering assignment, satisfy its selected portion without claiming the
+whole issue complete; retain future owners and original identities. Do not start a
+next assignment without controller authorization of its predecessor and plan.
+Use #137's final reconciliation through
 the selected/adopted consumer binding and existing return record when available;
 never call an unwired route operational. Missing due proof blocks ready; legitimate
 later capture/qualification/review/installed actions retain accepted owners pending.

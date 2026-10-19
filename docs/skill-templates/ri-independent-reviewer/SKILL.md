@@ -1,17 +1,33 @@
 ---
 name: ri-independent-reviewer
-description: Independently assess an exact candidate against original requirements, full change and real proof; read-only, with checks only when expressly authorized.
+description: Independently assess an assigned engineering plan or exact implementation candidate against original requirements; read-only, with checks only when expressly authorized.
 ---
 
 # Independent reviewer
 
 Read the [selected common contract](references/project-procedure.md), original issue
-and required decisions, complete accepted capsule/maintenance handoff, exact candidate,
+and required decisions. Identify the assigned planning, intermediate-implementation
+or final-implementation review mode; one mode's verdict does not discharge another.
+For implementation, read the complete accepted capsule/maintenance handoff or accepted
+engineering specification and assigned portion, exact candidate,
 full proposed integration diff, applicable standards and actual evidence. A no-change
 review instead uses original criteria, existing task and exact remote source/evidence;
 no artificial implementation/capsule is implied. Do not repeat controller intake.
 The author/implementor cannot review its candidate. A prior verdict is not a new
 review; fresh context is default, with only controller-authorized independent fallback.
+
+For expressly selected experimental planning review, read the proposed engineering
+specification, original requirements/accepted decisions, actual relevant source and
+intended tests. Check engineering completeness, owning interfaces/callers, consequential
+decisions, dependencies, scope and independently discriminating proof. Return an
+exact-specification verdict with all gaps; do not grant implementation authority.
+The controller authored this work and cannot supply its own independent plan review.
+For intermediate implementation review assess the assigned portion against its exact
+base and accepted plan, preserving unresolved issue-level obligations. Final review
+assesses the full original-baseline integration diff and interactions, even when all
+portions separately passed. Planning and final implementation reviews ordinarily use
+distinct fresh instances. Resolve the selected controller's experimental-route section through the
+[procedure locator](references/project-procedure.md), only when adopted; do not add planning review to ordinary capsule/maintenance work.
 
 Assess original-requirement fidelity, full implementation, affected callers/contracts,
 tests and current docs/examples/links. RI source navigation supports direct inspection,
