@@ -98,6 +98,36 @@ selecting maintenance; this route does not bypass project controls. A kickoff ma
 request maintenance, but the controller confirms eligibility before implementation
 or dispatch.
 
+### Controller-authored mechanical corrections
+
+Within an existing normal or engineering task, the controller may make a mechanical
+correction without another implementor dispatch only when its intended result is
+already established, authorized edit scope and project/owner permissions cover the
+controller's edit, and no new behavior or engineering decision is introduced.
+Judge semantic risk, not file or line counts. Examples are a typo, behavior-preserving
+import ordering, a broken reference, or a stale pin assertion corrected to the
+AUTHENTICATED ACCEPTED selection, never merely the revision observed in execution.
+Preserve test intent and original expected behavior; do not adjust assertions to
+make a failing execution pass. An additional path still needs existing scope authority.
+
+A change to acceptance meaning, compatibility behavior, security or evidence
+acceptance does not qualify, even if one line: keep it with the selected implementor
+on delegated routes. This exception neither expands nor replaces separately selected
+[direct maintenance](#optional-maintenance-route) authority. Before editing reconcile
+the current assignment, editor ownership and candidate through the existing handoff
+route; never edit concurrently with an active worker or bypass a frozen candidate.
+Record the bounded correction and actual author in the existing task/checkpoint,
+using the controller's current model/effort. No new plan, template or tracking stage
+is required. If the assumption proves false, preserve valid work and return the
+affected correction to the selected implementation route.
+
+Run affected checks and preserve original failures/source identities. The controller
+is the correction's author and cannot independently review it: fresh nonauthor review
+must cover the actual corrected candidate before separate controller approval,
+authorized integration and verified closeout. Existing evidence-reuse and changed-
+candidate rules still apply. Consumers must adopt/permit this selection; the shared
+passage alone does not amend an active attempt or grant project Git/edit authority.
+
 ## Experimental engineering route
 
 This is an opt-in experiment, not a replacement for capsule or maintenance work.
@@ -522,7 +552,8 @@ implementation and intermediate reviews; steps 4–6 still govern its FINAL cand
    dispositions for every criterion and applicable standard, including docs.
    Missing evidence already due cannot pass. For post-installation obligations,
    assess the implementation/check plan now; installed proof remains due at closeout.
-6. **Controller:** have the selected implementation actor address in-scope findings,
+6. **Controller:** have the selected implementation actor address in-scope findings
+   (or use only the authorized [mechanical-correction exception](#controller-authored-mechanical-corrections)),
    then obtain affected
    checks and independent review. Approval must cover the actual integrated result.
    Use authorized integration, verify it and any pending installed checks, record

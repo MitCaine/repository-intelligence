@@ -62,6 +62,11 @@ relevant transitive-input/environment equivalence; unknown equivalence needs
 affected reruns. Compare source, command, directory, toolchain and configuration
 when results conflict; a passing repetition alone does not explain a failure.
 
+The selected controller procedure owns the narrow controller-authored mechanical-
+correction exception. It requires covered edit authority and reconciled editor
+ownership; the controller then counts as author and cannot independently review
+that correction. It does not waive scope, checks or changed-candidate evidence.
+
 A failed command or terminal worker handoff does not stop an otherwise active task.
 Preserve failures and use bounded in-scope diagnosis/correction without another
 human approval for ordinary fixes. Do not guess consequential decisions, weaken
