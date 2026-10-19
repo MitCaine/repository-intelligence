@@ -112,7 +112,11 @@ integrated implementation review -> project qualification, approval, integration
 verified closeout. Project-required gate order still applies. Planning and final
 implementation reviews ordinarily use distinct fresh nonauthor instances. The
 controller cannot self-review its engineering specification or implementation.
-The selected [reviewer skill](skill-templates/ri-independent-reviewer/SKILL.md)
+Resolve every role and both review modes from the single adopted
+[model/effort default mapping](new-project-setup.md#role-model-and-effort-defaults)
+before constructing handoffs or launches; no model substitution is implied by
+adding a review stage. The selected
+[reviewer skill](skill-templates/ri-independent-reviewer/SKILL.md)
 provides both review modes; they are different assignments, not transferred verdicts.
 
 The controller performs the builder's actual engineering work on this route. Use
@@ -255,7 +259,9 @@ location; no mandatory export, duplicate manifest or new record schema is implie
 Environment, model and effort are separate settings. Resolve them from the
 selected project configuration and explicit owner inputs under the
 [kickoff-input contract](new-project-setup.md#kickoff-inputs-and-selected-configuration).
-Use the map's supported route; no new launcher or service is required. Configure
+Use the map's supported route and the
+[role/default resolution rule](new-project-setup.md#role-model-and-effort-defaults)
+when constructing the actual handoff and launch; no new launcher or service is required. Configure
 each worker explicitly before dispatch, matching the full selected model ID and
 effort rather than inheriting the controller's pair. Kickoff does not switch an
 already-running chat's model.

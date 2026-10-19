@@ -71,6 +71,9 @@ the controller before dependent work; preserve valid work and pause the affected
 part. Diagnosis cannot resume an explicit stopped/paused attempt, and later success
 cannot clear it. STOP_REPLAN is last resort, not opening progress.
 
+The controller handoff carries the resolved role/review-mode model and effort from
+the selected setup mapping; roles do not choose a different pair because a task
+override was omitted. A dispatcher requests that resolved implementor pair explicitly.
 Use the map's accepted confirmation policy: identify requested settings separately
 from host-confirmed settings and unresolved confirmation. Unknown telemetry proves
 neither compliance, mismatch nor capacity failure. Do not infer mode from tools,
