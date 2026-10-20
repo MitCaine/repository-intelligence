@@ -7,6 +7,14 @@ project map or assigned handoff; an unavailable helper does not authorize a
 different instruction revision or additional reading. Ordinary file tools remain
 supported. No service or persistent index is required.
 
+The current [issue procedure](start-an-issue.md) does not require the historical
+orchestration ladder. Prepared-worker, dispatch and capsule/engineering selection
+APIs below remain optional compatibility contracts for actual consumer callers;
+using them does not require a creator, dispatcher or separate implementor. Names
+and packet versions are retained, not new role authority. See the
+[ownership inventory](capsule-controller-workflow.md#keep-the-integration-small)
+before removing a dependency. No runtime API or version changes in this migration.
+
 ## Consumer check runner
 
 Command execution and source projection belong to the consumer. Its map should

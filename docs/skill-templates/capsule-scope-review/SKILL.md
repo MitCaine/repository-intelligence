@@ -5,6 +5,12 @@ description: Independently challenge a proposed consumer capsule impact inventor
 
 # Capsule scope review
 
+**Historical compatibility only.** Unselected for new author-and-reviewer work.
+Use this resource only for an existing pinned contract or an explicit retained
+compatibility assignment. It does not create a new required stage. Current work
+uses the project's adopted issue procedure and fresh independent review.
+
+
 This is an optional independent challenge when scope uncertainty or a separately
 adopted project requirement warrants it. Follow the
 [role locator](references/project-procedure.md) and supplied scope assignment;

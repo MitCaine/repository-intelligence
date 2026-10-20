@@ -5,6 +5,12 @@ description: Authenticate an active task capsule and its exact repository state 
 
 # Capsule preflight
 
+**Historical compatibility only.** Unselected for new author-and-reviewer work.
+Use this resource only for an existing pinned contract or an explicit retained
+compatibility assignment. It does not create a new required stage. Current work
+uses the project's adopted issue procedure and fresh independent review.
+
+
 Resolve the caller’s selected role instructions through the
 [role locator](references/project-procedure.md). Controllers use the project map;
 workers use only inputs permitted by their selected role

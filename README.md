@@ -8,139 +8,60 @@ with its results.
 
 Tree-sitter is the default parser for **Python, Rust, JavaScript/JSX,
 TypeScript/TSX, Java, Go, C#, C, C++, and Markdown**. Native analyzers are optional.
-RI needs no service, database, or maintained symbol index. Task scope, capsule
-execution, and acceptance stay with the consumer project.
+RI needs no service, database, or maintained symbol index. Task scope, execution and acceptance stay with the consumer project.
 
 [Bounded workflow helpers](docs/workflow-tools.md) support explicit section reading
 and declared-resource adoption, plus optional
 [prepared execution and inventory-driven request generation](docs/workflow-tools.md#prepared-worker-execution-linkage). Consumer check execution stays in the project's
 selected runner; these helpers do not add acceptance gates.
 
-## Start work with the kickoff skills
+## Start work
 
-Start from the project map and selected
-[ownership and role-input contract](docs/new-project-setup.md#instruction-ownership-and-handoffs). The default RI workflow uses two chats for the same project: a **Work
-controller**, which manages the issue, planning and review; and a **Codex
-dispatcher**, which launches the implementation worker and returns its results.
-For delegated implementation, create and connect both chats. Permitted direct
-Work maintenance needs only the Work controller chat. Using RI's source-navigation
-tools alone does not require this workflow.
+The selected workflow uses **one Work author for engineering and coding**, followed
+by a **fresh independent Work reviewer**. Both default to **Sol 6.1 Light
+(`gpt-6.1-sol / low`)** under the project's selected settings and permitted overrides.
+One author chat is enough to start; no creator, dispatcher, Luna worker or planning
+review is required. Using RI navigation alone does not require adopting this workflow.
 
-**New project?** Complete [project setup](docs/new-project-setup.md) first,
-including the adopted project map, configuration and
-[verified skill availability](docs/skill-templates/README.md#kickoff-availability-and-adoption).
-Repository templates alone are not installed skills. Kickoff uses the project's
-adopted instructions, not automatically the newest RI main.
-
-### 1. Create and connect the chats
-
-For delegated implementation, open Work with your actual controller selection
-and Codex for the same repository. For permitted direct Work maintenance, open
-only Work and proceed to its kickoff below.
-Identify both chats through the host's supported chat mention/link or authenticated
-chat-list route; have the controller resolve those references to concrete IDs.
-Display titles alone do not identify a destination. Supply each chat's reference
-to the other and send this owner authorization, replacing the placeholders:
-
-```text
-I authorize <Work controller chat> and <Codex dispatcher chat> to exchange this
-issue's bounded handoffs, status, questions and results in both directions.
-```
-
-Use the selected project's supported messaging route and verify delivery before
-implementation. Opening chats or pasting kickoff prompts does not connect them.
-If direct communication is unavailable, select manual relay: copy the bounded
-handoff or its accessible location from Work to Codex, then copy the terminal
-result back to Work and confirm consumption. A pending dispatcher may orient
-and wait; do not launch implementation without its authorized handoff.
-
-### 2. Work controller: send this prompt
-
-Use the installed skill selector to orient a new or existing controller under
-[daily intake](docs/start-an-issue.md#intake); replace the project, issue and dispatcher.
-Include `@GitHub` where supported; another project-permitted GitHub route is fine.
-Connector access is not publication or integration authority. The optional Authority
-field below explicitly selects the [reusable task grant](docs/new-project-setup.md#access-and-task-authority);
-use it only when you intend that grant, or name an applicable recorded grant.
-Include the controller selection only when it matches your actual choice.
-
-```text
-@ri-work-kickoff
-@GitHub
-Repository: MitCaine/poker-app
-Issue(s): #447
-Authority: I select the reusable task grant for #447.
-Controller selection: Work; gpt-6.1-sol / low, owner-confirmed
-Codex dispatcher: <concrete dispatcher chat ID or supported reference>
-I authorize this controller and that dispatcher to exchange this issue's bounded
-handoffs, questions, status and results in both directions.
-```
-
-This short example uses existing project defaults and task authority. See the
-[kickoff-input contract](docs/new-project-setup.md#kickoff-inputs-and-selected-configuration)
-for optional worker overrides, issue queues, permissions and stopping conditions.
-
-For bounded upkeep, including an identified dependency update or inspected RI
-adoption, use the same kickoff with a specific issue and request the optional route:
+**New project?** Complete [project setup](docs/new-project-setup.md) first. Existing
+projects use their adopted map and instructions, not automatically latest RI main.
+With the installed kickoff skill, send:
 
 ```text
 @ri-work-kickoff
 @GitHub
 Repository: <owner/repository>
-Issue(s): #<maintenance issue>
+Issue(s): #<issue>
+Author selection: Work; gpt-6.1-sol / low, owner-confirmed
 Authority: I select the reusable task grant for this issue.
-Requested route: maintenance
-Implementation execution: direct Work controller
-Controller selection: Work; gpt-6.1-sol / low, owner-confirmed
 ```
 
-The issue should name the bounded objective, such as correcting identified broken
-documentation links. The controller confirms
-[maintenance eligibility](docs/start-an-issue.md#optional-maintenance-route);
-an open-ended “upkeep pass” is insufficient. Direct controller implementation
-also requires the map's permission and retains fresh independent review. It needs
-no Codex dispatcher; when implementation is delegated, the dispatcher kickoff
-stays the same.
+Include the selection/grant only when true and intended. `@GitHub` is optional when
+another permitted route exists; connector access is not authority. An applicable
+recorded grant may be reused. See [authority](docs/new-project-setup.md#access-and-task-authority).
+If Work skill registration is unverified, use the same prompt with the map's selected
+[issue procedure](docs/start-an-issue.md) directly. Copied templates do not prove
+installation or runtime mode.
 
-An explicitly adopted [experimental engineering route](docs/start-an-issue.md#experimental-engineering-route)
-can instead select `Requested route: engineering`. The controller authors the
-engineering specification, obtains independent planning review and assigns bounded
-implementation portions before full integrated review. It is a pilot option, not a
-silent replacement for capsules or maintenance; consumer validator/authority support
-and explicit selection are required. The same kickoff/dispatcher resources apply.
-
-### 3. Codex dispatcher: send this prompt
-
-```text
-$ri-codex-dispatcher-kickoff
-@GitHub
-Repository: MitCaine/poker-app
-Work controller: <concrete Work controller chat ID or supported reference>
-I authorize bounded bidirectional communication with that controller for its
-named issue assignment.
-```
-
-The dispatcher gets the implementor selection and authority from Work's resolved
-handoff; it does not configure a competing workflow. Invoke the actual installed
-host selector (`@` in Work, `$` in Codex); pasted text alone does not prove discovery.
-
-Without installed skills, send the same fields and actual product selection
-through [direct document-based kickoff](docs/new-project-setup.md#brief-invocation-examples).
-The controller follows its map's selected [Start an issue](docs/start-an-issue.md),
-and the dispatcher its selected [role skill](docs/worker-instructions.md#codex-dispatcher).
-No additional orientation stage is needed.
+The author inspects relevant source, keeps concise design and test expectations in
+the existing task record, implements and checks coherent changes, then requests
+exact-candidate independent review. Findings receive correction and affected
+re-review. Existing authorized qualification, integration, installed verification,
+durable evidence and safe cleanup remain required. Bounded maintenance uses this
+same sequence with proportionate engineering/checks; no extra planning artifact.
+Active attempts keep their pins. Consumers must explicitly reconcile their local
+rules before adopting this change; editing RI does not migrate Poker or Nutrition.
 
 ## Choose a route
 
 | Your task | Start here | What you get |
 | --- | --- | --- |
 | Use RI in an ordinary project | [Consumer guide](docs/consumer-guide.md), then the `locator` command below | Source navigation and coverage evidence; no capsule is required. |
-| Set up RI workflow in a new project | [New-project setup](docs/new-project-setup.md), [controller workflow](docs/capsule-controller-workflow.md), and [skill templates](docs/skill-templates/README.md) | The controller delegates planning, implementation and independent review through the selected project route. |
+| Set up RI workflow in a new project | [New-project setup](docs/new-project-setup.md), [adoption and tool ownership](docs/capsule-controller-workflow.md), and [skill templates](docs/skill-templates/README.md) | One author engineers and implements; a fresh independent reviewer assesses the exact candidate. |
 | Maintain the RI package | [Architecture](docs/architecture.md), [maintenance](docs/maintenance.md), and [documentation index](docs/README.md) | Module boundaries, updater/bundle commands, and verification requirements. |
 
-RI does not supply a consumer capsule runner, project permissions, or approval
-rules. A project can use RI source evidence without
-adopting the optional capsule workflow.
+RI does not supply project permissions or approval rules. A project can use source
+evidence without adopting the optional author/reviewer workflow.
 
 ## First query
 
@@ -188,18 +109,10 @@ macros. Read [coverage limits](docs/limitations.md) when deciding what else to i
 For a parser gap or a Rust reference question, [native analysis](docs/native-analysis.md)
 provides explicit Python AST, native Rust syntax, and Rust definition interfaces.
 Keep the original structural evidence; the providers have different coverage.
-The [capsule controller workflow](docs/capsule-controller-workflow.md) explains
-the purpose, capsule requirements and checkable acceptance criteria, full
-handoff, native subagent completion, recovery decisions, and optional project
-skill templates. For eligible bounded upkeep, the optional
-[maintenance route](docs/start-an-issue.md#optional-maintenance-route) replaces
-planning with a brief controller handoff. The controller verifies the accepted
-capsule, maintenance handoff or selected engineering specification and exact published
-candidate before implementation review; experimental planning review has its own
-earlier boundary. Publication and
-integration remain subject to project authority. The accepted task record remains
-the accepted implementation specification; authenticated owner grants and project
-permissions separately govern execution authority.
+The [issue procedure](docs/start-an-issue.md) owns engineering, implementation,
+independent review and closeout. Publication/integration remain subject to project
+authority; useful tools do not grant it. [Adoption and tool ownership](docs/capsule-controller-workflow.md)
+explain the compatibility boundary for older integrations.
 
 ## Develop and verify
 
@@ -248,11 +161,6 @@ The [documentation index](docs/README.md) links all current guides.
 identify behavior more precisely than package version `0.1.0`; pin the RI revision.
 RI originated in [Poker App](https://github.com/MitCaine/poker-app).
 RI has no project license file yet; distribution notes are in maintenance.
-
-The default [controller workflow](docs/capsule-controller-workflow.md) uses a
-bounded task, serial capsule-builder/implementor/reviewer roles, relevant tests and full
-diff review. Independent scope challenge and evidence helpers are optional unless
-needed by a separately adopted project requirement.
 
 For large structural handoffs, the optional [deduplicated review bundle](docs/review-evidence.md) retains complete evidence with a concise index and selective reads. Consumer adoption remains explicit.
 

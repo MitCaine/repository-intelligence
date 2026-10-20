@@ -1,5 +1,10 @@
 # Selected role instructions
 
+For new work, resolve the adopted author-and-reviewer procedure through the project
+map. Old role references below are compatibility-only for pinned/explicitly retained
+assignments, not requirements to recruit those roles. Preserve active selections.
+
+
 Resolve instructions through the controller’s authenticated handoff and the
 consumer project-root `docs/local_project_map.md`, not this installed folder.
 The controller supplies the selected RI revision, role-skill folder and common-contract location/identity,

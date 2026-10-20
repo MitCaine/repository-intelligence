@@ -24,14 +24,9 @@ apply here. The current user request defines the task scope.
   persistent indexes, or consumer permission policy without a concrete need.
 - For this standalone RI checkout, do not commit, push, merge, or change
   repository settings unless requested. This restriction does not override the
-  documented consumer workflow: for the normal route, its controller directs
-  capsule planning, resolves any required scope challenge, and verifies the
-  accepted capsule before implementation. For eligible maintenance, the controller
-  verifies the brief accepted handoff under the selected maintenance rules instead.
-  An explicitly adopted experimental engineering route uses controller-authored
-  specification, independent planning review and bounded assignments under its
-  selected rules; this does not repin active attempts or grant consumer authority.
-  The consumer execution map assigns candidate capture
-  and publication to an authorized actor and stage. Implementor commit/push is
-  allowed only when explicitly granted there. No subagent pushes directly to
-  `main`; the consumer's acceptance route controls integration.
+  documented consumer workflow: one author engineers and implements, and a fresh
+  independent reviewer assesses the exact candidate against original requirements.
+  Project authority still controls qualification, capture/publication, integration
+  and closeout; useful RI tools do not grant those permissions. Preserve active
+  attempts' selected instructions and historical compatibility. No subagent pushes
+  directly to `main`; the consumer's acceptance route controls integration.
