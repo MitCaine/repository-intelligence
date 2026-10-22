@@ -1,5 +1,10 @@
 # Inventory and comparison reference
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 `repository_intelligence.inventory.inventory_tree(root, stable=False,
 logical_root=".")` scans supported Python, Rust, JavaScript, JSX, TypeScript,
 TSX, Java, Go, C#, C, C++, and Markdown source without query terms. The current inventory

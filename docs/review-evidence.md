@@ -1,5 +1,10 @@
 # Review evidence transport
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 Use this optional transport when repeated inventory records make a handoff large.
 It retains the complete planning inventory, candidate inventory and recomputed
 comparison. Repeated JSON objects and arrays are stored once and referenced by SHA-256.

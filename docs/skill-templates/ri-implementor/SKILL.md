@@ -1,9 +1,14 @@
 ---
 name: ri-implementor
-description: Implement an accepted capsule, engineering assignment or maintenance handoff within assigned authority and reconcile original obligations with actual proof; not issue planning or self-review.
+description: Historical reference for defunct RI; no longer maintained. Implement an accepted capsule, engineering assignment or maintenance handoff within assigned authority and reconcile original obligations with actual proof; not issue planning or self-review.
 ---
 
 # Implementor
+
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](https://github.com/MitCaine/repository-intelligence/blob/main/README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
 
 **Historical compatibility only.** Unselected for new author-and-reviewer work.
 Use this resource only for an existing pinned contract or an explicit retained

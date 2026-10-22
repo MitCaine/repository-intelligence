@@ -1,9 +1,14 @@
 ---
 name: ri-work-kickoff
-description: Orient a new or existing owner-selected ChatGPT Work controller on an issue or bounded issue queue using the target project's adopted RI workflow.
+description: Historical reference for defunct RI; no longer maintained. Orient a new or existing owner-selected ChatGPT Work controller on an issue or bounded issue queue using the target project's adopted RI workflow.
 ---
 
 # Work kickoff
+
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](https://github.com/MitCaine/repository-intelligence/blob/main/README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
 
 On explicit owner invocation, record owner-selected Work for this chat separately
 from provider-effective telemetry. Automatic loading or incidental reference does

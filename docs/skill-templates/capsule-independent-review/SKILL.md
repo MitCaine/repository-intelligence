@@ -1,9 +1,14 @@
 ---
 name: capsule-independent-review
-description: Conduct or prepare a fresh, inspection-only review of one exact capsule candidate against its acceptance criteria and repository standards. Use for the independent reviewer lane, not self-review or controller approval.
+description: Historical reference for defunct RI; no longer maintained. Conduct or prepare a fresh, inspection-only review of one exact capsule candidate against its acceptance criteria and repository standards. Use for the independent reviewer lane, not self-review or controller approval.
 ---
 
 # Capsule independent review
+
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](https://github.com/MitCaine/repository-intelligence/blob/main/README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
 
 Resolve and read the selected **independent reviewer** document through the
 [role locator](references/project-procedure.md). Do not read the full controller

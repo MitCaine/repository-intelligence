@@ -1,5 +1,10 @@
 # Selected role instructions
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](https://github.com/MitCaine/repository-intelligence/blob/main/README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 For new work, resolve the adopted author-and-reviewer procedure through the project
 map. Old role references below are compatibility-only for pinned/explicitly retained
 assignments, not requirements to recruit those roles. Preserve active selections.

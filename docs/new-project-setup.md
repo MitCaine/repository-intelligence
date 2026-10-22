@@ -1,5 +1,10 @@
 # Set up RI in a project
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 Use [the issue procedure](start-an-issue.md) for author-and-reviewer work or the
 [consumer guide](consumer-guide.md) for tools alone. No orchestration framework,
 second chat or full skill collection is needed.

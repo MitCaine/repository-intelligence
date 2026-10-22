@@ -1,5 +1,10 @@
 # Consumer guide
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 RI supplies source evidence. The caller owns source materialization, full diff review, project policy, and acceptance. Use a separate installed RI package rather than copying its modules into each consumer repository. Pin the checkout revision and keep the emitted parser and contract metadata with saved observations.
 
 For the surrounding capsule handoff, qualification, independent review, and

@@ -1,5 +1,10 @@
 # Limits and interpretation
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 Use these limits when deciding what additional source or tool evidence a task
 needs. Current packet fields and byte limits are in [navigation](navigation.md);
 per-language promises are in [language support](language-support.md).

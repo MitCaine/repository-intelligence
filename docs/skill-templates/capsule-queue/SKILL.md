@@ -1,9 +1,14 @@
 ---
 name: capsule-queue
-description: Queue one terminal result for an external agent job, capsule qualification, or CI run that otherwise needs repeated polling. Keep controller, implementor, and reviewer authority separate; use native completion when it already wakes the controller.
+description: Historical reference for defunct RI; no longer maintained. Queue one terminal result for an external agent job, capsule qualification, or CI run that otherwise needs repeated polling. Keep controller, implementor, and reviewer authority separate; use native completion when it already wakes the controller.
 ---
 
 # Capsule queue
+
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](https://github.com/MitCaine/repository-intelligence/blob/main/README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
 
 Use a watcher for an external job lacking reliable native completion. Native
 subagents default to event-based blocking waits; ordinary commands return directly.

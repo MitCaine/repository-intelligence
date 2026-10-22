@@ -1,6 +1,11 @@
 # Historical records
 
-Start with the [current guides](../README.md) for usage. These records preserve
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
+The [retained guide index](../README.md) now describes a defunct project. These records preserve
 measurements, decisions, and limitations at their original revisions. Historical
 commands and capabilities may have been removed; do not use them as setup steps.
 
@@ -30,6 +35,6 @@ does not itself change a result schema or runtime behavior.
 [Former controller procedure](extended-controller-workflow-2026-10-02.md) and
 [former setup](extended-project-setup-2026-10-02.md) preserve the extended adoption
 instructions for audit. The former preflight, scope-review, independent-review
-and RI-handoff skill prose is retained alongside them. Use the
-[current controller guide](../capsule-controller-workflow.md) for new or authorized
-replacement work. Optional helper defects remain independently auditable.
+and RI-handoff skill prose is retained alongside them. The
+[last controller guide](../capsule-controller-workflow.md) was also retired with the
+project; it is retained for historical and pinned compatibility reference. Optional helper defects remain independently auditable.

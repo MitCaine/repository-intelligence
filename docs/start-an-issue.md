@@ -1,5 +1,10 @@
 # Start an issue — author and independent reviewer
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 This is the single current issue procedure. Read it, the project's current
 `docs/local_project_map.md`, complete live issue and required decisions, and applicable
 project instructions before acting. Recover truncated inputs. Setup and package

@@ -1,5 +1,10 @@
 # Navigation reference
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 The shared entry points are `repository_intelligence.locator.index_file` and
 `query_path`. This page owns the current packet contract; examples are in the
 [consumer guide](consumer-guide.md), per-language promises in

@@ -1,5 +1,10 @@
 # Selected kickoff resources
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](https://github.com/MitCaine/repository-intelligence/blob/main/README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 Resolve project-root `docs/local_project_map.md`, repository/base, selected RI
 instruction identity and existing assignment. Read the complete selected issue
 procedure and directed original inputs. The setup owns configuration/authority;

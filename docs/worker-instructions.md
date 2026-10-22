@@ -1,5 +1,10 @@
 # Author and reviewer instructions
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 ## Role index
 
 New work uses one Work author for engineering and coding, and one fresh independent

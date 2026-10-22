@@ -1,5 +1,10 @@
 # Working on Repository Intelligence
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 This is the standalone RI package. Poker App and Nutrition App capsules,
 session scripts, database rules, and consumer-specific authority maps do not
 apply here. The current user request defines the task scope.

@@ -1,5 +1,10 @@
 # Bounded workflow tools
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 These local helpers reduce repeated reading and copy maintenance. They do not
 choose task scope, authorize reads or writes, establish test adequacy, approve a
 candidate, or connect chats. Select their installed location/version through the

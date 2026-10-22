@@ -1,9 +1,14 @@
 ---
 name: ri-evidence-handoff
-description: Prepare exact-source Repository Intelligence navigation or planning-to-candidate evidence for author engineering or independent review. Use when exact-source results are relevant; not for task authority or approval.
+description: Historical reference for defunct RI; no longer maintained. Prepare exact-source Repository Intelligence navigation or planning-to-candidate evidence for author engineering or independent review. Use when exact-source results are relevant; not for task authority or approval.
 ---
 
 # RI evidence handoff
+
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](https://github.com/MitCaine/repository-intelligence/blob/main/README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
 
 Use the caller’s assigned role through the [role locator](references/project-procedure.md),
 under the current author/reviewer route. Use the

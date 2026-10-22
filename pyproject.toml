@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "repository-intelligence"
 version = "0.1.0"
-description = "Source-derived code and Markdown navigation for AI-assisted repositories"
+description = "Defunct, no longer maintained: historical source navigation and structural comparison tools"
 requires-python = ">=3.12"
 dependencies = [
     "tree-sitter==0.25.1",

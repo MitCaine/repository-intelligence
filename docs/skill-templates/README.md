@@ -1,5 +1,10 @@
 # Current skills and historical compatibility helpers
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 The [issue procedure](../start-an-issue.md) is authoritative for the one Work author
 who engineers and implements. The [common contract](../worker-instructions.md) and
 fresh reviewer skill govern independent review. Setup owns

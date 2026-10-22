@@ -1,5 +1,10 @@
 # Native analysis and fallback
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 Tree-sitter supplies RI's ordinary structural navigation. Native syntax and
 semantic questions are separate optional operations. There is no automatic
 fallback ladder, universal native provider, or second inventory format to merge.

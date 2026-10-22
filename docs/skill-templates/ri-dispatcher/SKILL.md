@@ -1,9 +1,14 @@
 ---
 name: ri-dispatcher
-description: Launch or resume only the Work controller-authorized implementor and relay terminal evidence, without replanning, implementation or review.
+description: Historical reference for defunct RI; no longer maintained. Launch or resume only the Work controller-authorized implementor and relay terminal evidence, without replanning, implementation or review.
 ---
 
 # Codex dispatcher
+
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](https://github.com/MitCaine/repository-intelligence/blob/main/README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
 
 **Historical compatibility only.** Unselected for new author-and-reviewer work.
 Use this resource only for an existing pinned contract or an explicit retained

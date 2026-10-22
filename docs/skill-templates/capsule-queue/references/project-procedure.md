@@ -1,5 +1,10 @@
 # Selected role instructions
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](https://github.com/MitCaine/repository-intelligence/blob/main/README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 Resolve instructions through the controller’s authenticated handoff and the
 consumer project-root `docs/local_project_map.md`, not this installed folder.
 The controller supplies the selected RI revision, role-skill folder and common-contract location/identity,

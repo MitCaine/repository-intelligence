@@ -1,9 +1,14 @@
 ---
 name: ri-independent-reviewer
-description: Independently assess an exact implementation candidate against original requirements; read-only, with checks only when expressly authorized.
+description: Historical reference for defunct RI; no longer maintained. Independently assess an exact implementation candidate against original requirements; read-only, with checks only when expressly authorized.
 ---
 
 # Independent reviewer
+
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](https://github.com/MitCaine/repository-intelligence/blob/main/README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
 
 Read the [selected common contract](references/project-procedure.md), original issue,
 settled decisions, concise task record, exact candidate, full proposed integration

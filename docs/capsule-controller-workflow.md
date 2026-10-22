@@ -1,5 +1,10 @@
 # Adoption and tool ownership
 
+> **Defunct project — historical reference only.** RI is no longer developed or maintained.
+> See [project status](../README.md#project-status). Instructions and commands below describe the retained snapshot,
+> not an actively supported workflow; existing pinned consumers retain their own authority.
+
+
 The filename is retained for incoming links. [Start an issue](start-an-issue.md)
 is the sole current daily workflow: one Work Sol Light author engineers and codes,
 then a fresh independent Work Sol Light reviewer assesses the exact candidate.
